@@ -7,10 +7,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { checkDbConnection } from './config/database.js';
-import articlesRouter from './routes/articles.js';
-import categoriesRouter from './routes/categories.js';
-import adsRouter from './routes/ads.js';
-import authRouter from './routes/auth.js';
+import apiRouter from './routes/api.js';
+import { apiRateLimiter } from './middleware/rateLimitMiddleware.js';
+import { errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
 
@@ -26,10 +25,11 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'],
+  origin: [CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
 // Static uploads directory (for media library in cPanel/local)
@@ -41,23 +41,32 @@ app.get('/api/health', async (req, res) => {
   res.json({
     status: 'online',
     platform: 'The Bharat Chronicle Digital Publishing Platform',
-    version: '1.0.0-phase1',
+    version: '2.0.0-phase2',
     environment: process.env.NODE_ENV || 'development',
     serverTime: new Date().toISOString(),
     database: dbStatus
   });
 });
 
-// Mount Routes
-app.use('/api/articles', articlesRouter);
-app.use('/api/categories', categoriesRouter);
-app.use('/api/ads', adsRouter);
-app.use('/api/auth', authRouter);
+// Apply rate limiter to all API endpoints
+app.use('/api', apiRateLimiter);
+
+// Mount Versioned API Routes (/api/v1/* and backwards compatible /api/*)
+app.use('/api', apiRouter);
 
 // Fallback 404 for unmatched API routes
 app.all('/api/*', (req, res) => {
-  res.status(404).json({ success: false, message: 'API route not found' });
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: `API route ${req.method} ${req.path} not found.`
+    }
+  });
 });
+
+// Centralized Error Handling Middleware (must be after routes)
+app.use(errorHandler);
 
 // If deployed on cPanel with combined client dist
 const clientDistPath = path.join(__dirname, '../client/dist');

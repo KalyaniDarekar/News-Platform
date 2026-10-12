@@ -26,3 +26,9 @@ pnpm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local database and uploads
+.database/
+server/uploads/
+uploads/
+
