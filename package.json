@@ -1,0 +1,16 @@
+{
+  "name": "bharat-chronicle-news-platform",
+  "version": "1.0.0",
+  "description": "Enterprise-grade digital news publishing platform with React, Vite, Node.js, Express, MySQL and cPanel compatibility",
+  "scripts": {
+    "client:dev": "npm --prefix client run dev",
+    "client:build": "npm --prefix client run build",
+    "client:preview": "npm --prefix client run preview",
+    "server:dev": "npm --prefix server run dev",
+    "server:start": "npm --prefix server run start",
+    "build": "npm --prefix client run build"
+  },
+  "keywords": ["news", "publishing", "media", "journalism", "react", "express", "mysql"],
+  "author": "The Bharat Chronicle",
+  "license": "ISC"
+}
