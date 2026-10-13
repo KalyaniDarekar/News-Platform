@@ -1,121 +1,407 @@
-// API Service Layer for The Bharat Chronicle
-// Designed for seamless transition from Phase 1 demonstration data to Phase 2 MySQL/Express backend.
+// ========================================================================
+// The Bharat Chronicle — Public & Editorial API Client Service (Phase 4)
+// Connects all public content interfaces to the live Express + MySQL backend.
+// ========================================================================
 
-import { 
-  ALL_STORIES, 
-  CATEGORIES, 
-  BREAKING_NEWS, 
-  MARKET_DATA, 
+import {
+  ALL_STORIES,
+  CATEGORIES,
+  BREAKING_NEWS,
+  MARKET_DATA,
   WEATHER_DATA,
-  AD_BANNERS,
-  IS_DEMO_DATA 
+  AD_BANNERS
 } from '../data/mockNewsData';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
+// Timezone configured for newsroom publications (IST: Asia/Kolkata)
+const EDITORIAL_TIMEZONE = 'Asia/Kolkata';
+
+export const formatEditorialDate = (dateStr, options = {}) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    const defaultOptions = {
+      timeZone: EDITORIAL_TIMEZONE,
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    };
+
+    const formatted = new Intl.DateTimeFormat('en-IN', { ...defaultOptions, ...options }).format(date);
+    return `${formatted} IST`;
+  } catch {
+    return dateStr;
+  }
+};
+
+export const formatRelativeTime = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+
+    return formatEditorialDate(dateStr, { hour: undefined, minute: undefined });
+  } catch {
+    return dateStr;
+  }
+};
 
 export const apiService = {
-  // Check if live backend server is reachable
+  // Check backend service health
   async checkBackendHealth() {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const res = await fetch('http://localhost:5000/api/health', { signal: controller.signal });
       clearTimeout(timeoutId);
       if (res.ok) {
         return await res.json();
       }
       return { status: 'offline', note: 'Backend returned non-200 status' };
     } catch {
-      return { 
-        status: 'demo_mode', 
-        note: 'Backend not running or unreachable. Using Phase 1 demonstration dataset.' 
-      };
+      return { status: 'offline', note: 'Backend server unreachable' };
     }
   },
 
-  // Fetch articles with optional category filter
-  async getArticles({ category = null, limit = 20 } = {}) {
+  // List published articles with rich filtering, search, and pagination
+  async getArticles({
+    category = null,
+    tag = null,
+    language = null,
+    isBreaking = null,
+    isFeatured = null,
+    hasVideo = null,
+    search = null,
+    sort = 'latest',
+    page = 1,
+    limit = 12
+  } = {}) {
     try {
-      const url = category ? `${API_BASE}/articles?category=${category}&limit=${limit}` : `${API_BASE}/articles?limit=${limit}`;
-      const res = await fetch(url);
+      const params = new URLSearchParams();
+      if (category) params.append('category', category);
+      if (tag) params.append('tag', tag);
+      if (language) params.append('language', language);
+      if (isBreaking !== null) params.append('isBreaking', isBreaking);
+      if (isFeatured !== null) params.append('isFeatured', isFeatured);
+      if (hasVideo !== null) params.append('hasVideo', hasVideo);
+      if (search) params.append('search', search);
+      if (sort) params.append('sort', sort);
+      if (page) params.append('page', page);
+      if (limit) params.append('limit', limit);
+
+      const res = await fetch(`${API_BASE}/articles?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data.length > 0) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+        if (json.success) {
+          return {
+            data: json.data || [],
+            pagination: json.pagination || { page: 1, limit, total: json.data?.length || 0, totalPages: 1 },
+            source: 'MYSQL_LIVE'
+          };
         }
       }
-    } catch {
-      // Graceful fallback to demonstration data
+    } catch (err) {
+      console.warn('[API Warning] Articles fetch failed, attempting graceful fallback:', err.message);
     }
 
+    // Graceful fallback to demonstration dataset if backend unavailable
     let filtered = [...ALL_STORIES];
     if (category) {
-      filtered = filtered.filter(item => 
-        (item.categorySlug && item.categorySlug.toLowerCase() === category.toLowerCase()) ||
-        (item.category && item.category.toLowerCase().includes(category.toLowerCase()))
+      filtered = filtered.filter(
+        item =>
+          (item.categorySlug && item.categorySlug.toLowerCase() === category.toLowerCase()) ||
+          (item.category && item.category.toLowerCase().includes(category.toLowerCase()))
+      );
+    }
+    if (search) {
+      filtered = filtered.filter(
+        item =>
+          item.title.toLowerCase().includes(search.toLowerCase()) ||
+          (item.summary && item.summary.toLowerCase().includes(search.toLowerCase()))
       );
     }
 
     return {
       data: filtered.slice(0, limit),
-      source: 'DEMONSTRATION_MODE',
-      isDemo: IS_DEMO_DATA
+      pagination: { page: 1, limit, total: filtered.length, totalPages: Math.ceil(filtered.length / limit) },
+      source: 'DEMONSTRATION_MODE'
     };
   },
 
-  // Get article by unique slug
+  // Get single article by unique slug
   async getArticleBySlug(slug) {
     try {
-      const res = await fetch(`${API_BASE}/articles/${slug}`);
+      const res = await fetch(`${API_BASE}/articles/${encodeURIComponent(slug)}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.success) return { data: json.data, source: 'MYSQL_LIVE' };
+        if (json.success && json.data) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
       }
-    } catch {
-      // Fallback
+      if (res.status === 404 || res.status === 410) {
+        return { data: null, error: res.status === 410 ? 'EXPIRED' : 'NOT_FOUND', status: res.status };
+      }
+    } catch (err) {
+      console.warn(`[API Warning] getArticleBySlug("${slug}") failed:`, err.message);
     }
 
     const found = ALL_STORIES.find(item => item.slug === slug);
-    return {
-      data: found || ALL_STORIES[0], // fallback to first article if specific slug not found in demo
-      source: 'DEMONSTRATION_MODE',
-      isDemo: IS_DEMO_DATA
-    };
+    if (found) {
+      return { data: found, source: 'DEMONSTRATION_MODE' };
+    }
+    return { data: null, error: 'NOT_FOUND', status: 404 };
   },
 
-  // Get categories
-  async getCategories() {
+  // Get related articles for article detail page
+  async getRelatedArticles(slug, limit = 4) {
     try {
-      const res = await fetch(`${API_BASE}/categories`);
+      const res = await fetch(`${API_BASE}/articles/${encodeURIComponent(slug)}/related?limit=${limit}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data.length > 0) return { data: json.data, source: 'MYSQL_LIVE' };
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.warn(`[API Warning] getRelatedArticles("${slug}") failed:`, err.message);
+    }
+
+    // Fallback: exclude current slug
+    const fallback = ALL_STORIES.filter(s => s.slug !== slug).slice(0, limit);
+    return { data: fallback, source: 'DEMONSTRATION_MODE' };
+  },
+
+  // Get active categories
+  async getCategories() {
+    try {
+      const res = await fetch(`${API_BASE}/categories?activeOnly=true`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getCategories failed:', err.message);
     }
 
     return { data: CATEGORIES, source: 'DEMONSTRATION_MODE' };
   },
 
-  // Get breaking news ticker items
+  // Get single category by slug
+  async getCategoryBySlug(slug) {
+    try {
+      const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(slug)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn(`[API Warning] getCategoryBySlug("${slug}") failed:`, err.message);
+    }
+
+    const found = CATEGORIES.find(c => c.slug === slug);
+    return { data: found || null };
+  },
+
+  // Get live breaking news items (only currently eligible published articles)
   async getBreakingNews() {
+    try {
+      const res = await fetch(`${API_BASE}/articles?isBreaking=true&limit=10`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return {
+            data: json.data.map(item => ({
+              id: item.id,
+              headline: item.title,
+              slug: item.slug,
+              time: formatRelativeTime(item.publication_time),
+              kicker: item.kicker || 'BREAKING'
+            })),
+            source: 'MYSQL_LIVE'
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getBreakingNews failed:', err.message);
+    }
+
     return { data: BREAKING_NEWS, source: 'DEMONSTRATION_MODE' };
   },
 
-  // Get market indicators
+  // Get video news articles (articles with youtube_url)
+  async getVideoNews({ limit = 12 } = {}) {
+    try {
+      const res = await fetch(`${API_BASE}/articles?hasVideo=true&limit=${limit}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getVideoNews failed:', err.message);
+    }
+
+    // Fallback: search articles with video or mock multimedia
+    return {
+      data: ALL_STORIES.filter(s => s.youtube_url || s.videoUrl).slice(0, limit),
+      source: 'DEMONSTRATION_MODE'
+    };
+  },
+
+  // Get trending & most-read news based on view telemetry
+  async getTrendingArticles({ limit = 8 } = {}) {
+    try {
+      const res = await fetch(`${API_BASE}/articles?sort=views&limit=${limit}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getTrendingArticles failed:', err.message);
+    }
+
+    return { data: ALL_STORIES.slice(0, limit), source: 'DEMONSTRATION_MODE' };
+  },
+
+  // Get editorial featured stories
+  async getFeaturedArticles({ limit = 6 } = {}) {
+    try {
+      const res = await fetch(`${API_BASE}/articles?isFeatured=true&limit=${limit}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getFeaturedArticles failed:', err.message);
+    }
+
+    return { data: ALL_STORIES.filter(s => s.isLead || s.isFeatured).slice(0, limit), source: 'DEMONSTRATION_MODE' };
+  },
+
+  // Get active advertisement for placement slot
+  async getActiveAd(placementCode) {
+    const codeMap = {
+      headerLeaderboard: 'header_leaderboard',
+      midBillboard: 'homepage_mid_billboard',
+      sidebarRectangle: 'article_sidebar_top'
+    };
+    const targetCode = codeMap[placementCode] || placementCode;
+
+    try {
+      const res = await fetch(`${API_BASE}/ads/active/${targetCode}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return {
+            id: json.data.id,
+            title: json.data.title,
+            sponsor: json.data.client_name,
+            imageUrl: json.data.banner_image_url,
+            targetUrl: json.data.target_url,
+            placementCode: json.data.placement_code,
+            dimensions: json.data.dimensions,
+            source: 'MYSQL_LIVE'
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`[API Warning] getActiveAd("${targetCode}") failed:`, err.message);
+    }
+
+    const fallback = AD_BANNERS[placementCode] || AD_BANNERS.headerLeaderboard;
+    return {
+      id: null,
+      title: fallback.title,
+      sponsor: fallback.sponsor,
+      imageUrl: null,
+      targetUrl: fallback.url,
+      placementCode: targetCode,
+      dimensions: '970x90',
+      source: 'DEMONSTRATION_MODE'
+    };
+  },
+
+  // Record advertisement click telemetry in MySQL
+  async recordAdClick(adId) {
+    if (!adId) return;
+    try {
+      await fetch(`${API_BASE}/ads/${adId}/click`, { method: 'POST' });
+    } catch {
+      // Telemetry error silently ignored
+    }
+  },
+
+  // Get public site settings (masthead, tagline, editorial contact)
+  async getSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/settings`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getSettings failed:', err.message);
+    }
+
+    return {
+      data: {
+        site_name: 'The Bharat Chronicle',
+        site_tagline: 'Independent National Daily of Record',
+        site_motto: 'Veritas et Libertas • Est. 1928',
+        editorial_email: 'editorial@bharatchronicle.com',
+        press_council_registration: 'REG-BC-2026-DEL-0941'
+      },
+      source: 'DEMONSTRATION_MODE'
+    };
+  },
+
+  // Get active tags list
+  async getTags() {
+    try {
+      const res = await fetch(`${API_BASE}/tags`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getTags failed:', err.message);
+    }
+
+    return { data: [], source: 'DEMONSTRATION_MODE' };
+  },
+
+  // Financial and weather indicators
   getMarketData() {
     return MARKET_DATA;
   },
 
-  // Get weather indicators
   getWeatherData() {
     return WEATHER_DATA;
-  },
-
-  // Get advertising inventory slots
-  getAds() {
-    return AD_BANNERS;
   }
 };
 

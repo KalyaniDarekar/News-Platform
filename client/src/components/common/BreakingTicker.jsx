@@ -1,32 +1,63 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Pause, Play, Volume2 } from 'lucide-react';
-import { BREAKING_NEWS } from '../../data/mockNewsData';
+import { ChevronLeft, ChevronRight, Pause, Play, AlertCircle } from 'lucide-react';
+import apiService from '../../services/api';
 
 export default function BreakingTicker() {
+  const [items, setItems] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isPlaying || BREAKING_NEWS.length <= 1) return;
+    let isMounted = true;
+    async function loadBreaking() {
+      const res = await apiService.getBreakingNews();
+      if (isMounted) {
+        if (res && Array.isArray(res.data) && res.data.length > 0) {
+          setItems(res.data);
+        }
+        setLoading(false);
+      }
+    }
+    loadBreaking();
+
+    // Auto-refresh breaking alerts every 60 seconds
+    const pollInterval = setInterval(loadBreaking, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying || items.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % BREAKING_NEWS.length);
+      setCurrentIndex((prev) => (prev + 1) % items.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, [isPlaying, items.length]);
 
-  const currentItem = BREAKING_NEWS[currentIndex] || BREAKING_NEWS[0];
+  if (loading && items.length === 0) {
+    return null;
+  }
+
+  if (items.length === 0) {
+    return null; // Don't show ticker if no eligible breaking stories
+  }
+
+  const currentItem = items[currentIndex] || items[0];
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? BREAKING_NEWS.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % BREAKING_NEWS.length);
+    setCurrentIndex((prev) => (prev + 1) % items.length);
   };
 
   return (
-    <aside className="ticker-bar" aria-label="Breaking News Alert">
+    <aside className="ticker-bar" aria-label="Breaking News Alert" role="region">
       <div className="container-editorial" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
         
         {/* Red Breaking Badge */}
@@ -36,7 +67,10 @@ export default function BreakingTicker() {
         </div>
 
         {/* Current News Item Display */}
-        <div style={{ flex: 1, padding: '0.45rem 1rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <div 
+          style={{ flex: 1, padding: '0.45rem 1rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+          aria-live="polite"
+        >
           <Link 
             to={`/article/${currentItem.slug}`} 
             style={{ 
@@ -48,8 +82,8 @@ export default function BreakingTicker() {
               gap: '0.65rem',
               transition: 'color var(--transition-fast)'
             }}
-            onMouseEnter={(e) => e.target.style.color = '#fca5a5'}
-            onMouseLeave={(e) => e.target.style.color = '#ffffff'}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#fca5a5'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}
           >
             <span style={{ 
               color: '#f87171', 
@@ -57,15 +91,23 @@ export default function BreakingTicker() {
               fontSize: '0.75rem', 
               fontWeight: 700 
             }}>
-              [{currentItem.time}]
+              [{currentItem.time || 'LIVE'}]
             </span>
             <span>{currentItem.headline}</span>
           </Link>
         </div>
 
+        {/* Item count indicator */}
+        {items.length > 1 && (
+          <span style={{ fontSize: '0.7rem', color: '#9ca3af', marginRight: '0.5rem', fontFamily: 'var(--font-mono)' }}>
+            {currentIndex + 1}/{items.length}
+          </span>
+        )}
+
         {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', paddingRight: '0.5rem' }}>
           <button
+            type="button"
             onClick={() => setIsPlaying(!isPlaying)}
             style={{ color: '#9ca3af', padding: '0.2rem', display: 'inline-flex' }}
             title={isPlaying ? 'Pause Auto-cycle' : 'Resume Auto-cycle'}
@@ -75,6 +117,7 @@ export default function BreakingTicker() {
           </button>
 
           <button
+            type="button"
             onClick={handlePrev}
             style={{ color: '#9ca3af', padding: '0.2rem', display: 'inline-flex' }}
             title="Previous Alert"
@@ -84,6 +127,7 @@ export default function BreakingTicker() {
           </button>
 
           <button
+            type="button"
             onClick={handleNext}
             style={{ color: '#9ca3af', padding: '0.2rem', display: 'inline-flex' }}
             title="Next Alert"

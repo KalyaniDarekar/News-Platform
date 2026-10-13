@@ -22,6 +22,8 @@ import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsPage from './pages/public/TermsPage';
 import EditorialPoliciesPage from './pages/public/EditorialPoliciesPage';
 
+import NotFoundPage from './pages/public/NotFoundPage';
+
 // Admin CMS Components & Pages
 import AdminLayout from './components/admin/AdminLayout';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -98,6 +100,7 @@ export default function App() {
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="terms" element={<TermsPage />} />
             <Route path="policies" element={<EditorialPoliciesPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           {/* ================= ADMIN CMS ROUTES ================= */}
@@ -123,7 +126,7 @@ export default function App() {
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
 
-          {/* Catch-all redirect to Home */}
+          {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>

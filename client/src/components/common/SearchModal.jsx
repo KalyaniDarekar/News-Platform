@@ -2,10 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, TrendingUp } from 'lucide-react';
 import { TRENDING_TAGS } from '../../data/mockNewsData';
+import apiService from '../../services/api';
 
 export default function SearchModal({ isOpen, onClose }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [tags, setTags] = useState(TRENDING_TAGS);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function loadTags() {
+      try {
+        const res = await apiService.getTags();
+        if (res.data && res.data.length > 0) {
+          const names = res.data.map(t => (typeof t === 'object' ? t.name : t)).filter(Boolean);
+          if (names.length > 0) setTags(names.slice(0, 10));
+        }
+      } catch (e) {
+        // Fall back to default tags
+      }
+    }
+    if (isOpen) {
+      loadTags();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -29,7 +48,7 @@ export default function SearchModal({ isOpen, onClose }) {
 
   const handleTagClick = (tag) => {
     onClose();
-    navigate(`/search?q=${encodeURIComponent(tag)}`);
+    navigate(`/search?tag=${encodeURIComponent(tag)}`);
   };
 
   return (
@@ -113,7 +132,7 @@ export default function SearchModal({ isOpen, onClose }) {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {TRENDING_TAGS.map((tag, idx) => (
+            {tags.map((tag, idx) => (
               <button
                 key={idx}
                 type="button"

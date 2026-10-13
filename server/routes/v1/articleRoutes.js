@@ -34,10 +34,43 @@ router.post('/cron/publish', (req, res, next) => {
 }, articleController.processCron);
 
 // -----------------------------------------------------------------------
+// Public: Quick editorial feeds (MUST be mounted before /:slug)
+// -----------------------------------------------------------------------
+router.get('/breaking', (req, res, next) => {
+  req.query.isBreaking = 'true';
+  req.query.limit = req.query.limit || '8';
+  return articleController.listArticles(req, res, next);
+});
+
+router.get('/trending', (req, res, next) => {
+  req.query.sort = 'views';
+  req.query.order = 'desc';
+  req.query.limit = req.query.limit || '5';
+  return articleController.listArticles(req, res, next);
+});
+
+router.get('/featured', (req, res, next) => {
+  req.query.isFeatured = 'true';
+  req.query.limit = req.query.limit || '6';
+  return articleController.listArticles(req, res, next);
+});
+
+router.get('/videos', (req, res, next) => {
+  req.query.hasVideo = 'true';
+  req.query.limit = req.query.limit || '10';
+  return articleController.listArticles(req, res, next);
+});
+
+// -----------------------------------------------------------------------
 // Admin: Get single article by NUMERIC ID (for edit page load)
 // MUST be declared before /:slug to prevent Express matching 'id' as a slug
 // -----------------------------------------------------------------------
 router.get('/id/:id', authenticateToken, requireRoles('super_admin', 'editor', 'reporter'), articleController.getArticleById);
+
+// -----------------------------------------------------------------------
+// Public: Get related articles for article slug
+// -----------------------------------------------------------------------
+router.get('/:slug/related', articleController.getRelatedArticles);
 
 // -----------------------------------------------------------------------
 // Public / Staff: Get single article by slug

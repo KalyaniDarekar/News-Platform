@@ -16,6 +16,7 @@ export const articleController = {
         authorId: req.query.authorId,
         isBreaking: req.query.isBreaking,
         isFeatured: req.query.isFeatured,
+        hasVideo: req.query.hasVideo,
         search: req.query.search,
         sort: req.query.sort,
         page: req.query.page,
@@ -27,6 +28,21 @@ export const articleController = {
         success: true,
         ...result,
         meta: result.pagination
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // GET /api/v1/articles/:slug/related (Public)
+  async getRelatedArticles(req, res, next) {
+    try {
+      const { slug } = req.params;
+      const limit = parseInt(req.query.limit || '4', 10);
+      const articles = await articleService.getRelatedArticles(slug, limit);
+      res.json({
+        success: true,
+        data: articles
       });
     } catch (error) {
       next(error);

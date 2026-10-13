@@ -23,7 +23,7 @@ export const createUserSchema = z.object({
   bio: z.string().optional()
 });
 
-export const createArticleSchema = z.object({
+const baseArticleSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(255),
   slug: z.string().max(255).optional(),
   kicker: z.string().max(100).optional(),
@@ -62,13 +62,13 @@ export const createArticleSchema = z.object({
       { message: 'expiryTime must be a valid ISO 8601 date/time string' }
     ),
   categoryId: z.number().int().positive('Category ID must be a positive integer'),
-  status: z.enum(['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived']).default('draft'),
-  priority: z.number().int().default(0),
-  isFeatured: z.boolean().default(false),
-  isBreaking: z.boolean().default(false),
-  isSponsored: z.boolean().default(false),
+  status: z.enum(['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived']).optional(),
+  priority: z.number().int().optional(),
+  isFeatured: z.boolean().optional(),
+  isBreaking: z.boolean().optional(),
+  isSponsored: z.boolean().optional(),
   sponsorClient: z.string().max(150).optional().nullable(),
-  language: z.enum(['en', 'mr', 'hi']).default('en'),
+  language: z.enum(['en', 'mr', 'hi']).optional(),
   scheduledPublicationTime: z.string().optional().nullable(),
   tags: z.array(z.union([z.string(), z.number()])).optional(),
   metaTitle: z.string().max(255).optional().nullable(),
@@ -78,7 +78,16 @@ export const createArticleSchema = z.object({
   ogImage: z.string().url().optional().nullable()
 });
 
-export const updateArticleSchema = createArticleSchema.partial().extend({
+export const createArticleSchema = baseArticleSchema.extend({
+  status: z.enum(['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived']).default('draft'),
+  priority: z.number().int().default(0),
+  isFeatured: z.boolean().default(false),
+  isBreaking: z.boolean().default(false),
+  isSponsored: z.boolean().default(false),
+  language: z.enum(['en', 'mr', 'hi']).default('en')
+});
+
+export const updateArticleSchema = baseArticleSchema.partial().extend({
   revisionNotes: z.string().max(255).optional()
 });
 

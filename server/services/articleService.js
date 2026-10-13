@@ -28,6 +28,14 @@ const calculateReadingTime = (text = '') => {
   return Math.max(1, Math.ceil(words / 200));
 };
 
+/** Convert date string or Date object to MySQL DATETIME format (YYYY-MM-DD HH:MM:SS) */
+const toMySqlDateTime = (val) => {
+  if (!val) return null;
+  const d = val instanceof Date ? val : new Date(val);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 /**
  * Parse a YouTube / short-link URL and return a canonical embed URL.
  * Returns null if the URL is not a recognisable YouTube link.
@@ -121,6 +129,7 @@ export const articleService = {
     authorId = null,
     isBreaking = null,
     isFeatured = null,
+    hasVideo = null,
     search = null,
     sort = 'latest',
     page = 1,
@@ -181,6 +190,12 @@ export const articleService = {
     if (isFeatured !== null && isFeatured !== undefined) {
       whereClause += ' AND a.is_featured = ?';
       params.push(isFeatured === 'true' || isFeatured === 1 || isFeatured === true ? 1 : 0);
+    }
+
+    if (hasVideo !== null && hasVideo !== undefined) {
+      if (hasVideo === 'true' || hasVideo === 1 || hasVideo === true) {
+        whereClause += " AND a.youtube_url IS NOT NULL AND a.youtube_url != ''";
+      }
     }
 
     if (tag) {
@@ -263,9 +278,9 @@ export const articleService = {
     // ---- Access control ----
     if (article.status !== 'published') {
       if (!currentUser) {
-        const error = new Error('This dispatch is not currently published');
-        error.statusCode = 403;
-        error.code = 'ARTICLE_UNPUBLISHED';
+        const error = new Error('This dispatch is not found or no longer available');
+        error.statusCode = 404;
+        error.code = 'ARTICLE_NOT_FOUND';
         throw error;
       }
       // Reporters can only preview their own unpublished drafts
@@ -280,7 +295,7 @@ export const articleService = {
     // Public: also block expired articles (belt-and-suspenders beyond WHERE status='published')
     if (!currentUser && article.expiry_time && new Date(article.expiry_time) <= new Date()) {
       const error = new Error('This article has expired and is no longer publicly available');
-      error.statusCode = 410; // HTTP Gone
+      error.statusCode = 404;
       error.code = 'ARTICLE_EXPIRED';
       throw error;
     }
@@ -312,6 +327,80 @@ export const articleService = {
     }
 
     return article;
+  },
+
+  // -------------------------------------------------------------------------
+  // GET related articles for a given article (by slug or numeric ID)
+  // -------------------------------------------------------------------------
+  async getRelatedArticles(slugOrId, limit = 4) {
+    let articleId = null;
+    let categoryId = null;
+
+    if (!isNaN(slugOrId)) {
+      articleId = parseInt(slugOrId, 10);
+    }
+
+    const currentRows = await query(
+      `SELECT id, category_id FROM articles WHERE ${articleId ? 'id = ?' : 'slug = ?'} LIMIT 1`,
+      [articleId || slugOrId]
+    );
+
+    if (currentRows.length > 0) {
+      articleId = currentRows[0].id;
+      categoryId = currentRows[0].category_id;
+    }
+
+    const whereParts = [
+      "a.status = 'published'",
+      '(a.publication_time IS NULL OR a.publication_time <= NOW())',
+      '(a.expiry_time IS NULL OR a.expiry_time > NOW())'
+    ];
+    const params = [];
+
+    if (articleId) {
+      whereParts.push('a.id != ?');
+      params.push(articleId);
+    }
+    if (categoryId) {
+      whereParts.push('a.category_id = ?');
+      params.push(categoryId);
+    }
+
+    let articles = await query(
+      `SELECT ${ARTICLE_SELECT}
+       FROM articles a
+       LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN users u ON a.author_id = u.id
+       WHERE ${whereParts.join(' AND ')}
+       ORDER BY a.publication_time DESC
+       LIMIT ?`,
+      [...params, parseInt(limit, 10)]
+    );
+
+    // If fewer than limit found in same category, backfill with other published stories
+    if (articles.length < limit) {
+      const remaining = limit - articles.length;
+      const excludeIds = [articleId, ...articles.map(a => a.id)].filter(Boolean);
+      let backfillSql = `SELECT ${ARTICLE_SELECT}
+         FROM articles a
+         LEFT JOIN categories c ON a.category_id = c.id
+         LEFT JOIN users u ON a.author_id = u.id
+         WHERE a.status = 'published'
+           AND (a.publication_time IS NULL OR a.publication_time <= NOW())
+           AND (a.expiry_time IS NULL OR a.expiry_time > NOW())`;
+      const backfillParams = [];
+      if (excludeIds.length > 0) {
+        backfillSql += ` AND a.id NOT IN (${excludeIds.map(() => '?').join(',')})`;
+        backfillParams.push(...excludeIds);
+      }
+      backfillSql += ` ORDER BY a.publication_time DESC LIMIT ?`;
+      backfillParams.push(parseInt(remaining, 10));
+
+      const backfillRows = await query(backfillSql, backfillParams);
+      articles = [...articles, ...backfillRows];
+    }
+
+    return articles;
   },
 
   // -------------------------------------------------------------------------
@@ -475,7 +564,7 @@ export const articleService = {
           authorId, categoryId, safeStatus, priority,
           isFeatured ? 1 : 0, isBreaking ? 1 : 0, isSponsored ? 1 : 0, sponsorClient,
           readingTime, language,
-          scheduledPublicationTime, publicationTime, expiryTime || null,
+          toMySqlDateTime(scheduledPublicationTime), toMySqlDateTime(publicationTime), toMySqlDateTime(expiryTime),
           metaTitle || title,
           metaDescription || shortDescription.slice(0, 300),
           metaKeywords, canonicalUrl, ogImage || featuredImage
@@ -661,7 +750,7 @@ export const articleService = {
           categoryId, newStatus, priority,
           isFeatured, isBreaking, isSponsored, sponsorClient,
           readingTime, language,
-          scheduledTime, publicationTime, expiryTime,
+          toMySqlDateTime(scheduledTime), toMySqlDateTime(publicationTime), toMySqlDateTime(expiryTime),
           metaTitle, metaDescription, metaKeywords, canonicalUrl, ogImage,
           articleId
         ]
