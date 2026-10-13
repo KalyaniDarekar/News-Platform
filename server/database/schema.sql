@@ -4,12 +4,6 @@
 -- Character Set: utf8mb4 / utf8mb4_unicode_ci (Supports English, Hindi, Marathi, Multilingual)
 -- ========================================================================
 
-CREATE DATABASE IF NOT EXISTS `bharat_chronicle_db` 
-DEFAULT CHARACTER SET utf8mb4 
-COLLATE utf8mb4_unicode_ci;
-
-USE `bharat_chronicle_db`;
-
 -- Drop tables in reverse foreign key order if re-initializing
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -188,13 +182,16 @@ CREATE TABLE IF NOT EXISTS `advertisements` (
   `placement_id` INT UNSIGNED NOT NULL,
   `title` VARCHAR(180) NOT NULL,
   `client_name` VARCHAR(150) NOT NULL,
+  `ad_type` ENUM('image', 'code') NOT NULL DEFAULT 'image',
   `banner_image_url` VARCHAR(500) NOT NULL,
+  `ad_code` TEXT NULL,
   `target_url` VARCHAR(500) NOT NULL,
   `impressions_count` BIGINT UNSIGNED NOT NULL DEFAULT 0,
   `clicks_count` BIGINT UNSIGNED NOT NULL DEFAULT 0,
   `start_date` DATE NOT NULL,
   `end_date` DATE NOT NULL,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `priority` INT NOT NULL DEFAULT 5,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_ad_active_dates` (`is_active`, `start_date`, `end_date`),

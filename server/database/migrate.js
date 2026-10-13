@@ -15,16 +15,42 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbConfig = {
-  host: process.env.DB_HOST || '127.0.0.1',
-  port: parseInt(process.env.DB_PORT || '3306', 10),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  multipleStatements: true,
-  charset: 'utf8mb4'
+const getMigrationDbConfig = () => {
+  const uri = process.env.DB_URI || process.env.DATABASE_URL;
+  if (uri) {
+    try {
+      const parsed = new URL(uri);
+      const dbName = (parsed.pathname ? parsed.pathname.replace(/^\//, '') : '') || process.env.DB_NAME || 'defaultdb';
+      return {
+        host: parsed.hostname,
+        port: parsed.port ? parseInt(parsed.port, 10) : 3306,
+        user: decodeURIComponent(parsed.username),
+        password: decodeURIComponent(parsed.password),
+        database: dbName,
+        multipleStatements: true,
+        charset: 'utf8mb4',
+        ssl: { rejectUnauthorized: false }
+      };
+    } catch {
+      // Fallback to manual environment configuration
+    }
+  }
+
+  const isSsl = process.env.DB_SSL === 'true' || process.env.DB_SSL === '1';
+  return {
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'bharat_chronicle_db',
+    multipleStatements: true,
+    charset: 'utf8mb4',
+    ssl: isSsl ? { rejectUnauthorized: false } : undefined
+  };
 };
 
-const DB_NAME = process.env.DB_NAME || 'bharat_chronicle_db';
+const dbConfig = getMigrationDbConfig();
+const DB_NAME = dbConfig.database;
 
 export async function runMigrations({ shouldSeed = true } = {}) {
   console.log(`=======================================================`);
@@ -34,15 +60,19 @@ export async function runMigrations({ shouldSeed = true } = {}) {
 
   let connection;
   try {
-    // 1. Initial connection without database selection to ensure DB exists
+    // 1. Initial connection
     connection = await mysql.createConnection(dbConfig);
     console.log(`✓ Connected to MySQL server successfully.`);
 
-    // 2. Create database if not exists with utf8mb4 encoding
-    await connection.query(
-      `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-    );
-    console.log(`✓ Database \`${DB_NAME}\` verified / created.`);
+    // 2. Create database if not exists (gracefully handled on managed cloud providers like Aiven)
+    try {
+      await connection.query(
+        `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+      );
+      console.log(`✓ Database \`${DB_NAME}\` verified / created.`);
+    } catch (createErr) {
+      console.log(`ℹ Managed database detected or already exists: ${createErr.message}`);
+    }
 
     await connection.query(`USE \`${DB_NAME}\`;`);
 

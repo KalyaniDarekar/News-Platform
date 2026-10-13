@@ -4,8 +4,6 @@
 -- Compatible with MySQL 8.0+ / MariaDB 10.4+ / cPanel MySQL
 -- ========================================================================
 
-USE `bharat_chronicle_db`;
-
 -- 1. Ensure all 7 standard ad placements exist
 INSERT INTO `ad_placements` (`id`, `placement_code`, `name`, `dimensions`, `is_active`)
 VALUES
@@ -24,21 +22,21 @@ ON DUPLICATE KEY UPDATE
 -- 2. Enhance advertisements table for Phase 5 (support ad code, priority, and rich scheduling)
 -- Add columns if not already present
 SET @dbname = DATABASE();
-SET @tablename = "advertisements";
+SET @tablename = 'advertisements';
 
 -- Column: ad_type ('image' or 'code')
 SET @col1 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'ad_type');
-SET @sql1 = IF(@col1 = 0, 'ALTER TABLE advertisements ADD COLUMN ad_type ENUM("image", "code") NOT NULL DEFAULT "image" AFTER client_name;', 'SELECT 1;');
+SET @sql1 = IF(@col1 = 0, 'ALTER TABLE `advertisements` ADD COLUMN `ad_type` ENUM(\'image\', \'code\') NOT NULL DEFAULT \'image\' AFTER `client_name`;', 'SELECT 1;');
 PREPARE stmt1 FROM @sql1; EXECUTE stmt1; DEALLOCATE PREPARE stmt1;
 
 -- Column: ad_code (sanitized AdSense or partner snippet)
 SET @col2 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'ad_code');
-SET @sql2 = IF(@col2 = 0, 'ALTER TABLE advertisements ADD COLUMN ad_code TEXT NULL AFTER banner_image_url;', 'SELECT 1;');
+SET @sql2 = IF(@col2 = 0, 'ALTER TABLE `advertisements` ADD COLUMN `ad_code` TEXT NULL AFTER `banner_image_url`;', 'SELECT 1;');
 PREPARE stmt2 FROM @sql2; EXECUTE stmt2; DEALLOCATE PREPARE stmt2;
 
 -- Column: priority (higher integer = higher placement weight)
 SET @col3 = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = 'priority');
-SET @sql3 = IF(@col3 = 0, 'ALTER TABLE advertisements ADD COLUMN priority INT NOT NULL DEFAULT 5 AFTER is_active;', 'SELECT 1;');
+SET @sql3 = IF(@col3 = 0, 'ALTER TABLE `advertisements` ADD COLUMN `priority` INT NOT NULL DEFAULT 5 AFTER `is_active`;', 'SELECT 1;');
 PREPARE stmt3 FROM @sql3; EXECUTE stmt3; DEALLOCATE PREPARE stmt3;
 
 -- 3. Direct Advertiser Enquiries Table (Lead capture and CRM pipeline)

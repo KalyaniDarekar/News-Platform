@@ -4,8 +4,6 @@
 -- Hashed using bcrypt: $2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse
 -- ========================================================================
 
-USE `bharat_chronicle_db`;
-
 -- 1. Seed Editorial Staff Users
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`, `designation`, `bio`, `status`)
 VALUES 

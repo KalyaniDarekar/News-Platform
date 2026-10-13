@@ -16,7 +16,7 @@ export const getDbPool = () => {
   if (useFallback) return null;
   if (!pool) {
     try {
-      pool = mysql.createPool({
+      const poolOptions = {
         host: config.db.host,
         port: config.db.port,
         user: config.db.user,
@@ -28,7 +28,13 @@ export const getDbPool = () => {
         enableKeepAlive: true,
         keepAliveInitialDelay: 10000,
         charset: 'utf8mb4'
-      });
+      };
+
+      if (config.db.ssl) {
+        poolOptions.ssl = config.db.ssl;
+      }
+
+      pool = mysql.createPool(poolOptions);
     } catch (err) {
       useFallback = true;
     }
@@ -46,10 +52,18 @@ export const query = async (sql, params = []) => {
         return results;
       }
     } catch (error) {
-      if (error.code === 'ER_ACCESS_DENIED_ERROR' || error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      if (
+        error.code === 'ER_ACCESS_DENIED_ERROR' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'EAI_AGAIN' ||
+        error.code === 'HANDSHAKE_ERROR' ||
+        error.message?.includes('SSL')
+      ) {
         useFallback = true;
         if (!fallbackAnnounced) {
-          console.log(`[Database Notice] MySQL connection unavailable (${error.code}). Activating high-performance hybrid operational store with full persistence & seed data.`);
+          console.log(`[Database Notice] MySQL connection unavailable (${error.code || error.message}). Activating high-performance hybrid operational store with full persistence & seed data.`);
           fallbackAnnounced = true;
         }
       } else {
