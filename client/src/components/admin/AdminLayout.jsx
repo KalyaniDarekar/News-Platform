@@ -5,10 +5,12 @@ import {
   CalendarClock, Megaphone, BarChart3, Settings, LogOut, 
   ExternalLink, Bell, Search, Shield, ChevronRight, Menu, X, Sparkles
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { label: 'Dashboard Overview', path: '/admin', icon: LayoutDashboard, end: true },
@@ -107,25 +109,42 @@ export default function AdminLayout() {
           </Link>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"
-                alt="Avatar"
-                style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+              <div style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                flexShrink: 0
+              }}>
+                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+              </div>
               <div style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                  V. Sharma
+                  {user?.fullName || user?.email || 'Editorial Staff'}
                 </div>
-                <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                  Editor-in-Chief
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'capitalize' }}>
+                  {user?.role ? user.role.replace('_', ' ') : 'Staff'}
                 </div>
               </div>
             </div>
 
-            <Link to="/admin/login" title="Exit / Switch Session" style={{ color: '#94a3b8', padding: '0.25rem' }}>
-              <LogOut size={15} />
-            </Link>
+            <button 
+              onClick={() => {
+                logout();
+                navigate('/admin/login');
+              }}
+              title="Sign Out" 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
 

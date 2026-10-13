@@ -31,8 +31,38 @@ export const createArticleSchema = z.object({
   articleBody: z.string().min(20, 'Article body must be at least 20 characters'),
   featuredImage: z.string().url('Featured image must be a valid URL').optional().nullable(),
   imageCaption: z.string().max(255).optional().nullable(),
+  altText: z.string().max(255).optional().nullable(),
+  youtubeUrl: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true; // empty is fine
+        try {
+          const u = new URL(val);
+          return u.hostname.includes('youtube.com') || u.hostname === 'youtu.be';
+        } catch {
+          return false;
+        }
+      },
+      { message: 'youtubeUrl must be a valid YouTube link (youtube.com or youtu.be)' }
+    ),
+  expiryTime: z
+    .string()
+    .optional()
+    .nullable()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true; // clearing expiry is allowed
+        const d = new Date(val);
+        return !isNaN(d.getTime()); // must be parseable as a date
+      },
+      { message: 'expiryTime must be a valid ISO 8601 date/time string' }
+    ),
   categoryId: z.number().int().positive('Category ID must be a positive integer'),
-  status: z.enum(['draft', 'in_review', 'scheduled', 'published', 'archived']).default('draft'),
+  status: z.enum(['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived']).default('draft'),
   priority: z.number().int().default(0),
   isFeatured: z.boolean().default(false),
   isBreaking: z.boolean().default(false),

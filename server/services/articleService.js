@@ -1,24 +1,65 @@
 // ========================================================================
-// News Article Service
+// News Article Service — Phase 3
 // Complete editorial lifecycle: drafting, revisions, scheduling, publishing,
-// slug generation, multilingual support (English/Marathi/Hindi), and view telemetry.
+// expiry enforcement, soft-delete (archive), slug generation, multilingual
+// support (English/Marathi/Hindi), and view telemetry.
+//
+// Phase 3 changes:
+//   - createArticle: added expiry_time, alt_text, youtube_url
+//   - updateArticle: added expiry_time, alt_text, youtube_url; handles
+//                    'expired' → 'published' (republish) transition
+//   - deleteArticle: soft-archive instead of hard DELETE
+//   - processScheduledAndExpiringArticles: uses 'expired' status (not
+//     'archived'), adds per-article audit log entries, idempotent design
+//   - listArticles: 'expired' is now a valid admin status filter
+//   - getArticleById: new method for admin edit-page load by numeric ID
 // ========================================================================
 
 import { query, withTransaction } from '../config/database.js';
 import auditService from './auditService.js';
 
-// Helper to calculate reading time in minutes
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Calculate estimated reading time in minutes. */
 const calculateReadingTime = (text = '') => {
   const words = text.replace(/<[^>]*>/g, '').trim().split(/\s+/).length;
   return Math.max(1, Math.ceil(words / 200));
 };
 
-// Helper to normalize and ensure slug uniqueness
+/**
+ * Parse a YouTube / short-link URL and return a canonical embed URL.
+ * Returns null if the URL is not a recognisable YouTube link.
+ */
+const normaliseYouTubeUrl = (raw = '') => {
+  if (!raw || !raw.trim()) return null;
+  try {
+    const url = new URL(raw.trim());
+    // Standard watch URL: https://www.youtube.com/watch?v=ID
+    if (url.hostname.includes('youtube.com') && url.searchParams.get('v')) {
+      return `https://www.youtube.com/embed/${url.searchParams.get('v')}`;
+    }
+    // Short link: https://youtu.be/ID
+    if (url.hostname === 'youtu.be') {
+      return `https://www.youtube.com/embed${url.pathname}`;
+    }
+    // Already an embed URL — return as-is
+    if (url.pathname.startsWith('/embed/')) {
+      return raw.trim();
+    }
+  } catch {
+    // Invalid URL — ignore
+  }
+  return null;
+};
+
+/** Normalise and ensure slug uniqueness across the articles table. */
 export const generateUniqueSlug = async (title, currentId = null) => {
   let baseSlug = title
     .toLowerCase()
     .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, '') // Unicode-aware clean (supports Devanagari)
+    .replace(/[^\p{L}\p{N}\s-]/gu, '') // Unicode-aware (supports Devanagari)
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 200);
@@ -48,8 +89,30 @@ export const generateUniqueSlug = async (title, currentId = null) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Core SELECT fragment shared across list / detail queries
+// ---------------------------------------------------------------------------
+const ARTICLE_SELECT = `
+  a.id, a.title, a.slug, a.kicker, a.short_description, a.featured_image,
+  a.image_caption, a.alt_text, a.youtube_url,
+  a.status, a.priority, a.is_featured, a.is_breaking, a.is_sponsored, a.sponsor_client,
+  a.reading_time_minutes, a.view_count, a.language,
+  a.scheduled_publication_time, a.publication_time, a.expiry_time,
+  a.meta_title, a.meta_description, a.meta_keywords, a.canonical_url, a.og_image,
+  a.created_at, a.updated_at,
+  c.id as category_id, c.name as category_name, c.slug as category_slug, c.color_badge as category_color,
+  u.id as author_id, u.full_name as author_name, u.avatar_url as author_avatar, u.designation as author_designation
+`;
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
 export const articleService = {
-  // List articles with filtering, searching, and pagination
+
+  // -------------------------------------------------------------------------
+  // LIST articles with filtering, searching, and pagination
+  // -------------------------------------------------------------------------
   async listArticles({
     status = null,
     category = null,
@@ -63,20 +126,33 @@ export const articleService = {
     page = 1,
     limit = 20
   } = {}, currentUser = null) {
+
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const params = [];
     let whereClause = 'WHERE 1=1';
 
-    // Status filter: Public anonymous visitors can strictly view published articles
+    // ---- Visibility rules ----
     if (!currentUser) {
-      whereClause += " AND a.status = 'published' AND (a.publication_time IS NULL OR a.publication_time <= NOW()) AND (a.expiry_time IS NULL OR a.expiry_time > NOW())";
+      // Anonymous public: published only, not yet expired, not embargoed
+      whereClause +=
+        " AND a.status = 'published'" +
+        ' AND (a.publication_time IS NULL OR a.publication_time <= NOW())' +
+        ' AND (a.expiry_time IS NULL OR a.expiry_time > NOW())';
     } else {
-      if (status && status !== 'all') {
+      // Authenticated staff: can filter by any status
+      const validStatuses = ['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived', 'all'];
+      if (status && status !== 'all' && validStatuses.includes(status)) {
         whereClause += ' AND a.status = ?';
         params.push(status);
       }
+      // Reporters only see their own articles unless editor/super_admin
+      if (currentUser.role === 'reporter') {
+        whereClause += ' AND a.author_id = ?';
+        params.push(currentUser.id);
+      }
     }
 
+    // ---- Optional filters ----
     if (category) {
       if (isNaN(category)) {
         whereClause += ' AND c.slug = ?';
@@ -108,7 +184,9 @@ export const articleService = {
     }
 
     if (tag) {
-      whereClause += ' AND EXISTS (SELECT 1 FROM article_tags at JOIN tags t ON at.tag_id = t.id WHERE at.article_id = a.id AND t.slug = ?)';
+      whereClause +=
+        ' AND EXISTS (SELECT 1 FROM article_tags at JOIN tags t ON at.tag_id = t.id' +
+        ' WHERE at.article_id = a.id AND t.slug = ?)';
       params.push(tag);
     }
 
@@ -118,34 +196,25 @@ export const articleService = {
       params.push(term, term, term);
     }
 
-    // Determine sorting
+    // ---- Sorting ----
     let orderBy = 'a.publication_time DESC, a.created_at DESC';
-    if (sort === 'priority') {
-      orderBy = 'a.priority DESC, a.publication_time DESC';
-    } else if (sort === 'views') {
-      orderBy = 'a.view_count DESC';
-    } else if (sort === 'oldest') {
-      orderBy = 'a.created_at ASC';
-    }
+    if (sort === 'priority')   orderBy = 'a.priority DESC, a.publication_time DESC';
+    else if (sort === 'views') orderBy = 'a.view_count DESC';
+    else if (sort === 'oldest') orderBy = 'a.created_at ASC';
 
-    // Count query
+    // ---- Count ----
     const countRows = await query(
-      `SELECT COUNT(*) as total 
-       FROM articles a 
+      `SELECT COUNT(*) as total
+       FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        ${whereClause}`,
       params
     );
     const total = countRows[0].total;
 
-    // Data query
+    // ---- Data ----
     const articles = await query(
-      `SELECT a.id, a.title, a.slug, a.kicker, a.short_description, a.featured_image, a.image_caption,
-              a.status, a.priority, a.is_featured, a.is_breaking, a.is_sponsored, a.sponsor_client,
-              a.reading_time_minutes, a.view_count, a.language, a.scheduled_publication_time, 
-              a.publication_time, a.expiry_time, a.created_at, a.updated_at,
-              c.id as category_id, c.name as category_name, c.slug as category_slug, c.color_badge as category_color,
-              u.id as author_id, u.full_name as author_name, u.avatar_url as author_avatar, u.designation as author_designation
+      `SELECT ${ARTICLE_SELECT}
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        LEFT JOIN users u ON a.author_id = u.id
@@ -161,17 +230,20 @@ export const articleService = {
         total,
         page: parseInt(page, 10),
         limit: parseInt(limit, 10),
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / parseInt(limit, 10))
       }
     };
   },
 
-  // Get single article by slug with attached tags and multimedia embeds
+  // -------------------------------------------------------------------------
+  // GET single article by SLUG (public + staff preview)
+  // -------------------------------------------------------------------------
   async getArticleBySlug(slug, currentUser = null, reqMetadata = {}) {
     const articles = await query(
       `SELECT a.*,
               c.id as category_id, c.name as category_name, c.slug as category_slug, c.color_badge as category_color,
-              u.id as author_id, u.full_name as author_name, u.avatar_url as author_avatar, u.designation as author_designation, u.bio as author_bio
+              u.id as author_id, u.full_name as author_name, u.avatar_url as author_avatar,
+              u.designation as author_designation, u.bio as author_bio
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        LEFT JOIN users u ON a.author_id = u.id
@@ -188,7 +260,7 @@ export const articleService = {
 
     const article = articles[0];
 
-    // Access control: Only published stories are public
+    // ---- Access control ----
     if (article.status !== 'published') {
       if (!currentUser) {
         const error = new Error('This dispatch is not currently published');
@@ -196,7 +268,7 @@ export const articleService = {
         error.code = 'ARTICLE_UNPUBLISHED';
         throw error;
       }
-      // Reporters can only preview their own unpublished drafts unless editor or super_admin
+      // Reporters can only preview their own unpublished drafts
       if (currentUser.role === 'reporter' && article.author_id !== currentUser.id) {
         const error = new Error('You do not have permission to view this unpublished draft');
         error.statusCode = 403;
@@ -205,26 +277,34 @@ export const articleService = {
       }
     }
 
-    // Load attached tags
+    // Public: also block expired articles (belt-and-suspenders beyond WHERE status='published')
+    if (!currentUser && article.expiry_time && new Date(article.expiry_time) <= new Date()) {
+      const error = new Error('This article has expired and is no longer publicly available');
+      error.statusCode = 410; // HTTP Gone
+      error.code = 'ARTICLE_EXPIRED';
+      throw error;
+    }
+
+    // ---- Eager load: tags ----
     const tags = await query(
-      `SELECT t.id, t.name, t.slug 
-       FROM tags t 
-       JOIN article_tags at ON t.id = at.tag_id 
+      `SELECT t.id, t.name, t.slug
+       FROM tags t
+       JOIN article_tags at ON t.id = at.tag_id
        WHERE at.article_id = ?`,
       [article.id]
     );
     article.tags = tags;
 
-    // Load multimedia embeds
+    // ---- Eager load: multimedia embeds ----
     const multimedia = await query(
-      `SELECT id, media_type, embed_url, duration_seconds, thumbnail_url, transcript 
-       FROM article_multimedia 
+      `SELECT id, media_type, embed_url, duration_seconds, thumbnail_url, transcript
+       FROM article_multimedia
        WHERE article_id = ?`,
       [article.id]
     );
     article.multimedia = multimedia;
 
-    // Increment view metrics asynchronously for published dispatches
+    // ---- View telemetry (async, non-blocking) ----
     if (article.status === 'published' && !currentUser) {
       this.recordViewTelemetry(article.id, reqMetadata).catch((err) => {
         console.warn('[Telemetry Warning] View count update skipped:', err.message);
@@ -234,7 +314,64 @@ export const articleService = {
     return article;
   },
 
-  // Record hourly aggregated view count
+  // -------------------------------------------------------------------------
+  // GET single article by NUMERIC ID (admin edit page)
+  // -------------------------------------------------------------------------
+  async getArticleById(articleId, currentUser = null) {
+    const articles = await query(
+      `SELECT a.*,
+              c.id as category_id, c.name as category_name, c.slug as category_slug, c.color_badge as category_color,
+              u.id as author_id, u.full_name as author_name, u.avatar_url as author_avatar,
+              u.designation as author_designation, u.bio as author_bio
+       FROM articles a
+       LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN users u ON a.author_id = u.id
+       WHERE a.id = ? LIMIT 1`,
+      [parseInt(articleId, 10)]
+    );
+
+    if (articles.length === 0) {
+      const error = new Error(`Article #${articleId} was not found`);
+      error.statusCode = 404;
+      error.code = 'ARTICLE_NOT_FOUND';
+      throw error;
+    }
+
+    const article = articles[0];
+
+    // Reporters can only load their own articles
+    if (currentUser && currentUser.role === 'reporter' && article.author_id !== currentUser.id) {
+      const error = new Error('You do not have permission to edit this article');
+      error.statusCode = 403;
+      error.code = 'FORBIDDEN';
+      throw error;
+    }
+
+    // Attach tags
+    const tags = await query(
+      `SELECT t.id, t.name, t.slug
+       FROM tags t
+       JOIN article_tags at ON t.id = at.tag_id
+       WHERE at.article_id = ?`,
+      [article.id]
+    );
+    article.tags = tags;
+
+    // Attach multimedia embeds
+    const multimedia = await query(
+      `SELECT id, media_type, embed_url, duration_seconds, thumbnail_url, transcript
+       FROM article_multimedia
+       WHERE article_id = ?`,
+      [article.id]
+    );
+    article.multimedia = multimedia;
+
+    return article;
+  },
+
+  // -------------------------------------------------------------------------
+  // Record hourly aggregated view count (telemetry)
+  // -------------------------------------------------------------------------
   async recordViewTelemetry(articleId, { isMobile = false } = {}) {
     // 1. Increment total article view count
     await query(`UPDATE articles SET view_count = view_count + 1 WHERE id = ?`, [articleId]);
@@ -247,7 +384,7 @@ export const articleService = {
     await query(
       `INSERT INTO article_views_hourly (article_id, view_hour, view_count, device_mobile_count, device_desktop_count)
        VALUES (?, ?, 1, ?, ?)
-       ON DUPLICATE KEY UPDATE 
+       ON DUPLICATE KEY UPDATE
          view_count = view_count + 1,
          device_mobile_count = device_mobile_count + VALUES(device_mobile_count),
          device_desktop_count = device_desktop_count + VALUES(device_desktop_count)`,
@@ -255,7 +392,9 @@ export const articleService = {
     );
   },
 
-  // Create article (Draft, In-Review, or Published)
+  // -------------------------------------------------------------------------
+  // CREATE article (Draft / In-Review / Published)
+  // -------------------------------------------------------------------------
   async createArticle(data, authorId, ipAddress) {
     const {
       title,
@@ -265,6 +404,8 @@ export const articleService = {
       articleBody,
       featuredImage = null,
       imageCaption = null,
+      altText = null,              // ← Phase 3
+      youtubeUrl = null,           // ← Phase 3
       categoryId,
       status = 'draft',
       priority = 0,
@@ -274,6 +415,7 @@ export const articleService = {
       sponsorClient = null,
       language = 'en',
       scheduledPublicationTime = null,
+      expiryTime = null,           // ← Phase 3
       tags = [],
       metaTitle = null,
       metaDescription = null,
@@ -282,7 +424,22 @@ export const articleService = {
       ogImage = null
     } = data;
 
-    // Ensure category exists
+    // ---- Validate status transition ----
+    const allowedStatuses = ['draft', 'in_review', 'scheduled', 'published'];
+    const safeStatus = allowedStatuses.includes(status) ? status : 'draft';
+
+    // ---- Validate expiry is in the future ----
+    if (expiryTime) {
+      const expDate = new Date(expiryTime);
+      if (isNaN(expDate.getTime()) || expDate <= new Date()) {
+        const error = new Error('Expiry time must be a valid future date/time (UTC)');
+        error.statusCode = 400;
+        error.code = 'INVALID_EXPIRY';
+        throw error;
+      }
+    }
+
+    // ---- Ensure category exists ----
     const categories = await query(`SELECT id FROM categories WHERE id = ? LIMIT 1`, [categoryId]);
     if (categories.length === 0) {
       const error = new Error('Referenced category does not exist');
@@ -291,35 +448,43 @@ export const articleService = {
       throw error;
     }
 
-    // Generate or verify unique slug
-    const finalSlug = customSlug 
-      ? await generateUniqueSlug(customSlug) 
+    // ---- Generate unique slug ----
+    const finalSlug = customSlug
+      ? await generateUniqueSlug(customSlug)
       : await generateUniqueSlug(title);
 
     const readingTime = calculateReadingTime(articleBody);
-    const publicationTime = status === 'published' ? new Date() : null;
+    const publicationTime = safeStatus === 'published' ? new Date() : null;
+    const embedUrl = normaliseYouTubeUrl(youtubeUrl);
 
-    // Wrap article, tags, revision, and audit log in ACID transaction
+    // ---- Transaction: article + tags + revision + audit ----
     return await withTransaction(async (conn) => {
       const [artResult] = await conn.query(
         `INSERT INTO articles (
-           title, slug, kicker, short_description, article_body, featured_image, image_caption,
-           author_id, category_id, status, priority, is_featured, is_breaking, is_sponsored, sponsor_client,
-           reading_time_minutes, language, scheduled_publication_time, publication_time,
+           title, slug, kicker, short_description, article_body,
+           featured_image, image_caption, alt_text, youtube_url,
+           author_id, category_id, status, priority,
+           is_featured, is_breaking, is_sponsored, sponsor_client,
+           reading_time_minutes, language,
+           scheduled_publication_time, publication_time, expiry_time,
            meta_title, meta_description, meta_keywords, canonical_url, og_image
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          title, finalSlug, kicker, shortDescription, articleBody, featuredImage, imageCaption,
-          authorId, categoryId, status, priority, isFeatured ? 1 : 0, isBreaking ? 1 : 0,
-          isSponsored ? 1 : 0, sponsorClient, readingTime, language, scheduledPublicationTime,
-          publicationTime, metaTitle || title, metaDescription || shortDescription.slice(0, 300),
+          title, finalSlug, kicker, shortDescription, articleBody,
+          featuredImage, imageCaption, altText, embedUrl,
+          authorId, categoryId, safeStatus, priority,
+          isFeatured ? 1 : 0, isBreaking ? 1 : 0, isSponsored ? 1 : 0, sponsorClient,
+          readingTime, language,
+          scheduledPublicationTime, publicationTime, expiryTime || null,
+          metaTitle || title,
+          metaDescription || shortDescription.slice(0, 300),
           metaKeywords, canonicalUrl, ogImage || featuredImage
         ]
       );
 
       const articleId = artResult.insertId;
 
-      // Attach tags if provided
+      // ---- Attach tags ----
       if (Array.isArray(tags) && tags.length > 0) {
         for (const tagItem of tags) {
           let tagId;
@@ -341,21 +506,30 @@ export const articleService = {
         }
       }
 
-      // Record initial revision
+      // ---- Insert YouTube embed into article_multimedia ----
+      if (embedUrl) {
+        await conn.query(
+          `INSERT INTO article_multimedia (article_id, media_type, embed_url) VALUES (?, 'youtube', ?)`,
+          [articleId, embedUrl]
+        );
+      }
+
+      // ---- Initial revision ----
       await conn.query(
-        `INSERT INTO article_revisions (article_id, revision_number, title, short_description, article_body, edited_by, revision_notes)
+        `INSERT INTO article_revisions
+           (article_id, revision_number, title, short_description, article_body, edited_by, revision_notes)
          VALUES (?, 1, ?, ?, ?, ?, 'Initial submission')`,
         [articleId, title, shortDescription, articleBody, authorId]
       );
 
-      // Record audit log
+      // ---- Audit log ----
       await conn.query(
         `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address)
          VALUES (?, 'ARTICLE_CREATE', 'article', ?, ?, ?)`,
         [
           authorId,
           articleId,
-          JSON.stringify({ title, slug: finalSlug, status, categoryId }),
+          JSON.stringify({ title, slug: finalSlug, status: safeStatus, categoryId, expiryTime }),
           ipAddress
         ]
       );
@@ -364,14 +538,16 @@ export const articleService = {
         id: articleId,
         title,
         slug: finalSlug,
-        status,
+        status: safeStatus,
         readingTimeMinutes: readingTime,
         message: 'Article created successfully'
       };
     });
   },
 
-  // Update article with revision tracking
+  // -------------------------------------------------------------------------
+  // UPDATE article with full field support and revision tracking
+  // -------------------------------------------------------------------------
   async updateArticle(articleId, updateData, currentUser, ipAddress) {
     const articles = await query(`SELECT * FROM articles WHERE id = ? LIMIT 1`, [articleId]);
     if (articles.length === 0) {
@@ -383,7 +559,7 @@ export const articleService = {
 
     const current = articles[0];
 
-    // Authorization: Reporters can only update their own drafts
+    // ---- Authorization ----
     if (currentUser.role === 'reporter' && current.author_id !== currentUser.id) {
       const error = new Error('Reporters are only permitted to update their own articles');
       error.statusCode = 403;
@@ -391,57 +567,107 @@ export const articleService = {
       throw error;
     }
 
-    const title = updateData.title !== undefined ? updateData.title : current.title;
+    // ---- Merge fields (updateData wins over current row) ----
+    const title            = updateData.title            !== undefined ? updateData.title            : current.title;
     const shortDescription = updateData.shortDescription !== undefined ? updateData.shortDescription : current.short_description;
-    const articleBody = updateData.articleBody !== undefined ? updateData.articleBody : current.article_body;
-    const kicker = updateData.kicker !== undefined ? updateData.kicker : current.kicker;
-    const featuredImage = updateData.featuredImage !== undefined ? updateData.featuredImage : current.featured_image;
-    const imageCaption = updateData.imageCaption !== undefined ? updateData.imageCaption : current.image_caption;
-    const categoryId = updateData.categoryId !== undefined ? updateData.categoryId : current.category_id;
-    const status = updateData.status !== undefined ? updateData.status : current.status;
-    const priority = updateData.priority !== undefined ? updateData.priority : current.priority;
-    const isFeatured = updateData.isFeatured !== undefined ? (updateData.isFeatured ? 1 : 0) : current.is_featured;
-    const isBreaking = updateData.isBreaking !== undefined ? (updateData.isBreaking ? 1 : 0) : current.is_breaking;
-    const isSponsored = updateData.isSponsored !== undefined ? (updateData.isSponsored ? 1 : 0) : current.is_sponsored;
-    const sponsorClient = updateData.sponsorClient !== undefined ? updateData.sponsorClient : current.sponsor_client;
-    const language = updateData.language !== undefined ? updateData.language : current.language;
-    const scheduledTime = updateData.scheduledPublicationTime !== undefined ? updateData.scheduledPublicationTime : current.scheduled_publication_time;
-    const metaTitle = updateData.metaTitle !== undefined ? updateData.metaTitle : current.meta_title;
-    const metaDescription = updateData.metaDescription !== undefined ? updateData.metaDescription : current.meta_description;
+    const articleBody      = updateData.articleBody      !== undefined ? updateData.articleBody      : current.article_body;
+    const kicker           = updateData.kicker           !== undefined ? updateData.kicker           : current.kicker;
+    const featuredImage    = updateData.featuredImage    !== undefined ? updateData.featuredImage    : current.featured_image;
+    const imageCaption     = updateData.imageCaption     !== undefined ? updateData.imageCaption     : current.image_caption;
+    const altText          = updateData.altText          !== undefined ? updateData.altText          : current.alt_text;     // ← Phase 3
+    const categoryId       = updateData.categoryId       !== undefined ? updateData.categoryId       : current.category_id;
+    const priority         = updateData.priority         !== undefined ? updateData.priority         : current.priority;
+    const isFeatured       = updateData.isFeatured       !== undefined ? (updateData.isFeatured ? 1 : 0) : current.is_featured;
+    const isBreaking       = updateData.isBreaking       !== undefined ? (updateData.isBreaking ? 1 : 0) : current.is_breaking;
+    const isSponsored      = updateData.isSponsored      !== undefined ? (updateData.isSponsored ? 1 : 0) : current.is_sponsored;
+    const sponsorClient    = updateData.sponsorClient    !== undefined ? updateData.sponsorClient    : current.sponsor_client;
+    const language         = updateData.language         !== undefined ? updateData.language         : current.language;
+    const scheduledTime    = updateData.scheduledPublicationTime !== undefined ? updateData.scheduledPublicationTime : current.scheduled_publication_time;
+    const metaTitle        = updateData.metaTitle        !== undefined ? updateData.metaTitle        : current.meta_title;
+    const metaDescription  = updateData.metaDescription  !== undefined ? updateData.metaDescription  : current.meta_description;
+    const metaKeywords     = updateData.metaKeywords     !== undefined ? updateData.metaKeywords     : current.meta_keywords;
+    const canonicalUrl     = updateData.canonicalUrl     !== undefined ? updateData.canonicalUrl     : current.canonical_url;
+    const ogImage          = updateData.ogImage          !== undefined ? updateData.ogImage          : current.og_image;
 
-    // Check slug change
+    // ---- Expiry time — Phase 3 ----
+    let expiryTime = current.expiry_time; // preserve existing by default
+    if (updateData.expiryTime !== undefined) {
+      if (updateData.expiryTime === null || updateData.expiryTime === '') {
+        expiryTime = null; // editor cleared the expiry
+      } else {
+        const expDate = new Date(updateData.expiryTime);
+        if (isNaN(expDate.getTime())) {
+          const error = new Error('expiryTime must be a valid ISO 8601 date string');
+          error.statusCode = 400;
+          error.code = 'INVALID_EXPIRY';
+          throw error;
+        }
+        expiryTime = updateData.expiryTime;
+      }
+    }
+
+    // ---- YouTube URL — Phase 3 ----
+    let youtubeUrl = current.youtube_url;
+    if (updateData.youtubeUrl !== undefined) {
+      youtubeUrl = normaliseYouTubeUrl(updateData.youtubeUrl);
+    }
+
+    // ---- Status transition logic ----
+    const allowedStatuses = ['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived'];
+    let newStatus = updateData.status !== undefined ? updateData.status : current.status;
+    if (!allowedStatuses.includes(newStatus)) newStatus = current.status;
+
+    // Reporters cannot directly set published status
+    if (currentUser.role === 'reporter' && newStatus === 'published') {
+      newStatus = 'in_review';
+    }
+
+    // ---- Publication timestamp ----
+    let publicationTime = current.publication_time;
+    if (newStatus === 'published' && current.status !== 'published') {
+      publicationTime = new Date(); // first-time publish
+    }
+    // Republishing an expired article resets expiry if new one not provided
+    if (newStatus === 'published' && current.status === 'expired' && updateData.expiryTime === undefined) {
+      expiryTime = null; // clear old expiry on republish unless a new one is set
+    }
+
+    // ---- Slug ----
     let slug = current.slug;
     if (updateData.slug && updateData.slug !== current.slug) {
       slug = await generateUniqueSlug(updateData.slug, articleId);
     }
 
-    // Publication timestamp transition
-    let publicationTime = current.publication_time;
-    if (status === 'published' && current.status !== 'published') {
-      publicationTime = new Date();
-    }
-
     const readingTime = calculateReadingTime(articleBody);
-    const contentChanged = title !== current.title || articleBody !== current.article_body || shortDescription !== current.short_description;
+    const contentChanged =
+      title !== current.title ||
+      articleBody !== current.article_body ||
+      shortDescription !== current.short_description;
 
     return await withTransaction(async (conn) => {
       await conn.query(
         `UPDATE articles SET
            title = ?, slug = ?, kicker = ?, short_description = ?, article_body = ?,
-           featured_image = ?, image_caption = ?, category_id = ?, status = ?,
-           priority = ?, is_featured = ?, is_breaking = ?, is_sponsored = ?, sponsor_client = ?,
-           reading_time_minutes = ?, language = ?, scheduled_publication_time = ?, publication_time = ?,
-           meta_title = ?, meta_description = ?
+           featured_image = ?, image_caption = ?, alt_text = ?, youtube_url = ?,
+           category_id = ?, status = ?, priority = ?,
+           is_featured = ?, is_breaking = ?, is_sponsored = ?, sponsor_client = ?,
+           reading_time_minutes = ?, language = ?,
+           scheduled_publication_time = ?, publication_time = ?, expiry_time = ?,
+           meta_title = ?, meta_description = ?, meta_keywords = ?, canonical_url = ?, og_image = ?
          WHERE id = ?`,
         [
-          title, slug, kicker, shortDescription, articleBody, featuredImage, imageCaption,
-          categoryId, status, priority, isFeatured, isBreaking, isSponsored, sponsorClient,
-          readingTime, language, scheduledTime, publicationTime, metaTitle, metaDescription,
+          title, slug, kicker, shortDescription, articleBody,
+          featuredImage, imageCaption, altText, youtubeUrl,
+          categoryId, newStatus, priority,
+          isFeatured, isBreaking, isSponsored, sponsorClient,
+          readingTime, language,
+          scheduledTime, publicationTime, expiryTime,
+          metaTitle, metaDescription, metaKeywords, canonicalUrl, ogImage,
           articleId
         ]
       );
 
-      // Handle tags update if provided
+      // ---- Tags update ----
       if (Array.isArray(updateData.tags)) {
         await conn.query(`DELETE FROM article_tags WHERE article_id = ?`, [articleId]);
         for (const tagItem of updateData.tags) {
@@ -464,7 +690,22 @@ export const articleService = {
         }
       }
 
-      // If content changed, record a new revision
+      // ---- YouTube embed sync ----
+      if (updateData.youtubeUrl !== undefined) {
+        // Remove old youtube entry for this article then re-insert if URL provided
+        await conn.query(
+          `DELETE FROM article_multimedia WHERE article_id = ? AND media_type = 'youtube'`,
+          [articleId]
+        );
+        if (youtubeUrl) {
+          await conn.query(
+            `INSERT INTO article_multimedia (article_id, media_type, embed_url) VALUES (?, 'youtube', ?)`,
+            [articleId, youtubeUrl]
+          );
+        }
+      }
+
+      // ---- Revision snapshot (only when content changed) ----
       if (contentChanged) {
         const [revRows] = await conn.query(
           `SELECT MAX(revision_number) as max_rev FROM article_revisions WHERE article_id = ?`,
@@ -473,28 +714,31 @@ export const articleService = {
         const nextRev = (revRows[0].max_rev || 0) + 1;
 
         await conn.query(
-          `INSERT INTO article_revisions (article_id, revision_number, title, short_description, article_body, edited_by, revision_notes)
+          `INSERT INTO article_revisions
+             (article_id, revision_number, title, short_description, article_body, edited_by, revision_notes)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
-            articleId,
-            nextRev,
-            title,
-            shortDescription,
-            articleBody,
-            currentUser.id,
+            articleId, nextRev, title, shortDescription, articleBody, currentUser.id,
             updateData.revisionNotes || `Revision #${nextRev} saved by ${currentUser.full_name}`
           ]
         );
       }
 
-      // Audit log
+      // ---- Audit log ----
       await conn.query(
         `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address)
          VALUES (?, 'ARTICLE_UPDATE', 'article', ?, ?, ?)`,
         [
           currentUser.id,
           articleId,
-          JSON.stringify({ status, slug, contentChanged, revisionCreated: contentChanged }),
+          JSON.stringify({
+            status: newStatus,
+            prevStatus: current.status,
+            slug,
+            expiryTime,
+            contentChanged,
+            revisionCreated: contentChanged
+          }),
           ipAddress
         ]
       );
@@ -503,36 +747,62 @@ export const articleService = {
         id: articleId,
         title,
         slug,
-        status,
+        status: newStatus,
+        expiryTime,
         message: 'Article updated successfully'
       };
     });
   },
 
-  // Delete / Archive article
+  // -------------------------------------------------------------------------
+  // SOFT DELETE — archive rather than hard-delete to preserve metrics
+  // -------------------------------------------------------------------------
   async deleteArticle(articleId, currentUser, ipAddress) {
-    const articles = await query(`SELECT title, slug FROM articles WHERE id = ? LIMIT 1`, [articleId]);
+    const articles = await query(
+      `SELECT id, title, slug, status FROM articles WHERE id = ? LIMIT 1`,
+      [articleId]
+    );
     if (articles.length === 0) {
       const error = new Error('Article not found');
       error.statusCode = 404;
+      error.code = 'NOT_FOUND';
       throw error;
     }
 
-    await query(`DELETE FROM articles WHERE id = ?`, [articleId]);
+    const article = articles[0];
+
+    // Only editors and super_admins can archive; reporters cannot delete
+    if (currentUser.role === 'reporter') {
+      const error = new Error('Reporters are not permitted to delete or archive articles');
+      error.statusCode = 403;
+      error.code = 'FORBIDDEN';
+      throw error;
+    }
+
+    // Soft archive — preserve article, revisions, and metrics
+    await query(
+      `UPDATE articles SET status = 'archived', is_breaking = 0, is_featured = 0 WHERE id = ?`,
+      [articleId]
+    );
 
     await auditService.logAction({
       userId: currentUser.id,
-      action: 'ARTICLE_DELETE',
+      action: 'ARTICLE_ARCHIVE',
       entityType: 'article',
       entityId: articleId,
-      details: { title: articles[0].title, slug: articles[0].slug },
+      details: { title: article.title, slug: article.slug, prevStatus: article.status },
       ipAddress
     });
 
-    return { success: true, message: `Article #${articleId} deleted successfully` };
+    return {
+      success: true,
+      message: `Article #${articleId} archived successfully (soft delete — data preserved)`
+    };
   },
 
-  // Get revision history for article
+  // -------------------------------------------------------------------------
+  // Get revision history for an article
+  // -------------------------------------------------------------------------
   async getArticleRevisions(articleId) {
     const revisions = await query(
       `SELECT r.id, r.revision_number, r.title, r.short_description, r.revision_notes, r.created_at,
@@ -546,26 +816,92 @@ export const articleService = {
     return revisions;
   },
 
-  // Automated publish runner for scheduled & expired news (triggered by cPanel cron)
+  // -------------------------------------------------------------------------
+  // CRON PROCESSOR — triggered by cPanel cron job or POST /api/v1/articles/cron/publish
+  //
+  // Design guarantees:
+  //   • Idempotent: WHERE conditions prevent double-transitions
+  //   • Atomic per-article: status flips are individual UPDATEs not a bulk swap
+  //   • Audit: each auto-action is logged with action='SYSTEM_CRON_...'
+  //   • Expiry enforced in query layer too (belt-and-suspenders with WHERE in listArticles)
+  // -------------------------------------------------------------------------
   async processScheduledAndExpiringArticles() {
-    // 1. Publish scheduled articles whose time has arrived
-    const publishResult = await query(
-      `UPDATE articles 
-       SET status = 'published', publication_time = NOW() 
-       WHERE status = 'scheduled' AND scheduled_publication_time <= NOW()`
+    const now = new Date();
+    const nowStr = now.toISOString();
+
+    // ---- 1. Publish articles whose scheduled time has arrived ----
+    //         Only transitions from 'scheduled' → 'published'
+    //         Idempotent: already-published articles are untouched
+    const toPublish = await query(
+      `SELECT id, title, slug FROM articles
+       WHERE status = 'scheduled'
+         AND scheduled_publication_time IS NOT NULL
+         AND scheduled_publication_time <= NOW()`,
+      []
     );
 
-    // 2. Archive articles past their expiration time
-    const archiveResult = await query(
-      `UPDATE articles 
-       SET status = 'archived' 
-       WHERE status = 'published' AND expiry_time IS NOT NULL AND expiry_time <= NOW()`
+    let publishedCount = 0;
+    for (const art of toPublish) {
+      await query(
+        `UPDATE articles
+         SET status = 'published', publication_time = NOW()
+         WHERE id = ? AND status = 'scheduled'`,   // re-check status for safety
+        [art.id]
+      );
+      publishedCount++;
+
+      // Audit each auto-published article
+      await query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+         VALUES (NULL, 'SYSTEM_CRON_PUBLISHED', 'article', ?, ?)`,
+        [
+          art.id,
+          JSON.stringify({ title: art.title, slug: art.slug, timestamp: nowStr })
+        ]
+      );
+    }
+
+    // ---- 2. Expire articles whose expiry_time has passed ----
+    //         Only transitions from 'published' → 'expired'
+    //         Does NOT touch 'archived' or already-'expired' articles
+    //         'expired' is intentionally distinct from 'archived':
+    //           expired = time-based removal (can be republished)
+    //           archived = editorial removal (deliberate)
+    const toExpire = await query(
+      `SELECT id, title, slug FROM articles
+       WHERE status = 'published'
+         AND expiry_time IS NOT NULL
+         AND expiry_time <= NOW()`,
+      []
     );
+
+    let expiredCount = 0;
+    for (const art of toExpire) {
+      await query(
+        `UPDATE articles
+         SET status = 'expired', is_breaking = 0, is_featured = 0
+         WHERE id = ? AND status = 'published'`,   // re-check for idempotency
+        [art.id]
+      );
+      expiredCount++;
+
+      // Audit each auto-expired article
+      await query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+         VALUES (NULL, 'SYSTEM_CRON_EXPIRED', 'article', ?, ?)`,
+        [
+          art.id,
+          JSON.stringify({ title: art.title, slug: art.slug, timestamp: nowStr })
+        ]
+      );
+    }
 
     return {
-      publishedCount: publishResult.affectedRows || 0,
-      archivedCount: archiveResult.affectedRows || 0,
-      timestamp: new Date().toISOString()
+      publishedCount,
+      expiredCount,
+      archivedCount: expiredCount,
+      timestamp: nowStr,
+      message: `Cron run complete: ${publishedCount} published, ${expiredCount} expired`
     };
   }
 };

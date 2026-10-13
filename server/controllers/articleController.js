@@ -48,6 +48,24 @@ export const articleController = {
     }
   },
 
+  // GET /api/v1/articles/id/:id  — admin edit page (load by numeric ID)
+  async getArticleById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const articleId = parseInt(id, 10);
+      if (isNaN(articleId) || articleId < 1) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_ID', message: 'Article ID must be a positive integer' }
+        });
+      }
+      const article = await articleService.getArticleById(articleId, req.user);
+      res.json({ success: true, data: article });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // POST /api/v1/articles
   async createArticle(req, res, next) {
     try {

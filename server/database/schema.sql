@@ -77,9 +77,11 @@ CREATE TABLE IF NOT EXISTS `articles` (
   `article_body` LONGTEXT NOT NULL,
   `featured_image` VARCHAR(500) NULL,
   `image_caption` VARCHAR(255) NULL,
+  `alt_text` VARCHAR(255) NULL COMMENT 'Accessibility alt text for featured image',
+  `youtube_url` VARCHAR(500) NULL COMMENT 'Primary YouTube/video embed URL for this article',
   `author_id` INT UNSIGNED NOT NULL,
   `category_id` INT UNSIGNED NOT NULL,
-  `status` ENUM('draft', 'in_review', 'scheduled', 'published', 'archived') NOT NULL DEFAULT 'draft',
+  `status` ENUM('draft', 'in_review', 'scheduled', 'published', 'expired', 'archived') NOT NULL DEFAULT 'draft',
   `priority` INT NOT NULL DEFAULT 0 COMMENT 'Higher number indicates higher editorial placement priority',
   `is_featured` TINYINT(1) NOT NULL DEFAULT 0,
   `is_breaking` TINYINT(1) NOT NULL DEFAULT 0,
@@ -106,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `articles` (
   INDEX `idx_art_author` (`author_id`),
   INDEX `idx_art_language` (`language`),
   INDEX `idx_art_scheduled` (`scheduled_publication_time`),
+  INDEX `idx_art_expiry` (`status`, `expiry_time`),
   FULLTEXT `ft_art_search` (`title`, `short_description`, `article_body`),
   CONSTRAINT `fk_art_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_art_author` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
@@ -242,3 +245,22 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ========================================================================
+-- Phase 3 Migration Script
+-- Run this block ONLY against an existing Phase 2 database.
+-- Safe to skip if running schema.sql fresh on a new database.
+-- ========================================================================
+
+-- MIGRATION: Add 'expired' status to articles
+-- ALTER TABLE `articles`
+--   MODIFY COLUMN `status` ENUM('draft', 'in_review', 'scheduled', 'published', 'expired', 'archived') NOT NULL DEFAULT 'draft';
+
+-- MIGRATION: Add alt_text and youtube_url columns
+-- ALTER TABLE `articles`
+--   ADD COLUMN `alt_text` VARCHAR(255) NULL COMMENT 'Accessibility alt text for featured image' AFTER `image_caption`,
+--   ADD COLUMN `youtube_url` VARCHAR(500) NULL COMMENT 'Primary YouTube/video embed URL' AFTER `alt_text`;
+
+-- MIGRATION: Add composite expiry index
+-- ALTER TABLE `articles`
+--   ADD INDEX `idx_art_expiry` (`status`, `expiry_time`);

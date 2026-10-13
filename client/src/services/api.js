@@ -119,4 +119,5 @@ export const apiService = {
   }
 };
 
+export { adminApi } from './adminApi';
 export default apiService;

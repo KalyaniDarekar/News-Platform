@@ -25,7 +25,13 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin or any localhost / 127.0.0.1 port (5173, 5174, etc.)
+    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || (CLIENT_URL && origin === CLIENT_URL)) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

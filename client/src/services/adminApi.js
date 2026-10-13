@@ -1,0 +1,215 @@
+// ========================================================================
+// Admin API Service Layer — Phase 3
+// Communicates with Express /api/v1 backend with Bearer JWT tokens.
+// No mock fallbacks — all calls target live MySQL database endpoints.
+// ========================================================================
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const TOKEN_KEY = 'auth_token';
+
+async function request(endpoint, options = {}) {
+  const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('bc_auth_token');
+  const headers = { ...options.headers };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Do not set Content-Type for FormData (browser sets boundary automatically)
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
+
+  const url = `${API_BASE}/v1${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('auth_user');
+    if (!window.location.pathname.includes('/admin/login')) {
+      window.location.href = '/admin/login';
+    }
+  }
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    const errorMsg = data.error?.message || `Request failed with status ${response.status}`;
+    const err = new Error(errorMsg);
+    err.status = response.status;
+    err.details = data.error?.details;
+    throw err;
+  }
+
+  return data;
+}
+
+export const adminApi = {
+  // ---- Dashboard Endpoints ----
+  async getDashboardStats() {
+    return request('/dashboard/stats');
+  },
+
+  async getQuickCounts() {
+    return request('/dashboard/counts');
+  },
+
+  // ---- Articles CRUD & Lifecycle ----
+  async getArticles(params = {}) {
+    const query = new URLSearchParams();
+    if (params.status) query.set('status', params.status);
+    if (params.category) query.set('category', params.category);
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/articles${queryString}`);
+  },
+
+  async getArticleById(id) {
+    return request(`/articles/id/${id}`);
+  },
+
+  async createArticle(payload) {
+    return request('/articles', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updateArticle(id, payload) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteArticle(id) {
+    return request(`/articles/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async publishArticle(id) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'published' })
+    });
+  },
+
+  async unpublishArticle(id) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'draft' })
+    });
+  },
+
+  async scheduleArticle(id, scheduledPublicationTime, expiryTime = null) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status: 'scheduled',
+        scheduledPublicationTime,
+        expiryTime
+      })
+    });
+  },
+
+  async extendExpiry(id, newExpiryTime) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        expiryTime: newExpiryTime
+      })
+    });
+  },
+
+  async republishExpired(id, newExpiryTime = null) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status: 'published',
+        expiryTime: newExpiryTime
+      })
+    });
+  },
+
+  // ---- Categories Endpoints ----
+  async getCategories() {
+    return request('/categories');
+  },
+
+  async createCategory(payload) {
+    return request('/categories', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updateCategory(id, payload) {
+    return request(`/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteCategory(id) {
+    return request(`/categories/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // ---- Tags Endpoints ----
+  async getTags() {
+    return request('/tags');
+  },
+
+  // ---- Media Endpoints ----
+  async uploadMedia(formData) {
+    return request('/media/upload', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  async getMediaAssets(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.mimeType) query.set('mimeType', params.mimeType);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/media${queryString}`);
+  },
+
+  async deleteMedia(id) {
+    return request(`/media/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // ---- Staff / Auth Endpoints ----
+  async login(email, password) {
+    return request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+  },
+
+  async logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('bc_auth_token');
+    localStorage.removeItem('auth_user');
+  },
+
+  async getMe() {
+    return request('/auth/me');
+  }
+};
+
+export default adminApi;

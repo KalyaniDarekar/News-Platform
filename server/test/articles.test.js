@@ -252,6 +252,179 @@ describe('News Articles & Multilingual Publishing Suite', () => {
     assert.equal(res.status, 200);
     assert.equal(body.success, true);
     assert.ok(typeof body.data.publishedCount === 'number');
-    assert.ok(typeof body.data.archivedCount === 'number');
+    assert.ok(typeof body.data.expiredCount === 'number' || typeof body.data.archivedCount === 'number');
+  });
+
+  // =========================================================================
+  // PHASE 3: EXPIRY, EMBARGO, SEARCH EXCLUSION & IDEMPOTENCY SUITE
+  // =========================================================================
+
+  let testExpiredArticleId = null;
+  let testExpiredSlug = '';
+  let testScheduledArticleId = null;
+
+  test('Phase 3 - Create article with past expiry_time and verify immediate public exclusion', async () => {
+    // 1. Create a published article
+    const createRes = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${editorToken}`
+      },
+      body: JSON.stringify({
+        title: 'Phase 3 Expiry Test: Flash Breaking Bulletin for Reader Exclusion',
+        shortDescription: 'This story tests immediate SQL exclusion upon reaching expiry datetime.',
+        articleBody: '<p>Comprehensive investigative paragraph designed to exceed schema length validation requirements.</p>',
+        categoryId: 1,
+        status: 'published'
+      })
+    });
+
+    const createBody = await createRes.json();
+    assert.equal(createRes.status, 201);
+    testExpiredArticleId = createBody.data.id;
+    testExpiredSlug = createBody.data.slug;
+
+    // 2. Set expiry to an expired time via update
+    const pastTime = new Date(Date.now() - 3600000).toISOString(); // 1 hour ago
+    await fetch(`${BASE_URL}/articles/${testExpiredArticleId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${editorToken}`
+      },
+      body: JSON.stringify({
+        expiryTime: pastTime,
+        status: 'expired'
+      })
+    });
+
+    // 3. Verify public GET /articles does NOT contain the expired article
+    const pubRes = await fetch(`${BASE_URL}/articles?limit=50`);
+    const pubBody = await pubRes.json();
+    assert.equal(pubRes.status, 200);
+    const foundInPublic = pubBody.data.some(a => a.id === testExpiredArticleId);
+    assert.equal(foundInPublic, false, 'Expired article must be excluded from public list');
+
+    // 4. Verify public GET /articles/:slug returns 404
+    const slugRes = await fetch(`${BASE_URL}/articles/${testExpiredSlug}`);
+    assert.equal(slugRes.status, 404, 'Expired article slug must return 404 to anonymous readers');
+  });
+
+  test('Phase 3 - Expired article is accessible in admin GET /articles?status=expired', async () => {
+    assert.ok(testExpiredArticleId, 'Expired article ID must be set');
+
+    const adminRes = await fetch(`${BASE_URL}/articles?status=expired`, {
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const adminBody = await adminRes.json();
+
+    assert.equal(adminRes.status, 200);
+    assert.equal(adminBody.success, true);
+    const foundInAdmin = adminBody.data.some(a => a.id === testExpiredArticleId);
+    assert.equal(foundInAdmin, true, 'Expired article must be listed for authenticated editors');
+  });
+
+  test('Phase 3 - Scheduled article is omitted from public feed before release date', async () => {
+    const futureTime = new Date(Date.now() + 86400000 * 2).toISOString(); // 2 days in future
+    const res = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${editorToken}`
+      },
+      body: JSON.stringify({
+        title: 'Phase 3 Embargo Test: Strictly Embargoed Diplomatic Memorandum',
+        shortDescription: 'Story is embargoed until official bilateral signing ceremony.',
+        articleBody: '<p>Diplomatic bilateral communique details embargoed under diplomatic convention.</p>',
+        categoryId: 1,
+        status: 'scheduled',
+        scheduledPublicationTime: futureTime
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 201);
+    testScheduledArticleId = body.data.id;
+
+    // Public feed check
+    const pubRes = await fetch(`${BASE_URL}/articles?limit=50`);
+    const pubBody = await pubRes.json();
+    const foundInPublic = pubBody.data.some(a => a.id === testScheduledArticleId);
+    assert.equal(foundInPublic, false, 'Scheduled embargoed article must NOT be public');
+  });
+
+  test('Phase 3 - Cron runner idempotency (multiple runs cause no duplicate state transitions)', async () => {
+    // Run 1
+    const res1 = await fetch(`${BASE_URL}/articles/cron/publish`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const body1 = await res1.json();
+    assert.equal(res1.status, 200);
+
+    // Run 2 immediately after
+    const res2 = await fetch(`${BASE_URL}/articles/cron/publish`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const body2 = await res2.json();
+    assert.equal(res2.status, 200);
+
+    // Second run should find 0 additional transitions
+    assert.equal(body2.data.publishedCount, 0, 'Second run must publish 0 articles (idempotent)');
+    assert.equal(body2.data.expiredCount, 0, 'Second run must expire 0 articles (idempotent)');
+  });
+
+  test('Phase 3 - Expired article is omitted from search queries', async () => {
+    const searchRes = await fetch(`${BASE_URL}/articles?search=Flash+Breaking+Bulletin`);
+    const searchBody = await searchRes.json();
+
+    assert.equal(searchRes.status, 200);
+    const found = searchBody.data.some(a => a.id === testExpiredArticleId);
+    assert.equal(found, false, 'Expired story must NOT appear in reader search queries');
+  });
+
+  test('Phase 3 - Reporter cannot directly publish another reporter article (403 forbidden)', async () => {
+    // Try to update an article using reporterToken where reporter is not the author
+    const res = await fetch(`${BASE_URL}/articles/${testExpiredArticleId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${reporterToken}`
+      },
+      body: JSON.stringify({
+        title: 'Unauthorized Modification Attempt by Staff Reporter'
+      })
+    });
+
+    assert.equal(res.status, 403, 'Reporters cannot modify another authors article');
+  });
+
+  test('Phase 3 - Extending expiry on an expired article preserves expired status until republish', async () => {
+    assert.ok(testExpiredArticleId, 'Article ID must be set');
+
+    const futureExpiry = new Date(Date.now() + 86400000 * 7).toISOString(); // 7 days future
+    const res = await fetch(`${BASE_URL}/articles/${testExpiredArticleId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${editorToken}`
+      },
+      body: JSON.stringify({
+        expiryTime: futureExpiry
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 200);
+
+    // Verify status remains 'expired' until explicit status='published' is dispatched
+    const checkRes = await fetch(`${BASE_URL}/articles/id/${testExpiredArticleId}`, {
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const checkBody = await checkRes.json();
+    assert.equal(checkBody.data.status, 'expired', 'Status must stay expired until deliberate republish');
   });
 });
+

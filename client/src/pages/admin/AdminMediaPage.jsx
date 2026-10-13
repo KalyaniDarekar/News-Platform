@@ -1,52 +1,84 @@
-import React, { useState } from 'react';
-import { UploadCloud, Image as ImageIcon, Copy, Check, Trash2, Search, Filter } from 'lucide-react';
-import { ALL_STORIES } from '../../data/mockNewsData';
+// ========================================================================
+// Admin Media Library Desk — Phase 3
+// Real-time photojournalism asset repository: upload via Multer,
+// asset list from MySQL, URL clipboard copy, and asset management.
+// ========================================================================
+
+import React, { useState, useEffect, useRef } from 'react';
+import { UploadCloud, Image as ImageIcon, Copy, Check, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
+import adminApi from '../../services/adminApi';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 export default function AdminMediaPage() {
   const [copiedId, setCopiedId] = useState(null);
-  const [mediaItems, setMediaItems] = useState([
-    {
-      id: 1,
-      filename: 'semiconductor-cleanroom-dholera.jpg',
-      url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1000&q=80',
-      size: '1.4 MB',
-      dimensions: '1920x1080',
-      uploadedBy: 'Rajeshwari Nair',
-      date: 'Oct 12, 2026'
-    },
-    {
-      id: 2,
-      filename: 'reserve-bank-mumbai-headquarters.jpg',
-      url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=1000&q=80',
-      size: '890 KB',
-      dimensions: '1600x1000',
-      uploadedBy: 'Dr. Arundhati Sen',
-      date: 'Oct 12, 2026'
-    },
-    {
-      id: 3,
-      filename: 'quad-ministerial-summit-delhi.jpg',
-      url: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1000&q=80',
-      size: '2.1 MB',
-      dimensions: '2048x1365',
-      uploadedBy: 'Vikramaditya Sharma',
-      date: 'Oct 11, 2026'
-    },
-    {
-      id: 4,
-      filename: 'ladakh-solar-wind-farm.jpg',
-      url: 'https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=1000&q=80',
-      size: '1.1 MB',
-      dimensions: '1800x1200',
-      uploadedBy: 'Kavita Krishnamurthy',
-      date: 'Oct 10, 2026'
+  const [mediaItems, setMediaItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const fetchMedia = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await adminApi.getMediaAssets({ limit: 40 });
+      if (res.data) setMediaItems(res.data);
+    } catch (err) {
+      setErrorMsg(`Failed to load media assets: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await adminApi.uploadMedia(formData);
+      setSuccessMsg(`Asset "${file.name}" uploaded successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3500);
+      fetchMedia();
+    } catch (err) {
+      setErrorMsg(`Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  };
 
   const handleCopy = (id, url) => {
-    navigator.clipboard.writeText(url);
+    const fullUrl = url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+    navigator.clipboard.writeText(fullUrl);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Delete media asset "${name}"?`)) return;
+    try {
+      await adminApi.deleteMedia(id);
+      fetchMedia();
+    } catch (err) {
+      setErrorMsg(`Delete failed: ${err.message}`);
+    }
   };
 
   return (
@@ -55,116 +87,194 @@ export default function AdminMediaPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>
-            Media & Photography Library
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+            Media &amp; Photography Library
           </h1>
-          <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: '0.2rem' }}>
-            Asset repository for high-resolution photojournalism, charts, and wire photography.
+          <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
+            Central media repository for high-resolution photojournalism, charts, and wire photography.
           </p>
         </div>
 
-        <button
-          onClick={() => alert('Media Upload Trigger: In Phase 2, files upload to cPanel /uploads via Express Multer middleware.')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            backgroundColor: '#2563eb',
-            color: '#ffffff',
-            padding: '0.55rem 1rem',
-            borderRadius: '4px',
-            fontSize: '0.82rem',
-            fontWeight: 700
-          }}
-        >
-          <UploadCloud size={16} /> Upload Photographs
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={fetchMedia}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <RefreshCw size={13} /> Refresh
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e.target.files?.[0])}
+            style={{ display: 'none' }}
+          />
+
+          <button
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              border: 'none',
+              cursor: uploading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <UploadCloud size={16} /> {uploading ? 'Uploading...' : 'Upload Photographs'}
+          </button>
+        </div>
       </div>
 
-      {/* Simulated Upload Dropzone */}
+      {errorMsg && (
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem' }}>
+          {errorMsg}
+        </div>
+      )}
+
+      {successMsg && (
+        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600 }}>
+          {successMsg}
+        </div>
+      )}
+
+      {/* Drag & Drop Upload Zone */}
       <div 
-        onClick={() => alert('Upload Dropzone: In Phase 2, drag & drop uploads raw TIFF/JPEG assets directly into the cPanel storage directory.')}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
         style={{
-          border: '2px dashed #cbd5e1',
-          backgroundColor: '#ffffff',
-          borderRadius: '4px',
-          padding: '2rem',
+          border: '2px dashed #93c5fd',
+          backgroundColor: '#eff6ff',
+          borderRadius: '6px',
+          padding: '2.5rem 1.5rem',
           textAlign: 'center',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          transition: 'all 150ms ease'
         }}
       >
-        <UploadCloud size={32} style={{ color: '#2563eb', margin: '0 auto 0.5rem' }} />
-        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>
-          Drag high-resolution news photographs here, or click to browse
+        <UploadCloud size={36} style={{ color: '#2563eb', margin: '0 auto 0.5rem' }} />
+        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e3a8a' }}>
+          {uploading ? 'Processing upload with Multer...' : 'Drag high-resolution news photographs here, or click to browse'}
         </div>
-        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem' }}>
-          Supported: JPEG, WebP, PNG, SVG (Maximum size 10MB per image asset)
+        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+          Supports JPEG, PNG, WebP, GIF, SVG, AVIF up to 10 MB per asset. Auto-indexed in MySQL.
         </div>
       </div>
 
       {/* Media Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: '1.25rem'
-      }}>
-        {mediaItems.map((item) => (
-          <div key={item.id} style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '4px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-            boxShadow: 'var(--shadow-sm)',
-            display: 'flex',
-            flexDirection: 'column'
+      <div>
+        <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>
+          Cataloged Assets ({mediaItems.length})
+        </h2>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '0.85rem' }}>
+            Loading media assets...
+          </div>
+        ) : mediaItems.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+            No media assets uploaded yet. Upload your first photograph above!
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '1.25rem'
           }}>
-            <div style={{ aspectRatio: '16/10', backgroundColor: '#f1f5f9', overflow: 'hidden', position: 'relative' }}>
-              <img src={item.url} alt={item.filename} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <span style={{ position: 'absolute', bottom: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.7)', color: '#ffffff', fontSize: '0.65rem', padding: '0.15rem 0.35rem', borderRadius: '2px', fontFamily: 'monospace' }}>
-                {item.dimensions}
-              </span>
-            </div>
+            {mediaItems.map((item) => {
+              const fullUrl = item.file_url?.startsWith('http') ? item.file_url : `${BACKEND_URL}${item.file_url}`;
+              const sizeKb = item.file_size_bytes ? `${Math.round(item.file_size_bytes / 1024)} KB` : 'N/A';
 
-            <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {item.filename}
-              </div>
-
-              <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{item.size}</span>
-                <span>{item.date}</span>
-              </div>
-
-              <div style={{ marginTop: 'auto', paddingTop: '0.65rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button
-                  onClick={() => handleCopy(item.id, item.url)}
+              return (
+                <div
+                  key={item.id}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    color: copiedId === item.id ? '#15803d' : '#2563eb',
-                    padding: '0.25rem 0.45rem',
-                    backgroundColor: copiedId === item.id ? '#dcfce7' : '#eff6ff',
-                    borderRadius: '2px'
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
                   }}
                 >
-                  {copiedId === item.id ? <Check size={12} /> : <Copy size={12} />}
-                  {copiedId === item.id ? 'URL Copied' : 'Copy Asset Link'}
-                </button>
+                  <div style={{ height: '160px', backgroundColor: '#0f172a', position: 'relative' }}>
+                    <img
+                      src={fullUrl}
+                      alt={item.alt_text || item.original_name || item.filename}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    <div style={{ position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '3px' }}>
+                      {sizeKb}
+                    </div>
+                  </div>
 
-                <button
-                  onClick={() => setMediaItems(mediaItems.filter(m => m.id !== item.id))}
-                  title="Remove asset"
-                  style={{ color: '#ef4444', padding: '0.2rem' }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            </div>
+                  <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.original_name || item.filename}>
+                      {item.original_name || item.filename}
+                    </div>
+
+                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                      Uploaded: {new Date(item.created_at).toLocaleDateString()}
+                    </div>
+
+                    <div style={{ marginTop: 'auto', paddingTop: '0.65rem', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <button
+                        onClick={() => handleCopy(item.id, item.file_url)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '4px',
+                          border: '1px solid #cbd5e1',
+                          backgroundColor: copiedId === item.id ? '#f0fdf4' : '#f8fafc',
+                          color: copiedId === item.id ? '#15803d' : '#334155',
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {copiedId === item.id ? <Check size={12} /> : <Copy size={12} />}
+                        {copiedId === item.id ? 'Copied URL!' : 'Copy URL'}
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(item.id, item.original_name || item.filename)}
+                        title="Delete asset record"
+                        style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0.35rem' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
 
     </div>

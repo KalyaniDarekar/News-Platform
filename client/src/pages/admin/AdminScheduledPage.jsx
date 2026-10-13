@@ -1,141 +1,299 @@
-import React, { useState } from 'react';
-import { CalendarClock, Clock, AlertCircle, CheckCircle, Play, RotateCcw } from 'lucide-react';
+// ========================================================================
+// Admin Scheduled & Expiry Management Desk — Phase 3
+// Real-time control of scheduled releases, expiring articles, and cron trigger.
+// ========================================================================
+
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  CalendarClock, Clock, AlertCircle, CheckCircle, Play, 
+  RotateCcw, RefreshCw, Edit, ExternalLink, Calendar, AlertTriangle
+} from 'lucide-react';
+import adminApi from '../../services/adminApi';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function AdminScheduledPage() {
-  const [scheduledItems, setScheduledItems] = useState([
-    {
-      id: 1,
-      title: 'Diplomatic Communique: Bilateral Indo-Japanese Quantum Computing Accord',
-      category: 'World & Technology',
-      author: 'Vikramaditya Sharma',
-      scheduledFor: '2026-10-12 18:00 IST',
-      embargoNote: 'Strict diplomatic embargo until joint prime ministerial press conference at Tokyo',
-      status: 'Embargo Active'
-    },
-    {
-      id: 2,
-      title: 'Q2 Sovereign Direct Tax Receipts Exceed Budgetary Estimates by 11.4%',
-      category: 'Economy & Fiscal Policy',
-      author: 'Dr. Arundhati Sen',
-      scheduledFor: '2026-10-13 09:00 IST',
-      embargoNote: 'Awaits official release by Controller General of Accounts',
-      status: 'Scheduled'
-    }
-  ]);
+  const [scheduledArticles, setScheduledArticles] = useState([]);
+  const [expiredArticles, setExpiredArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [triggeringCron, setTriggeringCron] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
-  const [expiryRules] = useState([
-    { rule: 'Intraday Financial Stock Indices', action: 'Auto-archive after 24 hours', status: 'Enabled' },
-    { rule: 'Weather & Monsoon Bulletins', action: 'Auto-archive after 48 hours', status: 'Enabled' },
-    { rule: 'Election Live Counting Micro-Updates', action: 'Consolidate into static archive after 7 days', status: 'Enabled' }
-  ]);
+  const fetchData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const [schedRes, expRes] = await Promise.all([
+        adminApi.getArticles({ status: 'scheduled' }),
+        adminApi.getArticles({ status: 'expired' })
+      ]);
+
+      if (schedRes.data) setScheduledArticles(schedRes.data);
+      if (expRes.data) setExpiredArticles(expRes.data);
+    } catch (err) {
+      setErrorMsg(`Failed to load scheduled/expiry queue: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Trigger server-side cron processor immediately
+  const handleTriggerCron = async () => {
+    setTriggeringCron(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(`${API_BASE}/v1/articles/cron/publish`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFeedback(`Cron processor executed! Published: ${data.data?.publishedCount || 0}, Expired: ${data.data?.expiredCount || 0}`);
+        fetchData();
+      } else {
+        throw new Error(data.error?.message || 'Cron execution failed');
+      }
+    } catch (err) {
+      setErrorMsg(`Cron trigger error: ${err.message}`);
+    } finally {
+      setTriggeringCron(false);
+    }
+  };
+
+  const handlePublishNow = async (id) => {
+    if (!window.confirm('Bypass schedule and publish this article immediately?')) return;
+    try {
+      await adminApi.publishArticle(id);
+      setFeedback(`Article #${id} released live to readers!`);
+      fetchData();
+    } catch (err) {
+      setErrorMsg(`Publish failed: ${err.message}`);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>
-          Scheduled News & Embargo Management
-        </h1>
-        <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: '0.2rem' }}>
-          Automate time-locked investigative disclosures, diplomatic embargoes, and stale content auto-expiry.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+            Scheduled Releases & Expiry Desk
+          </h1>
+          <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
+            Automate embargoed investigative disclosures and time-based publication retirements.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={fetchData}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <RefreshCw size={13} /> Refresh
+          </button>
+
+          <button
+            onClick={handleTriggerCron}
+            disabled={triggeringCron}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#7e22ce',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              border: 'none',
+              cursor: triggeringCron ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <Play size={14} /> {triggeringCron ? 'Running Processor...' : 'Trigger Cron Processor'}
+          </button>
+        </div>
       </div>
 
-      {/* cPanel Cron Status Callout */}
-      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '1rem 1.25rem', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+      {feedback && (
+        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600 }}>
+          {feedback}
+        </div>
+      )}
+
+      {errorMsg && (
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem' }}>
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Cron Info Callout */}
+      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '1rem 1.25rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <Clock size={18} color="#2563eb" />
           <div>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1e40af' }}>
-              cPanel Automation Cron Job: */5 * * * *
+              cPanel Automation Cron Target: <code>node server/cron/expiry-processor.js</code>
             </div>
-            <div style={{ fontSize: '0.74rem', color: '#3b82f6' }}>
-              Scheduled daemon checks the MySQL release table every 5 minutes and auto-publishes expired embargoes.
+            <div style={{ fontSize: '0.74rem', color: '#3b82f6', marginTop: '0.15rem' }}>
+              All database times stored in UTC. The cron evaluates <code>scheduled_publication_time &lt;= NOW()</code> and <code>expiry_time &lt;= NOW()</code>.
             </div>
           </div>
         </div>
-        <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '0.7rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '999px' }}>
-          CRON SERVICE ACTIVE
+        <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '0.7rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '4px' }}>
+          IDEMPOTENT &amp; AUDITED
         </span>
       </div>
 
-      {/* Scheduled Stories Table */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0', fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
-          Active Embargoes & Scheduled Releases
+      {/* SECTION 1: Scheduled Embargoes Table */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Calendar size={16} color="#7e22ce" />
+            <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+              Scheduled Publications ({scheduledArticles.length})
+            </h2>
+          </div>
+          <Link to="/admin/articles/new" style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>
+            + Schedule New
+          </Link>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
-              <th style={{ padding: '0.75rem 1.25rem' }}>Article Title & Embargo Reason</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Desk</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Release Target</th>
-              <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-              <th style={{ padding: '0.75rem 1.25rem', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {scheduledItems.map((item) => (
-              <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '1rem 1.25rem' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.86rem' }}>
-                    {item.title}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <AlertCircle size={12} /> {item.embargoNote}
-                  </div>
-                </td>
-
-                <td style={{ padding: '1rem 1rem', color: '#475569' }}>
-                  {item.category}
-                </td>
-
-                <td style={{ padding: '1rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: '#0f172a' }}>
-                  {item.scheduledFor}
-                </td>
-
-                <td style={{ padding: '1rem 1rem' }}>
-                  <span style={{ backgroundColor: '#fef3c7', color: '#92400e', fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '3px' }}>
-                    {item.status}
-                  </span>
-                </td>
-
-                <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                  <button
-                    onClick={() => alert(`Phase 1 Preview: Immediate release triggered for "${item.title}".`)}
-                    style={{ padding: '0.35rem 0.65rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '3px', fontSize: '0.74rem', fontWeight: 700 }}
-                  >
-                    Release Now
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b', fontSize: '0.85rem' }}>
+            Loading scheduled releases...
+          </div>
+        ) : scheduledArticles.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+            No embargoed or scheduled releases currently pending in database.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left', fontWeight: 700 }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Article Title</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Category</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Release Target</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Expiry Setting</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduledArticles.map((art) => (
+                  <tr key={art.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700, maxWidth: '320px' }}>
+                      <Link to={`/admin/articles/${art.id}/edit`} style={{ color: '#0f172a', textDecoration: 'none' }}>
+                        {art.title}
+                      </Link>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
+                      {art.category_name || 'General'}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', color: '#7e22ce', fontWeight: 700 }}>
+                      {art.scheduled_publication_time ? new Date(art.scheduled_publication_time).toLocaleString() : 'Not set'}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.75rem', color: art.expiry_time ? '#c2410c' : '#94a3b8' }}>
+                      {art.expiry_time ? new Date(art.expiry_time).toLocaleString() : 'No expiry'}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
+                        <Link
+                          to={`/admin/articles/${art.id}/edit`}
+                          style={{ padding: '0.3rem 0.5rem', borderRadius: '3px', backgroundColor: '#f1f5f9', color: '#334155', textDecoration: 'none', fontSize: '0.75rem' }}
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handlePublishNow(art.id)}
+                          style={{ padding: '0.3rem 0.6rem', borderRadius: '3px', backgroundColor: '#dcfce7', color: '#15803d', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                        >
+                          Release Now
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Auto-Expiry Rules Configuration */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', padding: '1.25rem' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-          Stale Content Expiry & Archival Automation
-        </h3>
-        <p style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '1rem' }}>
-          Ensures breaking intraday alerts do not clutter historical archives.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-          {expiryRules.map((rule, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px solid #f1f5f9' }}>
-              <div>
-                <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>{rule.rule}</strong>
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Action: {rule.action}</div>
-              </div>
-              <span style={{ color: '#059669', fontSize: '0.74rem', fontWeight: 700 }}>● {rule.status}</span>
-            </div>
-          ))}
+      {/* SECTION 2: Expired Articles Queue */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={16} color="#ea580c" />
+            <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+              Expired Articles Archive ({expiredArticles.length})
+            </h2>
+          </div>
+          <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+            Retired from public reader views
+          </span>
         </div>
+
+        {expiredArticles.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+            No expired articles currently in database.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left', fontWeight: 700 }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Article Title</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Category</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Expired At</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expiredArticles.map((art) => (
+                  <tr key={art.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, maxWidth: '340px' }}>
+                      <Link to={`/admin/articles/${art.id}/edit`} style={{ color: '#0f172a', textDecoration: 'none' }}>
+                        {art.title}
+                      </Link>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#64748b' }}>
+                      {art.category_name || 'General'}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#c2410c', fontFamily: 'monospace', fontWeight: 600 }}>
+                      {art.expiry_time ? new Date(art.expiry_time).toLocaleString() : 'Expired'}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                      <Link
+                        to={`/admin/articles/${art.id}/edit`}
+                        style={{ padding: '0.3rem 0.65rem', borderRadius: '3px', backgroundColor: '#ea580c', color: '#ffffff', textDecoration: 'none', fontSize: '0.75rem', fontWeight: 700 }}
+                      >
+                        Republish / Extend
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>

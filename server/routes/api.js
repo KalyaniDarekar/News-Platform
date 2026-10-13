@@ -12,10 +12,12 @@ import mediaRoutes from './v1/mediaRoutes.js';
 import analyticsRoutes from './v1/analyticsRoutes.js';
 import auditRoutes from './v1/auditRoutes.js';
 import settingsRoutes from './v1/settingsRoutes.js';
+import dashboardRoutes from './v1/dashboardRoutes.js';         // Phase 3
+import { authenticateToken } from '../middleware/authMiddleware.js'; // Phase 3
 
 const router = Router();
 
-// Version 1 API Routes
+// ---- Version 1 API Routes ----
 router.use('/v1/auth', authRoutes);
 router.use('/v1/articles', articleRoutes);
 router.use('/v1/categories', categoryRoutes);
@@ -26,7 +28,11 @@ router.use('/v1/analytics', analyticsRoutes);
 router.use('/v1/audit-logs', auditRoutes);
 router.use('/v1/settings', settingsRoutes);
 
-// Backwards-compatible aliases for Phase 1 endpoints
+// Dashboard is admin-only — authenticateToken applied at mount level
+// so every /v1/dashboard/* route requires a valid JWT
+router.use('/v1/dashboard', authenticateToken, dashboardRoutes);  // Phase 3
+
+// ---- Backwards-compatible aliases for Phase 1 public endpoints ----
 router.use('/auth', authRoutes);
 router.use('/articles', articleRoutes);
 router.use('/categories', categoryRoutes);
@@ -38,3 +44,4 @@ router.use('/audit-logs', auditRoutes);
 router.use('/settings', settingsRoutes);
 
 export default router;
+

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, Shield, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('editor@bharatchronicle.com');
@@ -10,8 +11,7 @@ export default function AdminLoginPage() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [successUser, setSuccessUser] = useState(null);
   const navigate = useNavigate();
-
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const auth = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -19,21 +19,8 @@ export default function AdminLoginPage() {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(`${API_BASE}/v1/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error?.message || 'Authentication failed. Please verify credentials.');
-      }
-
-      // Store JWT token and user profile in storage
-      localStorage.setItem('auth_token', data.data.token);
-      localStorage.setItem('auth_user', JSON.stringify(data.data.user));
-      setSuccessUser(data.data.user);
+      const user = await auth.login(email, password);
+      setSuccessUser(user);
 
       setTimeout(() => {
         navigate('/admin');

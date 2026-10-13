@@ -1,37 +1,113 @@
-import React, { useState } from 'react';
+// ========================================================================
+// Admin Dashboard Overview Desk — Phase 3
+// Real-time editorial analytics, expiration alert queue, upcoming releases,
+// and audit log activity feed connected directly to MySQL backend.
+// ========================================================================
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FileText, Clock, AlertTriangle, Users, TrendingUp, 
-  PlusCircle, CheckCircle2, ChevronRight, Eye, ShieldAlert, Sparkles 
+  PlusCircle, CheckCircle2, ChevronRight, Eye, ShieldAlert, Sparkles,
+  RefreshCw, Calendar, ArrowRight, Activity, ExternalLink
 } from 'lucide-react';
-import { ALL_STORIES, BREAKING_NEWS } from '../../data/mockNewsData';
+import adminApi from '../../services/adminApi';
 
 export default function AdminDashboardPage() {
-  const [breakingActive, setBreakingActive] = useState(true);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchStats = async () => {
+    setRefreshing(true);
+    setErrorMsg(null);
+    try {
+      const res = await adminApi.getDashboardStats();
+      if (res.data) {
+        setStats(res.data);
+      }
+    } catch (err) {
+      console.warn('Dashboard stats notice:', err.message);
+      // If server or DB is in dev fallback mode, show gentle notice only
+      setErrorMsg('Notice: Connecting to local MySQL server. Check server/.env for DB_PASSWORD if tables are not loaded yet.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b' }}>
+        <RefreshCw className="animate-spin" size={32} style={{ margin: '0 auto 1rem', color: '#2563eb' }} />
+        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Loading live newsroom dashboard telemetry...</div>
+      </div>
+    );
+  }
+
+  const counts = stats?.counts || { published: 0, draft: 0, scheduled: 0, in_review: 0, expired: 0, total: 0 };
+  const expiringSoon = stats?.expiring_soon_24h || 0;
+  const totalViews = stats?.total_views || 0;
+  const publishedToday = stats?.published_today || 0;
+  const expiringArticles = stats?.expiring_next_7_days || [];
+  const upcomingScheduled = stats?.upcoming_scheduled || [];
+  const recentActivity = stats?.recent_activity || [];
+  const topArticles = stats?.top_articles || [];
 
   const metrics = [
-    { title: 'Articles Published Today', value: '18', change: '+4 vs yesterday', icon: FileText, color: '#2563eb' },
-    { title: 'Stories Pending Review', value: '4', change: '2 marked urgent', icon: Clock, color: '#f59e0b' },
-    { title: 'Scheduled Embargoed', value: '3', change: 'Next at 16:00 IST', icon: AlertTriangle, color: '#8b5cf6' },
-    { title: 'Concurrent Active Readers', value: '3,842', change: '+14% spike', icon: Users, color: '#10b981' },
-    { title: 'Commercial Ad CTR', value: '2.48%', change: 'Normal threshold', icon: TrendingUp, color: '#06b6d4' }
+    { title: 'Live Published Articles', value: counts.published, sub: `${publishedToday} published today`, icon: FileText, color: '#16a34a', bg: '#f0fdf4' },
+    { title: 'In Review Queue', value: counts.in_review, sub: 'Needs editorial approval', icon: Clock, color: '#ca8a04', bg: '#fefce8' },
+    { title: 'Drafts in Progress', value: counts.draft, sub: 'Saved by reporters', icon: FileText, color: '#475569', bg: '#f8fafc' },
+    { title: 'Scheduled Embargoes', value: counts.scheduled, sub: 'Auto-publish on schedule', icon: Calendar, color: '#7e22ce', bg: '#faf5ff' },
+    { title: 'Expiring Within 24h', value: expiringSoon, sub: `${counts.expired} already expired`, icon: AlertTriangle, color: '#ea580c', bg: '#fff7ed' },
+    { title: 'Cumulative Reader Views', value: totalViews.toLocaleString(), sub: 'Across published network', icon: TrendingUp, color: '#2563eb', bg: '#eff6ff' }
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       
-      {/* Dashboard Page Header */}
+      {/* Top Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>
-            Newsroom Central Dashboard
-          </h1>
-          <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: '0.2rem' }}>
-            Real-time editorial desk coordination, publication queue, and commercial telemetry.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>
+              Editorial Command Dashboard
+            </h1>
+            <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+              MYSQL LIVE
+            </span>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
+            Real-time status of editorial releases, publication expiration lifecycles, and staff activity.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            onClick={fetchStats}
+            disabled={refreshing}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: refreshing ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
+          </button>
+
           <Link
             to="/admin/articles/new"
             style={{
@@ -51,180 +127,261 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Breaking News Global Alert Toggle Strip */}
-      <div style={{
-        backgroundColor: breakingActive ? '#fef2f2' : '#f8fafc',
-        border: breakingActive ? '1px solid #fecaca' : '1px solid #e2e8f0',
-        padding: '0.85rem 1.25rem',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            backgroundColor: breakingActive ? '#dc2626' : '#94a3b8',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <ShieldAlert size={18} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: breakingActive ? '#991b1b' : '#334155' }}>
-              Global Breaking News Ticker: {breakingActive ? 'LIVE & BROADCASTING' : 'OFFLINE / PAUSED'}
-            </div>
-            <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-              Active lead headline: "{BREAKING_NEWS[0].headline}"
-            </div>
-          </div>
+      {errorMsg && (
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+          {errorMsg}
         </div>
+      )}
 
-        <button
-          onClick={() => setBreakingActive(!breakingActive)}
-          style={{
-            padding: '0.4rem 0.85rem',
-            backgroundColor: breakingActive ? '#991b1b' : '#334155',
-            color: '#ffffff',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            borderRadius: '4px',
-            textTransform: 'uppercase'
-          }}
-        >
-          {breakingActive ? 'Disable Ticker' : 'Activate Ticker'}
-        </button>
-      </div>
+      {/* Expiry Warning Strip if articles are expiring soon */}
+      {expiringSoon > 0 && (
+        <div style={{
+          backgroundColor: '#fff7ed',
+          border: '1px solid #fed7aa',
+          padding: '0.85rem 1.25rem',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ backgroundColor: '#ea580c', color: '#fff', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#9a3412' }}>
+                Attention: {expiringSoon} article{expiringSoon > 1 ? 's' : ''} expiring within the next 24 hours
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#c2410c' }}>
+                Stories will auto-retire from reader view unless their publication expiry dates are extended.
+              </div>
+            </div>
+          </div>
+          <Link
+            to="/admin/scheduled"
+            style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ea580c', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+          >
+            Review Scheduled & Expiry Queue <ArrowRight size={13} />
+          </Link>
+        </div>
+      )}
 
-      {/* Metrics Row */}
+      {/* Metrics 6-Card Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1.25rem'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: '1rem'
       }}>
         {metrics.map((m, idx) => {
           const Icon = m.icon;
           return (
-            <div key={idx} style={{
-              backgroundColor: '#ffffff',
-              padding: '1.25rem',
-              borderRadius: '4px',
-              border: '1px solid #e2e8f0',
-              boxShadow: 'var(--shadow-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#64748b' }}>
+            <div
+              key={idx}
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '1.15rem',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b' }}>
                   {m.title}
                 </span>
-                <div style={{ color: m.color, padding: '0.25rem', backgroundColor: `${m.color}15`, borderRadius: '4px' }}>
+                <div style={{ backgroundColor: m.bg, color: m.color, width: 28, height: 28, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon size={16} />
                 </div>
               </div>
-
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>
-                {m.value}
-              </div>
-
-              <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>
-                {m.change}
+              <div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+                  {m.value}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  {m.sub}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Editorial Queue & Review Table */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
-              Editorial Queue & Live Dispatches
-            </h2>
-            <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
-              Showing latest stories currently active across national, world, and economy desks.
-            </p>
+      {/* 2-Column Split: Expiring & Scheduled Queue vs Recent Editorial Activity */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+        gap: '1.5rem',
+        alignItems: 'start'
+      }}>
+        
+        {/* Left: Expiring in Next 7 Days */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Clock size={16} color="#ea580c" />
+              <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                Upcoming Expirations (Next 7 Days)
+              </h2>
+            </div>
+            <Link to="/admin/scheduled" style={{ fontSize: '0.74rem', color: '#2563eb', fontWeight: 600 }}>
+              View all
+            </Link>
           </div>
 
-          <Link to="/admin/articles" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2563eb', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-            Full Newsroom Archive <ChevronRight size={14} />
+          {expiringArticles.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+              No stories scheduled to expire in the next 7 days.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {expiringArticles.map((art) => (
+                <div
+                  key={art.id}
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '4px',
+                    border: '1px solid #fed7aa',
+                    backgroundColor: '#fffaf5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem'
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <Link
+                      to={`/admin/articles/${art.id}/edit`}
+                      style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {art.title}
+                    </Link>
+                    <div style={{ fontSize: '0.72rem', color: '#c2410c', marginTop: '0.15rem' }}>
+                      Expires: {new Date(art.expiry_time).toLocaleString()}
+                    </div>
+                  </div>
+                  <Link
+                    to={`/admin/articles/${art.id}/edit`}
+                    style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.35rem 0.65rem', borderRadius: '3px', backgroundColor: '#ea580c', color: '#ffffff', textDecoration: 'none', flexShrink: 0 }}
+                  >
+                    Extend
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Recent Newsroom Activity Feed */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Activity size={16} color="#2563eb" />
+              <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                Recent Newsroom Audit Activity
+              </h2>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Live audit trail</span>
+          </div>
+
+          {recentActivity.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+              No recent audit logs recorded.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {recentActivity.map((log) => (
+                <div
+                  key={log.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.65rem',
+                    fontSize: '0.78rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    paddingBottom: '0.5rem'
+                  }}
+                >
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#2563eb', marginTop: 5, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div>
+                      <strong>{log.actor_name || 'Staff User'}</strong> {log.action?.toLowerCase().replace(/_/g, ' ')}
+                      {log.entity_id ? ` #${log.entity_id}` : ''}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.1rem' }}>
+                      {new Date(log.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Top Read Articles Table */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Eye size={16} color="#059669" />
+            <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+              Most Read Stories (Telemetry)
+            </h2>
+          </div>
+          <Link to="/admin/articles" style={{ fontSize: '0.74rem', color: '#2563eb', fontWeight: 600 }}>
+            Manage all stories
           </Link>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.04em' }}>
-                <th style={{ padding: '0.75rem 1.25rem' }}>Headline & Desk</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Author</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Read Time</th>
-                <th style={{ padding: '0.75rem 1.25rem', textAlign: 'right' }}>Actions</th>
+              <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Headline</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Category</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Views</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Status</th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {ALL_STORIES.slice(0, 5).map((story, idx) => (
-                <tr key={story.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '1rem 1.25rem' }}>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>
-                      {story.title}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', fontSize: '0.72rem', color: '#64748b' }}>
-                      <span style={{ fontWeight: 700, color: '#2563eb' }}>{story.category || 'National'}</span>
-                      <span>•</span>
-                      <span>Published: {story.publishedAt || 'Today'}</span>
-                    </div>
-                  </td>
-
-                  <td style={{ padding: '1rem 1rem', color: '#334155', fontWeight: 600 }}>
-                    {story.author?.name || 'Bureau Staff'}
-                  </td>
-
-                  <td style={{ padding: '1rem 1rem' }}>
-                    <span style={{ 
-                      backgroundColor: idx === 0 ? '#dcfce7' : '#eff6ff', 
-                      color: idx === 0 ? '#15803d' : '#1d4ed8', 
-                      padding: '0.2rem 0.55rem', 
-                      borderRadius: '999px', 
-                      fontSize: '0.7rem', 
-                      fontWeight: 700,
-                      textTransform: 'uppercase'
-                    }}>
-                      {idx === 0 ? 'Lead Story' : 'Published'}
-                    </span>
-                  </td>
-
-                  <td style={{ padding: '1rem 1rem', color: '#64748b' }}>
-                    {story.readingTime || '4 min'}
-                  </td>
-
-                  <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                      <Link
-                        to={`/article/${story.slug}`}
-                        target="_blank"
-                        style={{ padding: '0.35rem 0.65rem', backgroundColor: '#f1f5f9', color: '#334155', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 600 }}
-                      >
-                        Preview
-                      </Link>
-                      <Link
-                        to="/admin/articles/new"
-                        style={{ padding: '0.35rem 0.65rem', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '4px', fontSize: '0.74rem', fontWeight: 600 }}
-                      >
-                        Edit
-                      </Link>
-                    </div>
+              {topArticles.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                    No published articles found in database.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                topArticles.map((art) => (
+                  <tr key={art.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '0.65rem 0.75rem', fontWeight: 600 }}>
+                      <Link to={`/admin/articles/${art.id}/edit`} style={{ color: '#0f172a', textDecoration: 'none' }}>
+                        {art.title}
+                      </Link>
+                    </td>
+                    <td style={{ padding: '0.65rem 0.75rem', color: '#64748b' }}>
+                      {art.category_name || 'General'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.75rem', fontWeight: 700, color: '#059669' }}>
+                      {art.view_count.toLocaleString()}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.75rem' }}>
+                      <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '3px', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 700 }}>
+                        {art.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>
+                      <Link to={`/admin/articles/${art.id}/edit`} style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.75rem' }}>
+                        Edit
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
