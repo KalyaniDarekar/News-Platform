@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Shield, CheckCircle, Award, ArrowUp } from 'lucide-react';
+import AdBanner from './AdBanner';
 import { CATEGORIES } from '../../data/mockNewsData';
 
 export default function Footer() {
@@ -43,8 +44,13 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* Footer Commercial Super Leaderboard Placement (Section A) */}
+      <div className="container-editorial" style={{ paddingTop: '1.5rem' }}>
+        <AdBanner slot="footerBanner" />
+      </div>
+
       {/* Main Footer Links Columns */}
-      <div className="container-editorial" style={{ padding: '2.5rem 20px 2rem' }}>
+      <div className="container-editorial" style={{ padding: '1.5rem 20px 2rem' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -91,14 +97,33 @@ export default function Footer() {
           {/* Column 3: Editorial Standards & Legal */}
           <div>
             <h4 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ffffff', marginBottom: '1rem', borderBottom: '1px solid #374151', paddingBottom: '0.4rem' }}>
-              Standards & Policies
+              Standards & Partnerships
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
+              <li><Link to="/advertise" style={{ color: '#60a5fa', fontWeight: 700 }}>★ Direct Advertising & Media Kit</Link></li>
               <li><Link to="/about" style={{ color: '#9ca3af' }}>About Our Newsroom</Link></li>
               <li><Link to="/contact" style={{ color: '#9ca3af' }}>Contact Bureaus & Tip-offs</Link></li>
               <li><Link to="/policies" style={{ color: '#9ca3af' }}>Corrections & Editorial Code</Link></li>
-              <li><Link to="/policies#advertising" style={{ color: '#9ca3af' }}>Commercial Advertising Policy</Link></li>
-              <li><Link to="/privacy-policy" style={{ color: '#9ca3af' }}>Privacy Policy</Link></li>
+              <li><Link to="/privacy-policy" style={{ color: '#9ca3af' }}>Privacy Policy (DPDP & GDPR)</Link></li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('bc_open_consent_modal'))}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    color: '#9ca3af',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
+                >
+                  Cookie & Consent Preferences
+                </button>
+              </li>
               <li><Link to="/terms" style={{ color: '#9ca3af' }}>Terms & Conditions</Link></li>
             </ul>
           </div>

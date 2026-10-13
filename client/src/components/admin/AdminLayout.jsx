@@ -3,7 +3,7 @@ import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, PlusCircle, FolderTree, Image, 
   CalendarClock, Megaphone, BarChart3, Settings, LogOut, 
-  ExternalLink, Bell, Search, Shield, ChevronRight, Menu, X, Sparkles
+  ExternalLink, Bell, Search, Shield, ChevronRight, Menu, X, Sparkles, Briefcase
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -20,6 +20,7 @@ export default function AdminLayout() {
     { label: 'Media Library', path: '/admin/media', icon: Image },
     { label: 'Scheduled & Expiry', path: '/admin/scheduled', icon: CalendarClock },
     { label: 'Ad Monetization', path: '/admin/ads', icon: Megaphone },
+    { label: 'Ad Enquiries & Leads', path: '/admin/enquiries', icon: Briefcase },
     { label: 'Editorial Analytics', path: '/admin/analytics', icon: BarChart3 },
     { label: 'Platform Settings', path: '/admin/settings', icon: Settings },
   ];

@@ -299,12 +299,17 @@ export const apiService = {
     return { data: ALL_STORIES.filter(s => s.isLead || s.isFeatured).slice(0, limit), source: 'DEMONSTRATION_MODE' };
   },
 
-  // Get active advertisement for placement slot
+  // Get active advertisement for placement slot (supports all 7 standard slots)
   async getActiveAd(placementCode) {
     const codeMap = {
       headerLeaderboard: 'header_leaderboard',
+      heroAdjacent: 'homepage_hero_adjacent',
       midBillboard: 'homepage_mid_billboard',
-      sidebarRectangle: 'article_sidebar_top'
+      inline: 'article_inline',
+      sidebarRectangle: 'article_sidebar_top',
+      categoryBanner: 'category_page_banner',
+      footerBanner: 'footer_banner',
+      mobileAnchor: 'mobile_anchor_banner'
     };
     const targetCode = codeMap[placementCode] || placementCode;
 
@@ -317,7 +322,9 @@ export const apiService = {
             id: json.data.id,
             title: json.data.title,
             sponsor: json.data.client_name,
+            adType: json.data.ad_type || 'image',
             imageUrl: json.data.banner_image_url,
+            adCode: json.data.ad_code,
             targetUrl: json.data.target_url,
             placementCode: json.data.placement_code,
             dimensions: json.data.dimensions,
@@ -332,24 +339,194 @@ export const apiService = {
     const fallback = AD_BANNERS[placementCode] || AD_BANNERS.headerLeaderboard;
     return {
       id: null,
-      title: fallback.title,
-      sponsor: fallback.sponsor,
+      title: fallback?.title || 'Partner with The Bharat Chronicle',
+      sponsor: fallback?.sponsor || 'The Bharat Chronicle Commercial Desk',
+      adType: 'image',
       imageUrl: null,
-      targetUrl: fallback.url,
+      adCode: null,
+      targetUrl: fallback?.url || '/advertise',
       placementCode: targetCode,
       dimensions: '970x90',
       source: 'DEMONSTRATION_MODE'
     };
   },
 
-  // Record advertisement click telemetry in MySQL
-  async recordAdClick(adId) {
+  // Record advertisement impression telemetry
+  async recordAdImpression(adId, placementCode = '', pagePath = '') {
     if (!adId) return;
     try {
-      await fetch(`${API_BASE}/ads/${adId}/click`, { method: 'POST' });
+      await fetch(`${API_BASE}/ads/${adId}/impression`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placementCode, pagePath: pagePath || window.location.pathname })
+      });
+    } catch {
+      // Silently ignored
+    }
+  },
+
+  // Record advertisement click telemetry
+  async recordAdClick(adId, placementCode = '', pagePath = '') {
+    if (!adId) return;
+    try {
+      await fetch(`${API_BASE}/ads/${adId}/click`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placementCode, pagePath: pagePath || window.location.pathname })
+      });
+    } catch {
+      // Silently ignored
+    }
+  },
+
+  // Submit direct advertiser commercial enquiry
+  async submitAdvertiserEnquiry(payload) {
+    try {
+      const res = await fetch(`${API_BASE}/advertiser-enquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error?.message || json.message || 'Submission failed');
+      }
+      return json;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // List approved YouTube video broadcasts
+  async getYoutubeVideos({ page = 1, limit = 12, search = '', isFeatured = null } = {}) {
+    try {
+      const params = new URLSearchParams();
+      if (page) params.set('page', page);
+      if (limit) params.set('limit', limit);
+      if (search) params.set('search', search);
+      if (isFeatured !== null) params.set('isFeatured', isFeatured);
+
+      const res = await fetch(`${API_BASE}/videos?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return { data: json.data, pagination: json.pagination, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getYoutubeVideos failed:', err.message);
+    }
+
+    // Fallback to sample videos
+    return {
+      data: [
+        {
+          id: 1,
+          youtube_id: 'dQw4w9WgXcQ',
+          title: 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand',
+          description: 'Exclusive Bharat Chronicle video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
+          embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+          is_featured: 1
+        },
+        {
+          id: 2,
+          youtube_id: '7NOSDKb0HlU',
+          title: 'Monetary Policy Briefing: Reserve Bank Governor on Inflation Targets',
+          description: 'Key takeaways from the RBI Monetary Policy Committee resolution and economic growth forecast.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80',
+          embedUrl: 'https://www.youtube.com/embed/7NOSDKb0HlU',
+          is_featured: 0
+        },
+        {
+          id: 3,
+          youtube_id: 'kJQP7kiw5Fk',
+          title: 'Himalayan Clean Energy: Assessing Run-of-the-River Hydro Projects',
+          description: 'Field report on ecological balance and clean power transmission in the northern states.',
+          thumbnail_url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=800&q=80',
+          embedUrl: 'https://www.youtube.com/embed/kJQP7kiw5Fk',
+          is_featured: 0
+        }
+      ],
+      source: 'DEMONSTRATION_MODE'
+    };
+  },
+
+  // Get featured YouTube video for Homepage spotlight
+  async getFeaturedVideo() {
+    try {
+      const res = await fetch(`${API_BASE}/videos/featured`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getFeaturedVideo failed:', err.message);
+    }
+
+    return {
+      data: {
+        youtube_id: 'dQw4w9WgXcQ',
+        title: 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand',
+        description: 'Exclusive Bharat Chronicle video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
+        embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+      },
+      source: 'DEMONSTRATION_MODE'
+    };
+  },
+
+  // Record first-party page view telemetry (debounced, privacy-conscious)
+  async trackPageView({ pagePath, pageType = 'article', articleId = null, referrer = '', deviceType = 'desktop', sessionId = '' } = {}) {
+    try {
+      await fetch(`${API_BASE}/analytics/track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pagePath: pagePath || window.location.pathname,
+          pageType,
+          articleId,
+          referrer: referrer || document.referrer || '',
+          deviceType,
+          sessionId
+        })
+      });
     } catch {
       // Telemetry error silently ignored
     }
+  },
+
+  // Get safe public integration settings (GA4, AdSense, YouTube channel)
+  async getPublicSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/settings/public`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return { data: json.data, source: 'MYSQL_LIVE' };
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getPublicSettings failed:', err.message);
+    }
+
+    return {
+      data: {
+        site_name: 'The Bharat Chronicle',
+        site_tagline: 'Independent National Daily of Record',
+        site_motto: 'Veritas et Libertas • Est. 1928',
+        youtube_channel_url: 'https://www.youtube.com/@TheBharatChronicle',
+        youtube_channel_name: 'The Bharat Chronicle Digital Newsroom',
+        featured_youtube_video_id: 'dQw4w9WgXcQ',
+        media_kit_url: '/downloads/Bharat_Chronicle_Media_Kit_2026.pdf',
+        advertiser_desk_email: 'advertising@bharatchronicle.com',
+        advertiser_desk_phone: '+91 (11) 4890-2800',
+        privacy_compliance_mode: 'dpdp_act_india',
+        cookie_consent_required: '1'
+      },
+      source: 'DEMONSTRATION_MODE'
+    };
   },
 
   // Get public site settings (masthead, tagline, editorial contact)

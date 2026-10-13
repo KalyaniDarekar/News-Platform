@@ -1,46 +1,159 @@
-import React, { useState } from 'react';
-import { Megaphone, PlusCircle, ToggleLeft, ToggleRight, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Megaphone, PlusCircle, ToggleLeft, ToggleRight, ExternalLink, 
+  TrendingUp, Eye, MousePointer, Calendar, Sparkles, AlertCircle, 
+  ShieldAlert, Edit3, Trash2, CheckCircle, RefreshCw, X, Image as ImageIcon,
+  Code, Clock, Layers
+} from 'lucide-react';
+import adminApi from '../../services/adminApi';
 
 export default function AdminAdsPage() {
-  const [ads, setAds] = useState([
-    {
-      id: 1,
-      slot: 'Header Super Leaderboard (970x90)',
-      sponsor: 'Confederation of Indian Industry',
-      campaign: 'India Global Tech Summit 2026',
-      impressions: '142,400',
-      clicks: '3,540',
-      ctr: '2.48%',
-      revenue: '₹1,85,000',
-      active: true
-    },
-    {
-      id: 2,
-      slot: 'Article Sidebar Top (300x250)',
-      sponsor: 'National Infrastructure Investment Fund',
-      campaign: 'Green Infrastructure Sovereign Bonds',
-      impressions: '98,200',
-      clicks: '2,110',
-      ctr: '2.15%',
-      revenue: '₹1,20,000',
-      active: true
-    },
-    {
-      id: 3,
-      slot: 'Homepage Mid-Billboard (970x120)',
-      sponsor: 'Ministry of New & Renewable Energy Partner',
-      campaign: 'Solar Mission Grid Expansion',
-      impressions: '64,100',
-      clicks: '1,420',
-      ctr: '2.21%',
-      revenue: '₹95,000',
-      active: true
-    }
-  ]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [placements, setPlacements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'placements'
 
-  const toggleAd = (id) => {
-    setAds(ads.map(ad => ad.id === id ? { ...ad, active: !ad.active } : ad));
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentId, setCurrentId] = useState(null);
+  const [previewAd, setPreviewAd] = useState(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    clientName: '',
+    placementId: 1,
+    adType: 'image',
+    bannerImageUrl: '',
+    adCode: '',
+    targetUrl: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '2026-12-31',
+    priority: 5,
+    isActive: true
+  });
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const fetchCampaignsAndPlacements = async () => {
+    setLoading(true);
+    try {
+      const [cRes, pRes] = await Promise.all([
+        adminApi.getAdCampaigns(),
+        adminApi.getAdPlacements()
+      ]);
+      setCampaigns(cRes.data || []);
+      setPlacements(pRes.data || []);
+      if (pRes.data && pRes.data.length > 0 && !formData.placementId) {
+        setFormData(prev => ({ ...prev, placementId: pRes.data[0].id }));
+      }
+    } catch (err) {
+      console.error('Failed to load campaigns or placements:', err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchCampaignsAndPlacements();
+  }, []);
+
+  const handleOpenCreateModal = () => {
+    setIsEditing(false);
+    setCurrentId(null);
+    setFormError('');
+    setFormData({
+      title: '',
+      clientName: '',
+      placementId: placements.length > 0 ? placements[0].id : 1,
+      adType: 'image',
+      bannerImageUrl: '',
+      adCode: '',
+      targetUrl: '',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '2026-12-31',
+      priority: 5,
+      isActive: true
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (camp) => {
+    setIsEditing(true);
+    setCurrentId(camp.id);
+    setFormError('');
+    setFormData({
+      title: camp.title || '',
+      clientName: camp.client_name || '',
+      placementId: camp.placement_id || (placements[0]?.id || 1),
+      adType: camp.ad_type || 'image',
+      bannerImageUrl: camp.banner_image_url || '',
+      adCode: camp.ad_code || '',
+      targetUrl: camp.target_url || '',
+      startDate: camp.start_date ? camp.start_date.split('T')[0] : '',
+      endDate: camp.end_date ? camp.end_date.split('T')[0] : '',
+      priority: camp.priority !== undefined ? camp.priority : 5,
+      isActive: Boolean(camp.is_active)
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveCampaign = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    setSaving(true);
+
+    try {
+      if (!formData.title || !formData.clientName) {
+        throw new Error('Campaign title and client name are required.');
+      }
+      if (formData.adType === 'image' && (!formData.bannerImageUrl || !formData.targetUrl)) {
+        throw new Error('Banner Image URL and Target URL are required for image ads.');
+      }
+      if (formData.adType === 'code' && (!formData.adCode || !formData.adCode.trim())) {
+        throw new Error('Approved Ad Code snippet is required for code ads.');
+      }
+
+      if (isEditing && currentId) {
+        await adminApi.updateAdCampaign(currentId, formData);
+      } else {
+        await adminApi.createAdCampaign(formData);
+      }
+
+      setIsModalOpen(false);
+      fetchCampaignsAndPlacements();
+    } catch (err) {
+      setFormError(err.message || 'Failed to save advertisement campaign.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (id, currentStatus) => {
+    try {
+      await adminApi.toggleAdCampaign(id, !currentStatus);
+      setCampaigns(prev => prev.map(c => c.id === id ? { ...c, is_active: !currentStatus ? 1 : 0 } : c));
+    } catch (err) {
+      alert(`Toggle failed: ${err.message}`);
+    }
+  };
+
+  const handleDeleteCampaign = async (id, title) => {
+    if (!window.confirm(`Permanently delete campaign "${title}"?`)) return;
+    try {
+      await adminApi.deleteAdCampaign(id);
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+    }
+  };
+
+  // Metrics summary based on real stored records
+  const totalImpressions = campaigns.reduce((acc, c) => acc + (Number(c.impressions_count) || 0), 0);
+  const totalClicks = campaigns.reduce((acc, c) => acc + (Number(c.clicks_count) || 0), 0);
+  const platformCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : '0.00';
+  const activeCount = campaigns.filter(c => c.is_active).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -52,112 +165,695 @@ export default function AdminAdsPage() {
             Commercial Advertising & Inventory Operations
           </h1>
           <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: '0.2rem' }}>
-            Manage direct sponsor campaigns, IAB ad slots, programmatic tags, and yield monetization.
+            Configure multi-slot advertising inventory, direct sponsor campaigns, priority scheduling, and approved ad code snippets.
           </p>
         </div>
 
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={fetchCampaignsAndPlacements}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              padding: '0.55rem 0.9rem',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <RefreshCw size={14} /> Refresh
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenCreateModal}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              padding: '0.55rem 1rem',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(37,99,235,0.25)'
+            }}
+          >
+            <PlusCircle size={15} /> Book Sponsor Campaign
+          </button>
+        </div>
+      </div>
+
+      {/* Verified First-Party Inventory Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Active Flights</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
+            {activeCount} <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#64748b' }}>/ {campaigns.length} total</span>
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 600, marginTop: '0.25rem' }}>
+            {placements.length} configured placement slots
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Delivered Impressions</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
+            {totalImpressions.toLocaleString('en-IN')}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>
+            Verified first-party viewable telemetry
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Recorded Clicks</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
+            {totalClicks.toLocaleString('en-IN')}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600, marginTop: '0.25rem' }}>
+            Audited reader click-through actions
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Average Platform CTR</div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>
+            {platformCtr}%
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>
+            Direct brand campaigns average
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', gap: '1rem' }}>
         <button
-          onClick={() => alert('New Campaign: In Phase 2, connects to MySQL advertisements table.')}
+          onClick={() => setActiveTab('campaigns')}
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            backgroundColor: '#2563eb',
-            color: '#ffffff',
-            padding: '0.55rem 1rem',
-            borderRadius: '4px',
-            fontSize: '0.82rem',
-            fontWeight: 700
+            padding: '0.75rem 1rem',
+            border: 'none',
+            borderBottom: activeTab === 'campaigns' ? '2px solid #2563eb' : '2px solid transparent',
+            color: activeTab === 'campaigns' ? '#2563eb' : '#64748b',
+            fontWeight: 700,
+            fontSize: '0.86rem',
+            backgroundColor: 'transparent',
+            cursor: 'pointer'
           }}
         >
-          <PlusCircle size={15} /> Book Sponsor Campaign
+          Booked Campaigns ({campaigns.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('placements')}
+          style={{
+            padding: '0.75rem 1rem',
+            border: 'none',
+            borderBottom: activeTab === 'placements' ? '2px solid #2563eb' : '2px solid transparent',
+            color: activeTab === 'placements' ? '#2563eb' : '#64748b',
+            fontWeight: 700,
+            fontSize: '0.86rem',
+            backgroundColor: 'transparent',
+            cursor: 'pointer'
+          }}
+        >
+          Inventory Placement Slots ({placements.length})
         </button>
       </div>
 
-      {/* Revenue Snapshot Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Total Monthly Ad Yield</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>₹4,00,000</div>
-          <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>+18% over last month</div>
+      {/* Tab 1: Booked Campaigns Table */}
+      {activeTab === 'campaigns' && (
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>Loading campaigns...</div>
+          ) : campaigns.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+              <Megaphone size={36} style={{ margin: '0 auto 0.75rem auto', color: '#94a3b8' }} />
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#334155' }}>No Active Campaigns Booked</h3>
+              <p style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>Click "Book Sponsor Campaign" above to schedule a new campaign.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Campaign & Sponsor</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Placement Slot</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Format</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Flight Dates</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Priority</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Impressions</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>CTR</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>State</th>
+                    <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaigns.map((camp) => (
+                    <tr key={camp.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>{camp.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.15rem' }}>
+                          Sponsor: <strong>{camp.client_name}</strong>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{camp.placement_name || camp.placement_code}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>{camp.dimensions}</div>
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          backgroundColor: camp.ad_type === 'code' ? '#f5f3ff' : '#eff6ff',
+                          color: camp.ad_type === 'code' ? '#7c3aed' : '#2563eb',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '3px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}>
+                          {camp.ad_type === 'code' ? <Code size={12} /> : <ImageIcon size={12} />}
+                          {camp.ad_type || 'image'}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem', fontSize: '0.76rem', color: '#64748b' }}>
+                        <div>From: {camp.start_date ? camp.start_date.split('T')[0] : 'Open'}</div>
+                        <div>To: {camp.end_date ? camp.end_date.split('T')[0] : 'Indefinite'}</div>
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem', fontWeight: 700, color: '#334155' }}>
+                        P-{camp.priority || 5}
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                        {(Number(camp.impressions_count) || 0).toLocaleString('en-IN')}
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem', fontFamily: 'monospace', fontWeight: 700, color: '#16a34a' }}>
+                        {camp.ctr_percentage || '0.00'}%
+                      </td>
+
+                      <td style={{ padding: '1rem 1rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(camp.id, Boolean(camp.is_active))}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '999px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            backgroundColor: camp.is_active ? '#dcfce7' : '#f1f5f9',
+                            color: camp.is_active ? '#15803d' : '#64748b',
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {camp.is_active ? 'Active' : 'Paused'}
+                        </button>
+                      </td>
+
+                      <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAd(camp)}
+                            style={{
+                              padding: '0.35rem 0.55rem',
+                              backgroundColor: '#f1f5f9',
+                              color: '#334155',
+                              borderRadius: '3px',
+                              border: 'none',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                            title="Preview Creative"
+                          >
+                            <Eye size={13} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(camp)}
+                            style={{
+                              padding: '0.35rem 0.55rem',
+                              backgroundColor: '#f0f9ff',
+                              color: '#0284c7',
+                              borderRadius: '3px',
+                              border: 'none',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                            title="Edit Campaign"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCampaign(camp.id, camp.title)}
+                            style={{
+                              padding: '0.35rem 0.55rem',
+                              backgroundColor: '#fee2e2',
+                              color: '#b91c1c',
+                              borderRadius: '3px',
+                              border: 'none',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer'
+                            }}
+                            title="Delete Campaign"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
+      )}
 
-        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Delivered Impressions</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>304,700</div>
-          <div style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 600 }}>98.4% fill rate</div>
+      {/* Tab 2: Inventory Placement Slots */}
+      {activeTab === 'placements' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+          {placements.map((p) => {
+            const activeCampaign = campaigns.find(c => c.placement_id === p.id && c.is_active);
+            return (
+              <div 
+                key={p.id}
+                style={{
+                  backgroundColor: '#ffffff',
+                  padding: '1.5rem',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 700, fontFamily: 'monospace' }}>
+                      {p.placement_code}
+                    </span>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
+                      {p.name}
+                    </h3>
+                  </div>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    backgroundColor: '#f1f5f9',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '3px'
+                  }}>
+                    {p.dimensions}
+                  </span>
+                </div>
+
+                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>CURRENT FLIGHT SPONSOR:</div>
+                  {activeCampaign ? (
+                    <div style={{ marginTop: '0.35rem' }}>
+                      <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>{activeCampaign.client_name}</strong>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b' }}>"{activeCampaign.title}"</div>
+                      <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 700, marginTop: '0.25rem' }}>
+                        Active &bull; {Number(activeCampaign.impressions_count).toLocaleString('en-IN')} impressions delivered
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                      Unbooked / Available for direct advertiser flight
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
+      )}
 
-        <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Average Platform CTR</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '0.25rem' }}>2.31%</div>
-          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Industry benchmark: 0.8%</div>
-        </div>
-      </div>
+      {/* Book / Edit Campaign Modal */}
+      {isModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15,23,42,0.6)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '6px',
+            maxWidth: '680px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '2rem',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+                  {isEditing ? 'Edit Sponsor Campaign' : 'Book Commercial Sponsor Campaign'}
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  Configure creative parameters, target destination, priority weighting, and flight schedule.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#64748b', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
 
-      {/* Inventory Slots Table */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
-              <th style={{ padding: '0.85rem 1.25rem' }}>Inventory Slot & Dimension</th>
-              <th style={{ padding: '0.85rem 1rem' }}>Active Sponsor / Campaign</th>
-              <th style={{ padding: '0.85rem 1rem' }}>Impressions</th>
-              <th style={{ padding: '0.85rem 1rem' }}>CTR</th>
-              <th style={{ padding: '0.85rem 1rem' }}>Gross Value</th>
-              <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ads.map((ad) => (
-              <tr key={ad.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '1rem 1.25rem' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a' }}>{ad.slot}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Position: Above Fold</div>
-                </td>
+            {formError && (
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '4px', fontSize: '0.82rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertCircle size={16} /> {formError}
+              </div>
+            )}
 
-                <td style={{ padding: '1rem 1rem' }}>
-                  <strong style={{ color: '#0f172a' }}>{ad.sponsor}</strong>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>"{ad.campaign}"</div>
-                </td>
+            <form onSubmit={handleSaveCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              
+              {/* Campaign Title & Client */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Campaign Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g. India Global Tech Summit 2026"
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                  />
+                </div>
 
-                <td style={{ padding: '1rem 1rem', fontFamily: 'monospace' }}>
-                  {ad.impressions}
-                </td>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Sponsor / Client Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.clientName}
+                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                    placeholder="e.g. Confederation of Indian Industry"
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                  />
+                </div>
+              </div>
 
-                <td style={{ padding: '1rem 1rem', fontFamily: 'monospace', fontWeight: 700, color: '#047857' }}>
-                  {ad.ctr}
-                </td>
-
-                <td style={{ padding: '1rem 1rem', fontWeight: 700, color: '#0f172a' }}>
-                  {ad.revenue}
-                </td>
-
-                <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                  <button
-                    onClick={() => toggleAd(ad.id)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: '999px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      backgroundColor: ad.active ? '#dcfce7' : '#f1f5f9',
-                      color: ad.active ? '#15803d' : '#64748b',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
+              {/* Placement & Ad Type */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Inventory Placement Slot *
+                  </label>
+                  <select
+                    value={formData.placementId}
+                    onChange={(e) => setFormData({ ...formData, placementId: parseInt(e.target.value, 10) })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
                   >
-                    {ad.active ? 'Active' : 'Paused'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    {placements.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.dimensions})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Creative Delivery Type *
+                  </label>
+                  <select
+                    value={formData.adType}
+                    onChange={(e) => setFormData({ ...formData, adType: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                  >
+                    <option value="image">Direct Creative Image (JPG / PNG / WebP)</option>
+                    <option value="code">Approved Ad Code (Google AdSense / HTML Tag)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Image creative vs Code creative */}
+              {formData.adType === 'image' ? (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                      Banner Image Creative URL *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={formData.bannerImageUrl}
+                      onChange={(e) => setFormData({ ...formData, bannerImageUrl: e.target.value })}
+                      placeholder="https://images.unsplash.com/... or /uploads/..."
+                      style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                    />
+                    {formData.bannerImageUrl && (
+                      <div style={{ marginTop: '0.5rem', maxHeight: '120px', overflow: 'hidden', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                        <img src={formData.bannerImageUrl} alt="Creative Preview" style={{ width: '100%', height: 'auto', display: 'block' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                      Target Destination Landing URL *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={formData.targetUrl}
+                      onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
+                      placeholder="https://partner-domain.com/landing-page"
+                      style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
+                      Approved Partner Ad Code Snippet *
+                    </label>
+                    <span style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <ShieldAlert size={12} /> Restricted to Super Admin / Ad Manager
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    required
+                    value={formData.adCode}
+                    onChange={(e) => setFormData({ ...formData, adCode: e.target.value })}
+                    placeholder={`<!-- Google AdSense or Approved Programmatic Unit -->\n<ins class="adsbygoogle"\n     style="display:block"\n     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"\n     data-ad-slot="1234567890"></ins>`}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontFamily: 'monospace' }}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>
+                    Note: Untrusted scripts are sandboxed. Do not include unapproved tracker scripts.
+                  </div>
+                </div>
+              )}
+
+              {/* Dates & Priority */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Flight Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Flight End Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                    Priority Weight (0-10)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value, 10) || 0 })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Active Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="isActiveToggle"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <label htmlFor="isActiveToggle" style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', cursor: 'pointer' }}>
+                  Enable campaign for active delivery immediately
+                </label>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  style={{
+                    padding: '0.6rem 1.25rem',
+                    backgroundColor: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    padding: '0.6rem 1.4rem',
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    opacity: saving ? 0.7 : 1
+                  }}
+                >
+                  {saving ? 'Saving Flight...' : (isEditing ? 'Update Campaign' : 'Confirm Campaign Booking')}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Visual Creative Preview Modal */}
+      {previewAd && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15,23,42,0.6)',
+          zIndex: 110,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '6px',
+            maxWidth: '820px',
+            width: '100%',
+            padding: '2rem',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                  Creative Preview: {previewAd.title}
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Placement: {previewAd.placement_name} ({previewAd.dimensions})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAd(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.4rem', color: '#64748b', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '160px' }}>
+              {previewAd.ad_type === 'image' && previewAd.banner_image_url ? (
+                <div style={{ width: '100%', textAlign: 'center' }}>
+                  <img src={previewAd.banner_image_url} alt={previewAd.title} style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '2px', border: '1px solid #cbd5e1' }} />
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#475569' }}>
+                    Destination: <a href={previewAd.target_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>{previewAd.target_url}</a>
+                  </div>
+                </div>
+              ) : previewAd.ad_type === 'code' ? (
+                <div style={{ width: '100%' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem' }}>Ad Code Output:</div>
+                  <pre style={{ backgroundColor: '#0f172a', color: '#38bdf8', padding: '1rem', borderRadius: '4px', fontSize: '0.76rem', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                    {previewAd.ad_code || '<!-- Empty Ad Code -->'}
+                  </pre>
+                </div>
+              ) : (
+                <div style={{ color: '#64748b', fontSize: '0.84rem' }}>No visual creative uploaded.</div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                onClick={() => setPreviewAd(null)}
+                style={{ backgroundColor: '#0f172a', color: '#ffffff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '4px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -108,20 +108,79 @@ export const createTagSchema = z.object({
   name: z.string().min(2, 'Tag name must be at least 2 characters').max(100)
 });
 
-export const createCampaignSchema = z.object({
+const campaignBaseSchema = z.object({
   placementId: z.number().int().positive('Valid placement ID is required'),
-  title: z.string().min(3).max(180),
-  clientName: z.string().min(2).max(150),
-  bannerImageUrl: z.string().url('Banner image must be a valid URL'),
-  targetUrl: z.string().url('Target URL must be a valid URL'),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be YYYY-MM-DD'),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be YYYY-MM-DD'),
+  title: z.string().min(3, 'Campaign title must be at least 3 characters').max(180),
+  clientName: z.string().min(2, 'Client / Sponsor name is required').max(150),
+  adType: z.enum(['image', 'code']).default('image'),
+  bannerImageUrl: z.string().url('Banner image must be a valid URL').optional().nullable(),
+  adCode: z.string().max(5000, 'Ad code exceeds maximum allowed size').optional().nullable(),
+  targetUrl: z.string().url('Target URL must be a valid URL').optional().nullable(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Start date must start with YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'End date must start with YYYY-MM-DD'),
+  priority: z.number().int().min(0).max(100).default(5),
   isActive: z.boolean().default(true)
+});
+
+export const createCampaignSchema = campaignBaseSchema.refine(
+  data => {
+    if (data.adType === 'image') {
+      return !!data.bannerImageUrl && !!data.targetUrl;
+    }
+    if (data.adType === 'code') {
+      return !!data.adCode && data.adCode.trim().length > 0;
+    }
+    return true;
+  },
+  { message: 'Banner image & Target URL are required for image ads; Ad code is required for code ads' }
+);
+
+export const updateCampaignSchema = campaignBaseSchema.partial();
+
+export const createEnquirySchema = z.object({
+  companyName: z.string().min(2, 'Company or organization name is required').max(191),
+  contactName: z.string().min(2, 'Primary contact name is required').max(150),
+  email: z.string().email('Valid business email address is required').max(191),
+  phone: z.string().max(50).optional().nullable(),
+  website: z.string().max(255).optional().nullable(),
+  budgetRange: z.string().min(1, 'Please select an estimated campaign budget tier'),
+  preferredPlacements: z.array(z.string()).optional().default([]),
+  flightStartDate: z.string().optional().nullable(),
+  campaignObjectives: z.string().max(1000).optional().nullable(),
+  message: z.string().min(10, 'Please provide details about your commercial campaign (min 10 characters)').max(3000)
+});
+
+export const updateEnquiryStatusSchema = z.object({
+  status: z.enum(['new', 'contacted', 'proposal_sent', 'closed_won', 'closed_lost']),
+  internalNotes: z.string().max(2000).optional().nullable()
+});
+
+export const createYoutubeVideoSchema = z.object({
+  youtubeUrlOrId: z.string().min(3, 'YouTube URL or 11-character Video ID is required'),
+  title: z.string().min(3, 'Video headline is required').max(255),
+  description: z.string().max(2000).optional().nullable(),
+  thumbnailUrl: z.string().url().optional().nullable(),
+  relatedArticleId: z.number().int().positive().optional().nullable(),
+  isFeatured: z.boolean().default(false),
+  displayOrder: z.number().int().default(0)
+});
+
+export const updateYoutubeVideoSchema = createYoutubeVideoSchema.partial();
+
+export const trackPageViewSchema = z.object({
+  pagePath: z.string().min(1).max(255),
+  pageType: z.string().max(50).default('article'),
+  articleId: z.number().int().positive().optional().nullable(),
+  referrer: z.string().max(255).optional().nullable(),
+  deviceType: z.enum(['desktop', 'mobile', 'tablet']).default('desktop'),
+  sessionId: z.string().max(64).optional().nullable()
 });
 
 export const updateSettingSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean()])
 });
+
+export const batchUpdateSettingsSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]));
 
 export default {
   loginSchema,
@@ -133,5 +192,12 @@ export default {
   updateCategorySchema,
   createTagSchema,
   createCampaignSchema,
-  updateSettingSchema
+  updateCampaignSchema,
+  createEnquirySchema,
+  updateEnquiryStatusSchema,
+  createYoutubeVideoSchema,
+  updateYoutubeVideoSchema,
+  trackPageViewSchema,
+  updateSettingSchema,
+  batchUpdateSettingsSchema
 };

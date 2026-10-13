@@ -9,6 +9,9 @@ import MainNavigation from './components/common/MainNavigation';
 import BreakingTicker from './components/common/BreakingTicker';
 import Footer from './components/common/Footer';
 import SearchModal from './components/common/SearchModal';
+import ConsentBanner from './components/common/ConsentBanner';
+import AdBanner from './components/common/AdBanner';
+import usePageTracking from './hooks/usePageTracking';
 
 // Public Pages
 import HomePage from './pages/public/HomePage';
@@ -16,12 +19,12 @@ import CategoryPage from './pages/public/CategoryPage';
 import ArticleDetailPage from './pages/public/ArticleDetailPage';
 import SearchResultsPage from './pages/public/SearchResultsPage';
 import VideoNewsPage from './pages/public/VideoNewsPage';
+import AdvertisePage from './pages/public/AdvertisePage';
 import AboutUsPage from './pages/public/AboutUsPage';
 import ContactUsPage from './pages/public/ContactUsPage';
 import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsPage from './pages/public/TermsPage';
 import EditorialPoliciesPage from './pages/public/EditorialPoliciesPage';
-
 import NotFoundPage from './pages/public/NotFoundPage';
 
 // Admin CMS Components & Pages
@@ -34,6 +37,7 @@ import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
 import AdminMediaPage from './pages/admin/AdminMediaPage';
 import AdminScheduledPage from './pages/admin/AdminScheduledPage';
 import AdminAdsPage from './pages/admin/AdminAdsPage';
+import AdminEnquiriesPage from './pages/admin/AdminEnquiriesPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
@@ -60,6 +64,9 @@ function ProtectedRoute({ children }) {
 // Public Website Shell Layout
 function PublicLayout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // Privacy-conscious, debounced first-party page view telemetry
+  usePageTracking();
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -73,6 +80,12 @@ function PublicLayout() {
       </main>
 
       <Footer />
+
+      {/* Floating Responsive Mobile Anchor Ad Slot */}
+      <AdBanner slot="mobileAnchor" />
+
+      {/* DPDP Act 2023 & GDPR Consent Controller */}
+      <ConsentBanner />
 
       <SearchModal 
         isOpen={isSearchOpen} 
@@ -95,6 +108,7 @@ export default function App() {
             <Route path="article/:slug" element={<ArticleDetailPage />} />
             <Route path="search" element={<SearchResultsPage />} />
             <Route path="videos" element={<VideoNewsPage />} />
+            <Route path="advertise" element={<AdvertisePage />} />
             <Route path="about" element={<AboutUsPage />} />
             <Route path="contact" element={<ContactUsPage />} />
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
@@ -122,6 +136,7 @@ export default function App() {
             <Route path="media" element={<AdminMediaPage />} />
             <Route path="scheduled" element={<AdminScheduledPage />} />
             <Route path="ads" element={<AdminAdsPage />} />
+            <Route path="enquiries" element={<AdminEnquiriesPage />} />
             <Route path="analytics" element={<AdminAnalyticsPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>

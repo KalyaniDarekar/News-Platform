@@ -209,6 +209,139 @@ export const adminApi = {
 
   async getMe() {
     return request('/auth/me');
+  },
+
+  // ================= PHASE 5 ENDPOINTS ================= //
+
+  // ---- Commercial Ad Management ----
+  async getAdPlacements() {
+    return request('/ads/placements');
+  },
+
+  async getAdCampaigns(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.placementId) query.set('placementId', params.placementId);
+    if (params.isActive !== undefined && params.isActive !== '') query.set('isActive', params.isActive);
+    if (params.search) query.set('search', params.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/ads/campaigns${queryString}`);
+  },
+
+  async createAdCampaign(payload) {
+    return request('/ads/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updateAdCampaign(id, payload) {
+    return request(`/ads/campaigns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteAdCampaign(id) {
+    return request(`/ads/campaigns/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async toggleAdCampaign(id, isActive) {
+    return request(`/ads/campaigns/${id}/toggle`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive })
+    });
+  },
+
+  // ---- Direct Advertiser Enquiries (CRM) ----
+  async getAdvertiserEnquiries(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.status && params.status !== 'all') query.set('status', params.status);
+    if (params.search) query.set('search', params.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/advertiser-enquiries${queryString}`);
+  },
+
+  async updateEnquiryStatus(id, payload) {
+    return request(`/advertiser-enquiries/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteEnquiry(id) {
+    return request(`/advertiser-enquiries/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // ---- YouTube Video Gallery & Attachments ----
+  async getYoutubeVideos(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.isFeatured !== undefined) query.set('isFeatured', params.isFeatured);
+    if (params.search) query.set('search', params.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/videos${queryString}`);
+  },
+
+  async createYoutubeVideo(payload) {
+    return request('/videos', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updateYoutubeVideo(id, payload) {
+    return request(`/videos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deleteYoutubeVideo(id) {
+    return request(`/videos/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // ---- First-Party Analytics Dashboard ----
+  async getAnalyticsOverview(params = {}) {
+    const query = new URLSearchParams();
+    if (params.timeRange) query.set('timeRange', params.timeRange);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request(`/analytics/overview${queryString}`);
+  },
+
+  // ---- Revenue Readiness & Settings ----
+  async getSettings() {
+    return request('/settings');
+  },
+
+  async updateSetting(key, value) {
+    return request(`/settings/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value })
+    });
+  },
+
+  async updateSettingsBatch(payload) {
+    return request('/settings/batch', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
   }
 };
 

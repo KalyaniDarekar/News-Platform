@@ -50,6 +50,7 @@ export const seoService = {
     const coreRoutes = [
       { path: '/', priority: '1.0', changefreq: 'always' },
       { path: '/videos', priority: '0.8', changefreq: 'daily' },
+      { path: '/advertise', priority: '0.8', changefreq: 'weekly' },
       { path: '/about', priority: '0.5', changefreq: 'monthly' },
       { path: '/contact', priority: '0.5', changefreq: 'monthly' },
       { path: '/policies', priority: '0.5', changefreq: 'monthly' },

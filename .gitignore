@@ -31,4 +31,7 @@ Thumbs.db
 .database/
 server/uploads/
 uploads/
+*.sqlite
+*.sqlite-journal
+server/data/*.sqlite
 

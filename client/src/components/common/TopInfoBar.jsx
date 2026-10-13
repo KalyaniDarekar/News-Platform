@@ -127,6 +127,26 @@ export default function TopInfoBar() {
                   <BookOpen size={12} style={{ color: 'var(--color-breaking)' }} /> e-Paper
                 </button>
 
+                <span style={{ color: 'var(--color-ink-300)' }}>|</span>
+
+                {/* Direct Advertise Link */}
+                <Link
+                  to="/advertise"
+                  style={{
+                    fontWeight: 700,
+                    color: 'var(--color-ink-800)',
+                    fontSize: '0.74rem',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center'
+                  }}
+                  title="Advertising & Media Kit"
+                >
+                  Advertise
+                </Link>
+
+                <span style={{ color: 'var(--color-ink-300)' }}>|</span>
+
                 {/* Newsroom Admin Link */}
                 <Link 
                   to="/admin" 

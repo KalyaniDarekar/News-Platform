@@ -508,6 +508,12 @@ button {
   .sponsored-grid {
     grid-template-columns: 1fr !important;
   }
+  .article-body-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .article-desktop-sidebar {
+    margin-top: 2rem !important;
+  }
   .hidden-sm {
     display: none !important;
   }

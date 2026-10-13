@@ -66,7 +66,7 @@ export default function ArticleDetailPage() {
     loadArticle();
   }, [slug]);
 
-  // Inject SEO Title & Schema.org NewsArticle JSON-LD structured data
+  // Inject SEO Title, Canonical URL & Schema.org NewsArticle + BreadcrumbList JSON-LD
   useEffect(() => {
     if (!article) return;
 
@@ -83,36 +83,77 @@ export default function ArticleDetailPage() {
     const oldDesc = metaDesc.content;
     metaDesc.content = article.short_description || article.summary || article.title;
 
-    // Structured Data JSON-LD
+    // Canonical link tag management
+    let canonical = document.querySelector('link[rel="canonical"]');
+    let createdCanonical = false;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+      createdCanonical = true;
+    }
+    const oldCanonical = canonical.href;
+    canonical.href = window.location.href;
+
+    // Structured Data JSON-LD (NewsArticle + BreadcrumbList)
     const script = document.createElement('script');
     script.type = 'application/ld+json';
     script.id = 'article-structured-data';
     const structuredData = {
       '@context': 'https://schema.org',
-      '@type': 'NewsArticle',
-      'headline': article.title,
-      'description': article.short_description || article.summary,
-      'image': [article.featured_image || 'https://bharatchronicle.com/default.jpg'],
-      'datePublished': article.publication_time || new Date().toISOString(),
-      'dateModified': article.updated_at || article.publication_time || new Date().toISOString(),
-      'author': [{
-        '@type': 'Person',
-        'name': article.author_name || 'Chronicle Bureau Correspondent',
-        'jobTitle': article.author_designation || 'Editorial Staff'
-      }],
-      'publisher': {
-        '@type': 'NewsMediaOrganization',
-        'name': 'The Bharat Chronicle',
-        'url': window.location.origin,
-        'logo': {
-          '@type': 'ImageObject',
-          'url': `${window.location.origin}/logo.png`
+      '@graph': [
+        {
+          '@type': 'NewsArticle',
+          '@id': `${window.location.href}#article`,
+          'headline': article.title,
+          'description': article.short_description || article.summary,
+          'image': [article.featured_image || 'https://bharatchronicle.com/default.jpg'],
+          'datePublished': article.publication_time || new Date().toISOString(),
+          'dateModified': article.updated_at || article.publication_time || new Date().toISOString(),
+          'author': [{
+            '@type': 'Person',
+            'name': article.author_name || 'Chronicle Bureau Correspondent',
+            'jobTitle': article.author_designation || 'Editorial Staff'
+          }],
+          'publisher': {
+            '@type': 'NewsMediaOrganization',
+            'name': 'The Bharat Chronicle',
+            'url': window.location.origin,
+            'logo': {
+              '@type': 'ImageObject',
+              'url': `${window.location.origin}/logo.png`
+            }
+          },
+          'mainEntityOfPage': {
+            '@type': 'WebPage',
+            '@id': window.location.href
+          }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${window.location.href}#breadcrumb`,
+          'itemListElement': [
+            {
+              '@type': 'ListItem',
+              'position': 1,
+              'name': 'News Home',
+              'item': window.location.origin
+            },
+            {
+              '@type': 'ListItem',
+              'position': 2,
+              'name': article.category_name || article.category || 'National',
+              'item': `${window.location.origin}/category/${article.category_slug || 'national'}`
+            },
+            {
+              '@type': 'ListItem',
+              'position': 3,
+              'name': article.title,
+              'item': window.location.href
+            }
+          ]
         }
-      },
-      'mainEntityOfPage': {
-        '@type': 'WebPage',
-        '@id': window.location.href
-      }
+      ]
     };
     script.text = JSON.stringify(structuredData);
     document.head.appendChild(script);
@@ -120,6 +161,10 @@ export default function ArticleDetailPage() {
     return () => {
       document.title = originalTitle;
       if (metaDesc) metaDesc.content = oldDesc;
+      if (canonical) {
+        if (createdCanonical) canonical.remove();
+        else canonical.href = oldCanonical;
+      }
       const el = document.getElementById('article-structured-data');
       if (el) el.remove();
     };
@@ -502,114 +547,185 @@ export default function ArticleDetailPage() {
         </div>
       )}
 
-      {/* Article Body Content */}
-      <div className="container-narrow">
-        
-        {/* Key Takeaways Box (if present) */}
-        {article.keyTakeaways && (
-          <div style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderLeft: '4px solid var(--color-ink-950)',
-            padding: '1.25rem 1.5rem',
-            marginBottom: '2rem',
-            borderRadius: '2px'
-          }}>
-            <h4 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-ink-900)', marginBottom: '0.65rem' }}>
-              Key Editorial Takeaways
-            </h4>
-            <ul style={{ listStyleType: 'disc', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.92rem', color: 'var(--color-ink-800)', lineHeight: 1.5 }}>
-              {article.keyTakeaways.map((point, idx) => (
-                <li key={idx}>{point}</li>
-              ))}
-            </ul>
+      {/* Article Body & Sidebar Grid Layout */}
+      <div className="container-editorial" style={{ maxWidth: '1160px', margin: '0 auto' }}>
+        <div className="article-body-grid">
+          
+          {/* Main Reading Column */}
+          <div style={{ minWidth: 0 }}>
+            {/* Key Takeaways Box (if present) */}
+            {article.keyTakeaways && (
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderLeft: '4px solid var(--color-ink-950)',
+                padding: '1.25rem 1.5rem',
+                marginBottom: '2rem',
+                borderRadius: '2px'
+              }}>
+                <h4 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-ink-900)', marginBottom: '0.65rem' }}>
+                  Key Editorial Takeaways
+                </h4>
+                <ul style={{ listStyleType: 'disc', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.92rem', color: 'var(--color-ink-800)', lineHeight: 1.5 }}>
+                  {article.keyTakeaways.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Main Formatted Typography Body */}
+            <div 
+              style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: '1.18rem',
+                lineHeight: 1.85,
+                color: 'var(--color-ink-900)',
+                wordBreak: 'break-word'
+              }}
+              dangerouslySetInnerHTML={{ 
+                __html: article.article_body || article.content || `<p>${article.short_description || article.summary || ''}</p><p>Investigation continues with regional correspondent dispatches from the field.</p>` 
+              }}
+            />
+
+            {/* Non-obstructive In-Article Advertisement Slot */}
+            <div style={{ margin: '2.5rem 0' }}>
+              <AdBanner slot="inline" />
+            </div>
+
+            {/* Tags / Taxonomies */}
+            {tagsList.length > 0 && (
+              <div style={{ marginTop: '2.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--color-ink-200)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-ink-500)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Tag size={13} /> TOPICS:
+                </span>
+                {tagsList.map((tag, idx) => (
+                  <Link
+                    key={idx}
+                    to={`/search?q=${encodeURIComponent(tag)}`}
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 600,
+                      padding: '0.25rem 0.6rem',
+                      backgroundColor: 'var(--color-ink-100)',
+                      color: 'var(--color-ink-800)',
+                      borderRadius: '2px',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Editorial Footnote / Source Disclosure */}
+            <div style={{
+              backgroundColor: '#fafbfc',
+              border: '1px solid var(--color-ink-200)',
+              padding: '1.25rem',
+              marginTop: '2rem',
+              borderRadius: '2px',
+              fontSize: '0.78rem',
+              color: 'var(--color-ink-600)',
+              lineHeight: 1.5
+            }}>
+              <strong style={{ color: 'var(--color-ink-900)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editorial Standards & Code:</strong> The Bharat Chronicle adheres strictly to Press Council of India standards. Dispatches do not contain undisclosed commercial endorsements. Report factual errors to <span style={{ color: 'var(--color-breaking)', textDecoration: 'underline' }}>corrections@bharatchronicle.com</span>.
+            </div>
+
+            {/* Author Bio Box */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1.25rem',
+              padding: '1.5rem 0',
+              marginTop: '2rem',
+              borderTop: '2px solid var(--color-ink-950)',
+              borderBottom: '1px solid var(--color-ink-200)'
+            }}>
+              <img
+                src={authorAvatar}
+                alt={authorName}
+                style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              />
+              <div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
+                  Written by {authorName}
+                </h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-ink-600)', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                  {authorTitle} for The Bharat Chronicle. Covers constitutional policy, national affairs, and economic developments.
+                </p>
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Main Formatted Typography Body */}
-        <div 
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '1.18rem',
-            lineHeight: 1.85,
-            color: 'var(--color-ink-900)',
-            wordBreak: 'break-word'
-          }}
-          dangerouslySetInnerHTML={{ 
-            __html: article.article_body || article.content || `<p>${article.short_description || article.summary || ''}</p><p>Investigation continues with regional correspondent dispatches from the field.</p>` 
-          }}
-        />
+          {/* Desktop Right Sidebar */}
+          <aside className="article-desktop-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+            {/* Desktop Sidebar Ad Slot */}
+            <div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-ink-400)', marginBottom: '0.35rem', textAlign: 'center' }}>
+                SPONSOR SHOWCASE
+              </div>
+              <AdBanner slot="sidebarRectangle" />
+            </div>
 
-        {/* Tags / Taxonomies */}
-        {tagsList.length > 0 && (
-          <div style={{ marginTop: '2.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--color-ink-200)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-ink-500)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Tag size={13} /> TOPICS:
-            </span>
-            {tagsList.map((tag, idx) => (
+            {/* Direct Advertiser Desk Teaser */}
+            <div style={{
+              backgroundColor: '#fafbfc',
+              border: '1px solid var(--color-ink-200)',
+              borderRadius: '3px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.65rem'
+            }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--color-breaking)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                COMMERCIAL DESK
+              </span>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--color-ink-950)', margin: 0, lineHeight: 1.3 }}>
+                Advertise With The Bharat Chronicle
+              </h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--color-ink-600)', margin: 0, lineHeight: 1.45 }}>
+                Direct advertiser packages across 7 audited positions. Access decision-makers across business, policy, and public leadership.
+              </p>
               <Link
-                key={idx}
-                to={`/search?q=${encodeURIComponent(tag)}`}
+                to="/advertise"
                 style={{
-                  fontSize: '0.76rem',
-                  fontWeight: 600,
-                  padding: '0.25rem 0.6rem',
-                  backgroundColor: 'var(--color-ink-100)',
-                  color: 'var(--color-ink-800)',
-                  borderRadius: '2px',
-                  textDecoration: 'none'
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  color: 'var(--color-ink-950)',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  borderBottom: '1.5px solid var(--color-ink-900)',
+                  alignSelf: 'flex-start',
+                  paddingBottom: '2px',
+                  marginTop: '0.25rem'
                 }}
               >
-                #{tag}
+                Media Kit & Rate Inquiries →
               </Link>
-            ))}
-          </div>
-        )}
+            </div>
 
-        {/* Non-obstructive In-Article Advertisement Slot */}
-        <div style={{ margin: '3rem 0' }}>
-          <AdBanner slot="headerLeaderboard" />
+            {/* Editorial Independence Assurance */}
+            <div style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '3px',
+              padding: '1rem',
+              fontSize: '0.75rem',
+              color: '#475569',
+              lineHeight: 1.45
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                <ShieldCheck size={14} color="#059669" /> Editorial Independence
+              </div>
+              The Bharat Chronicle newsroom operates autonomously from commercial sponsorships. Paid placements are strictly labeled.
+            </div>
+          </aside>
+
         </div>
-
-        {/* Editorial Footnote / Source Disclosure */}
-        <div style={{
-          backgroundColor: '#fafbfc',
-          border: '1px solid var(--color-ink-200)',
-          padding: '1.25rem',
-          marginTop: '2rem',
-          borderRadius: '2px',
-          fontSize: '0.78rem',
-          color: 'var(--color-ink-600)',
-          lineHeight: 1.5
-        }}>
-          <strong style={{ color: 'var(--color-ink-900)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editorial Standards & Code:</strong> The Bharat Chronicle adheres strictly to Press Council of India standards. Dispatches do not contain undisclosed commercial endorsements. Report factual errors to <span style={{ color: 'var(--color-breaking)', textDecoration: 'underline' }}>corrections@bharatchronicle.com</span>.
-        </div>
-
-        {/* Author Bio Box */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1.25rem',
-          padding: '1.5rem 0',
-          marginTop: '2rem',
-          borderTop: '2px solid var(--color-ink-950)',
-          borderBottom: '1px solid var(--color-ink-200)'
-        }}>
-          <img
-            src={authorAvatar}
-            alt={authorName}
-            style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-          />
-          <div>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-              Written by {authorName}
-            </h4>
-            <p style={{ fontSize: '0.82rem', color: 'var(--color-ink-600)', marginTop: '0.25rem', lineHeight: 1.4 }}>
-              {authorTitle} for The Bharat Chronicle. Covers constitutional policy, national affairs, and economic developments.
-            </p>
-          </div>
-        </div>
-
       </div>
 
       {/* Related Stories Section */}

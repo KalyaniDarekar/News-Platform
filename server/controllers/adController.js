@@ -1,5 +1,5 @@
 // ========================================================================
-// Advertisement Controller
+// Advertisement Controller (Phase 5)
 // ========================================================================
 
 import adService from '../services/adService.js';
@@ -19,11 +19,29 @@ export const adController = {
     }
   },
 
+  // POST /api/v1/ads/:id/impression (Public telemetry)
+  async recordImpression(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { placementCode, pagePath } = req.body || {};
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const result = await adService.recordImpression(parseInt(id, 10), placementCode, ipAddress, pagePath);
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // POST /api/v1/ads/:id/click (Public telemetry)
   async recordClick(req, res, next) {
     try {
       const { id } = req.params;
-      const result = await adService.recordClick(parseInt(id, 10));
+      const { placementCode, pagePath } = req.body || {};
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const result = await adService.recordClick(parseInt(id, 10), placementCode, ipAddress, pagePath);
       res.json({
         success: true,
         ...result
@@ -49,8 +67,8 @@ export const adController = {
   // GET /api/v1/ads/campaigns (Ad Manager / Admin)
   async listCampaigns(req, res, next) {
     try {
-      const { page, limit, placementId, isActive } = req.query;
-      const result = await adService.listCampaigns({ page, limit, placementId, isActive });
+      const { page, limit, placementId, isActive, search } = req.query;
+      const result = await adService.listCampaigns({ page, limit, placementId, isActive, search });
       res.json({
         success: true,
         ...result
@@ -64,11 +82,42 @@ export const adController = {
   async createCampaign(req, res, next) {
     try {
       const ipAddress = req.ip || req.connection.remoteAddress;
-      const campaign = await adService.createCampaign(req.body, req.user.id, ipAddress);
+      const campaign = await adService.createCampaign(req.body, req.user, ipAddress);
       res.status(201).json({
         success: true,
         data: campaign,
-        message: 'Campaign created'
+        message: 'Campaign created successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // PUT /api/v1/ads/campaigns/:id
+  async updateCampaign(req, res, next) {
+    try {
+      const { id } = req.params;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const updated = await adService.updateCampaign(parseInt(id, 10), req.body, req.user, ipAddress);
+      res.json({
+        success: true,
+        data: updated,
+        message: 'Campaign updated successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // DELETE /api/v1/ads/campaigns/:id
+  async deleteCampaign(req, res, next) {
+    try {
+      const { id } = req.params;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      await adService.deleteCampaign(parseInt(id, 10), req.user.id, ipAddress);
+      res.json({
+        success: true,
+        message: 'Campaign deleted successfully'
       });
     } catch (error) {
       next(error);

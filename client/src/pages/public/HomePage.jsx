@@ -382,13 +382,34 @@ export default function HomePage() {
             borderRadius: '0'
           }}>
             <div className="container-editorial">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1f2937', paddingBottom: '0.75rem', marginBottom: '1.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1f2937', paddingBottom: '0.75rem', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff' }}>
                   <Video size={18} style={{ color: '#ef4444' }} /> Chronicle Video News & Documentary Investigations
                 </h2>
-                <Link to="/videos" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', textDecoration: 'none' }}>
-                  All Video Broadcasts →
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <a
+                    href="https://www.youtube.com/@TheBharatChronicle?sub_confirmation=1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      backgroundColor: '#ff0000',
+                      color: '#ffffff',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '3px',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <Play size={12} fill="#ffffff" /> Subscribe on YouTube
+                  </a>
+                  <Link to="/videos" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', textDecoration: 'none' }}>
+                    All Broadcasts →
+                  </Link>
+                </div>
               </div>
 
               {/* Active Player Showcase */}
@@ -405,7 +426,7 @@ export default function HomePage() {
                   border: '1px solid #1f2937'
                 }} className="video-feature-grid">
                   
-                  {/* Responsive YouTube Player Iframe */}
+                  {/* Responsive YouTube Player Iframe (autoplay=0 strict compliance) */}
                   <div style={{
                     position: 'relative',
                     aspectRatio: '16/9',
@@ -414,11 +435,11 @@ export default function HomePage() {
                     overflow: 'hidden',
                     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7)'
                   }}>
-                    {extractYouTubeId(activeVideo.youtube_url) ? (
+                    {(activeVideo.youtube_id || extractYouTubeId(activeVideo.youtube_url)) ? (
                       <iframe
-                        src={`https://www.youtube.com/embed/${extractYouTubeId(activeVideo.youtube_url)}?rel=0`}
+                        src={`https://www.youtube.com/embed/${activeVideo.youtube_id || extractYouTubeId(activeVideo.youtube_url)}?autoplay=0&rel=0`}
                         title={activeVideo.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                         style={{
                           position: 'absolute',

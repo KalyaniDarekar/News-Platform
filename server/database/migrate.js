@@ -68,6 +68,15 @@ export async function runMigrations({ shouldSeed = true } = {}) {
       }
     }
 
+    // 5. Execute Phase 5 revenue infrastructure schema migration
+    const phase5Path = path.join(__dirname, 'schema_phase5.sql');
+    if (fs.existsSync(phase5Path)) {
+      const phase5Sql = fs.readFileSync(phase5Path, 'utf8');
+      console.log(`Executing schema_phase5.sql (${phase5Sql.length} bytes)...`);
+      await connection.query(phase5Sql);
+      console.log(`✓ Phase 5 commercial placements, direct enquiries, YouTube video news, and analytics schema verified.`);
+    }
+
     // 5. Verify created tables
     const [tables] = await connection.query(`SHOW TABLES;`);
     console.log(`\n📋 Verified ${tables.length} tables in \`${DB_NAME}\`:`);

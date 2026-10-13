@@ -179,6 +179,9 @@ export default function CategoryPage() {
         </div>
       </header>
 
+      {/* Category-Page Placement Banner (728x90 Billboard) */}
+      <AdBanner slot="categoryBanner" />
+
       {/* Main Layout: 2 Columns (Stories 70%, Sidebar 30%) */}
       <div style={{
         display: 'grid',
