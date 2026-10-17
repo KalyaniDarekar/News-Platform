@@ -32,7 +32,7 @@ export default function AboutUsPage() {
           borderRadius: '2px',
           fontFamily: 'var(--font-sans)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
           gap: '1.5rem'
         }}>
           <div>

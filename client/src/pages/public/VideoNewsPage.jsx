@@ -295,7 +295,7 @@ export default function VideoNewsPage() {
 
       {/* Video Playlist Grid */}
       <section className="container-editorial" style={{ paddingTop: '3.5rem' }}>
-        <div style={{ borderBottom: '1px solid #374151', paddingBottom: '0.75rem', marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ borderBottom: '1px solid #374151', paddingBottom: '0.75rem', marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#ffffff' }}>
             All Video Investigations & Interviews ({videos.length})
           </h3>
@@ -306,7 +306,7 @@ export default function VideoNewsPage() {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
           gap: '2rem'
         }}>
           {videos.map((item) => {

@@ -78,9 +78,9 @@ export default function ConsentBanner() {
           aria-label="Privacy & Cookie Consent"
           style={{
             position: 'fixed',
-            bottom: '1.25rem',
-            left: '1.25rem',
-            right: '1.25rem',
+            bottom: '0.75rem',
+            left: '0.75rem',
+            right: '0.75rem',
             maxWidth: '960px',
             margin: '0 auto',
             backgroundColor: '#0f172a',
@@ -88,10 +88,10 @@ export default function ConsentBanner() {
             borderRadius: '6px',
             boxShadow: '0 12px 36px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
             zIndex: 9999,
-            padding: '1.25rem 1.5rem',
+            padding: '1rem 1.25rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem',
+            gap: '0.85rem',
             animation: 'fadeInUp 250ms ease-out'
           }}
         >

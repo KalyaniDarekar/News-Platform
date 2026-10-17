@@ -30,55 +30,71 @@ export default function TopInfoBar() {
     <>
       <div className="top-info-bar">
         <div className="container-editorial">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            padding: '0.2rem 0'
+          }}>
             
-            {/* Left: Date, Edition, Weather */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
-                <Calendar size={13} style={{ color: 'var(--color-ink-500)' }} />
-                {currentDate || 'Tuesday, October 13, 2026'}
+            {/* Left Block: Date, Edition, Weather */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              flexWrap: 'wrap'
+            }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                <Calendar size={13} style={{ color: 'var(--color-ink-500)', flexShrink: 0 }} />
+                <span>{currentDate || 'Saturday, October 17, 2026'}</span>
               </span>
 
-              <span style={{ color: 'var(--color-ink-300)' }}>|</span>
-
               {/* Edition Switcher */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Globe size={13} style={{ color: 'var(--color-ink-500)' }} />
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                padding: '0.15rem 0.45rem',
+                borderRadius: '3px'
+              }}>
+                <Globe size={12} style={{ color: 'var(--color-ink-500)', flexShrink: 0 }} />
                 <select
                   value={edition}
                   onChange={(e) => setEdition(e.target.value)}
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     fontWeight: 600,
                     color: 'var(--color-ink-700)',
                     cursor: 'pointer',
-                    outline: 'none'
+                    outline: 'none',
+                    padding: 0
                   }}
                   aria-label="Editorial edition selector"
                 >
-                  <option value="India (New Delhi)">Edition: India (New Delhi)</option>
-                  <option value="Global Edition">Edition: International (Global)</option>
-                  <option value="Bengaluru Tech">Edition: Bengaluru & South</option>
-                  <option value="Mumbai Financial">Edition: Mumbai Capital</option>
+                  <option value="India (New Delhi)">India (New Delhi)</option>
+                  <option value="Global Edition">International (Global)</option>
+                  <option value="Bengaluru Tech">Bengaluru & South</option>
+                  <option value="Mumbai Financial">Mumbai Capital</option>
                 </select>
               </div>
 
-              <span style={{ color: 'var(--color-ink-300)' }}>|</span>
-
               {/* Weather & Air Quality */}
               {weatherData && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <CloudSun size={14} style={{ color: '#d97706' }} />
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', whiteSpace: 'nowrap' }}>
+                  <CloudSun size={13} style={{ color: '#d97706', flexShrink: 0 }} />
                   <span>{weatherData.city} {weatherData.temp}</span>
                   <span style={{ 
-                    fontSize: '0.68rem', 
+                    fontSize: '0.65rem', 
                     backgroundColor: '#fef3c7', 
                     color: '#92400e', 
                     padding: '0.1rem 0.35rem', 
                     borderRadius: '2px', 
-                    fontWeight: 600 
+                    fontWeight: 700 
                   }}>
                     AQI {weatherData.aqi}
                   </span>
@@ -86,16 +102,31 @@ export default function TopInfoBar() {
               )}
             </div>
 
-            {/* Right: Financial Ticker Preview, e-Paper & Admin Link */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', fontSize: '0.74rem' }}>
+            {/* Right Block: Financial Ticker Preview & Quick Navigation */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              width: 'auto'
+            }}>
+              {/* Markets Ticker */}
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                fontSize: '0.72rem',
+                overflowX: 'auto',
+                scrollbarWidth: 'none'
+              }}>
                 {marketData.slice(0, 2).map((item, idx) => (
-                  <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontFamily: 'var(--font-mono)' }}>
+                  <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
                     <strong style={{ color: 'var(--color-ink-800)' }}>{item.symbol}:</strong>
                     <span>{item.value}</span>
                     <span style={{ 
                       color: item.positive ? '#047857' : '#dc2626', 
-                      fontWeight: 600,
+                      fontWeight: 700,
                       display: 'inline-flex',
                       alignItems: 'center'
                     }}>
@@ -106,28 +137,28 @@ export default function TopInfoBar() {
                 ))}
               </div>
 
-              <span style={{ color: 'var(--color-ink-300)' }}>|</span>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {/* Action Links */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                 {/* e-Paper Interactive Modal Trigger */}
                 <button
                   type="button"
                   onClick={() => setIsEpaperOpen(true)}
                   style={{
-                    fontWeight: 600,
+                    fontWeight: 700,
                     color: 'var(--color-ink-700)',
-                    fontSize: '0.75rem',
+                    fontSize: '0.72rem',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.25rem',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: '3px',
+                    backgroundColor: 'rgba(0,0,0,0.03)'
                   }}
                   title="View Digital e-Paper Replica"
                 >
                   <BookOpen size={12} style={{ color: 'var(--color-breaking)' }} /> e-Paper
                 </button>
-
-                <span style={{ color: 'var(--color-ink-300)' }}>|</span>
 
                 {/* Direct Advertise Link */}
                 <Link
@@ -135,17 +166,18 @@ export default function TopInfoBar() {
                   style={{
                     fontWeight: 700,
                     color: 'var(--color-ink-800)',
-                    fontSize: '0.74rem',
+                    fontSize: '0.72rem',
                     textDecoration: 'none',
                     display: 'inline-flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    padding: '0.15rem 0.45rem',
+                    borderRadius: '3px',
+                    backgroundColor: 'rgba(0,0,0,0.03)'
                   }}
                   title="Advertising & Media Kit"
                 >
                   Advertise
                 </Link>
-
-                <span style={{ color: 'var(--color-ink-300)' }}>|</span>
 
                 {/* Newsroom Admin Link */}
                 <Link 
@@ -159,12 +191,9 @@ export default function TopInfoBar() {
                     color: '#1e40af', 
                     backgroundColor: '#eff6ff', 
                     padding: '0.15rem 0.45rem', 
-                    borderRadius: '2px',
-                    border: '1px solid #bfdbfe',
-                    transition: 'background-color var(--transition-fast)'
+                    borderRadius: '3px',
+                    border: '1px solid #bfdbfe'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
                 >
                   <ShieldCheck size={12} /> Newsroom CMS
                 </Link>

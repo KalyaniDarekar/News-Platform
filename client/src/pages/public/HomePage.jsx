@@ -377,11 +377,12 @@ export default function HomePage() {
           <section style={{
             backgroundColor: '#0a0e17',
             color: '#ffffff',
-            padding: '2.5rem 2rem',
-            margin: '3.5rem -20px',
-            borderRadius: '0'
+            padding: '2rem 1.25rem',
+            margin: '3rem 0',
+            borderRadius: '4px',
+            overflow: 'hidden'
           }}>
-            <div className="container-editorial">
+            <div style={{ width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1f2937', paddingBottom: '0.75rem', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff' }}>
                   <Video size={18} style={{ color: '#ef4444' }} /> Chronicle Video News & Documentary Investigations

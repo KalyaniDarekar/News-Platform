@@ -637,6 +637,7 @@ export default function ArticleDetailPage() {
             <div style={{
               display: 'flex',
               alignItems: 'center',
+              flexWrap: 'wrap',
               gap: '1.25rem',
               padding: '1.5rem 0',
               marginTop: '2rem',
@@ -742,7 +743,7 @@ export default function ArticleDetailPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
             gap: '1.75rem'
           }}>
             {relatedArticles.map((story) => (

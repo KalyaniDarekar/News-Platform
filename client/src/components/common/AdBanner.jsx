@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Info, Sparkles } from 'lucide-react';
+import { ExternalLink, Info, Sparkles, X } from 'lucide-react';
 import apiService from '../../services/api';
 
 /**
@@ -20,6 +20,7 @@ import apiService from '../../services/api';
 export default function AdBanner({ slot = 'headerLeaderboard', className = '' }) {
   const [ad, setAd] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
   const [hasRecordedImpression, setHasRecordedImpression] = useState(false);
   const containerRef = useRef(null);
 
@@ -70,6 +71,8 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
     }
   };
 
+  if (dismissed) return null;
+
   // Dimensions & layout detection based on slot
   const isSidebar = slot === 'sidebarRectangle' || slot === 'article_sidebar_top';
   const isHeroAdjacent = slot === 'heroAdjacent' || slot === 'homepage_hero_adjacent';
@@ -90,25 +93,45 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
           zIndex: 40,
           backgroundColor: '#0f172a',
           borderTop: '1px solid #334155',
-          boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
-          padding: '0.4rem 0.75rem',
+          boxShadow: '0 -4px 16px rgba(0,0,0,0.25)',
+          padding: '0.35rem 0.75rem',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center'
         }}
         aria-label="Mobile Partner Promotion"
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '360px', marginBottom: '0.2rem', fontSize: '0.62rem', color: '#94a3b8' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '380px', marginBottom: '0.2rem', fontSize: '0.62rem', color: '#94a3b8' }}>
           <span>ADVERTISEMENT</span>
-          <Link to="/advertise" style={{ color: '#60a5fa', textDecoration: 'none' }}>Advertise With Us</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Link to="/advertise" style={{ color: '#60a5fa', textDecoration: 'none' }}>Advertise With Us</Link>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDismissed(true);
+              }}
+              style={{
+                color: '#94a3b8',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '0 0.2rem'
+              }}
+              title="Close Ad"
+              aria-label="Dismiss banner"
+            >
+              <X size={12} />
+            </button>
+          </div>
         </div>
         <div 
           onClick={handleAdClick}
           style={{
             cursor: 'pointer',
             width: '100%',
-            maxWidth: '320px',
-            minHeight: '50px',
+            maxWidth: '380px',
+            minHeight: '48px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -119,14 +142,14 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
           }}
         >
           {ad?.imageUrl ? (
-            <img src={ad.imageUrl} alt={ad.title || 'Sponsored Advertisement'} style={{ width: '100%', height: '50px', objectFit: 'cover', borderRadius: '2px' }} />
+            <img src={ad.imageUrl} alt={ad.title || 'Sponsored Advertisement'} style={{ width: '100%', height: '48px', objectFit: 'cover', borderRadius: '2px' }} />
           ) : (
             <>
-              <div style={{ overflow: 'hidden', paddingRight: '0.5rem' }}>
+              <div style={{ overflow: 'hidden', paddingRight: '0.5rem', flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>{ad?.sponsor || 'SPONSORED'}</div>
                 <div style={{ fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ad?.title || 'Partner with The Bharat Chronicle'}</div>
               </div>
-              <button type="button" style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#2563eb', color: '#fff', border: 'none', padding: '0.25rem 0.5rem', borderRadius: '2px', whiteSpace: 'nowrap' }}>
+              <button type="button" style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#2563eb', color: '#fff', border: 'none', padding: '0.25rem 0.6rem', borderRadius: '2px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 Open
               </button>
             </>
@@ -285,7 +308,7 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
       style={{ width: '100%', margin: isInline ? '1.75rem 0' : '1.25rem 0' }} 
       aria-label="Commercial Sponsor Banner"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', fontSize: '0.65rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.05em' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', fontSize: '0.65rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.05em', flexWrap: 'wrap', gap: '0.5rem', width: '100%' }}>
         <span>ADVERTISEMENT • COMMERCIAL SPONSORSHIP</span>
         <Link to="/advertise" style={{ color: '#2563eb', textDecoration: 'none' }}>Partner With The Chronicle</Link>
       </div>
@@ -296,7 +319,7 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
           cursor: 'pointer',
           width: '100%',
           maxWidth: '100%',
-          minHeight: '90px',
+          minHeight: '85px',
           backgroundColor: '#0a0e1a',
           backgroundImage: ad?.imageUrl ? `url(${ad.imageUrl})` : 'linear-gradient(135deg, #0a0e1a 0%, #172554 100%)',
           backgroundSize: 'cover',
@@ -305,10 +328,10 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0.9rem 1.5rem',
+          padding: '0.75rem 1.15rem',
           borderRadius: '3px',
           flexWrap: 'wrap',
-          gap: '1rem',
+          gap: '0.75rem',
           boxShadow: 'var(--shadow-sm)',
           position: 'relative',
           overflow: 'hidden',

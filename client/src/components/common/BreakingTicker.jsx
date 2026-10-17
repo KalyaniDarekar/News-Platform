@@ -58,17 +58,22 @@ export default function BreakingTicker() {
 
   return (
     <aside className="ticker-bar" aria-label="Breaking News Alert" role="region">
-      <div className="container-editorial" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+      <div className="container-editorial" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
         
         {/* Red Breaking Badge */}
-        <div className="ticker-badge">
+        <div className="ticker-badge" style={{ flexShrink: 0 }}>
           <span className="pulse-dot"></span>
           <span>BREAKING</span>
         </div>
 
-        {/* Current News Item Display */}
+        {/* Current News Item Display with Guaranteed Truncation */}
         <div 
-          style={{ flex: 1, padding: '0.45rem 1rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '0.45rem 0.5rem',
+            overflow: 'hidden'
+          }}
           aria-live="polite"
         >
           <Link 
@@ -77,9 +82,12 @@ export default function BreakingTicker() {
               color: '#ffffff', 
               fontSize: '0.84rem', 
               fontWeight: 500,
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              gap: '0.65rem',
+              gap: '0.5rem',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              maxWidth: '100%',
               transition: 'color var(--transition-fast)'
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#fca5a5'}
@@ -88,28 +96,38 @@ export default function BreakingTicker() {
             <span style={{ 
               color: '#f87171', 
               fontFamily: 'var(--font-mono)', 
-              fontSize: '0.75rem', 
-              fontWeight: 700 
+              fontSize: '0.72rem', 
+              fontWeight: 700,
+              flexShrink: 0 
             }}>
               [{currentItem.time || 'LIVE'}]
             </span>
-            <span>{currentItem.headline}</span>
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+              minWidth: 0
+            }}>
+              {currentItem.headline}
+            </span>
           </Link>
         </div>
 
         {/* Item count indicator */}
         {items.length > 1 && (
-          <span style={{ fontSize: '0.7rem', color: '#9ca3af', marginRight: '0.5rem', fontFamily: 'var(--font-mono)' }}>
+          <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>
             {currentIndex + 1}/{items.length}
           </span>
         )}
 
         {/* Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', paddingRight: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0 }}>
           <button
             type="button"
+            className="hidden-mobile"
             onClick={() => setIsPlaying(!isPlaying)}
-            style={{ color: '#9ca3af', padding: '0.2rem', display: 'inline-flex' }}
+            style={{ color: '#9ca3af', padding: '0.3rem', display: 'inline-flex' }}
             title={isPlaying ? 'Pause Auto-cycle' : 'Resume Auto-cycle'}
             aria-label="Toggle ticker playback"
           >
@@ -119,21 +137,21 @@ export default function BreakingTicker() {
           <button
             type="button"
             onClick={handlePrev}
-            style={{ color: '#9ca3af', padding: '0.2rem', display: 'inline-flex' }}
+            style={{ color: '#9ca3af', padding: '0.3rem', display: 'inline-flex' }}
             title="Previous Alert"
             aria-label="Previous alert"
           >
-            <ChevronLeft size={15} />
+            <ChevronLeft size={16} />
           </button>
 
           <button
             type="button"
             onClick={handleNext}
-            style={{ color: '#9ca3af', padding: '0.2rem', display: 'inline-flex' }}
+            style={{ color: '#9ca3af', padding: '0.3rem', display: 'inline-flex' }}
             title="Next Alert"
             aria-label="Next alert"
           >
-            <ChevronRight size={15} />
+            <ChevronRight size={16} />
           </button>
         </div>
 

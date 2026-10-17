@@ -91,7 +91,9 @@ export default function HeroPackage({
             justifyContent: 'space-between',
             paddingTop: '0.75rem',
             borderTop: '1px solid var(--color-ink-200)',
-            marginTop: '0.5rem'
+            marginTop: '0.5rem',
+            flexWrap: 'wrap',
+            gap: '0.65rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
               <img
@@ -109,7 +111,7 @@ export default function HeroPackage({
               </div>
             </div>
 
-            <div style={{ fontSize: '0.74rem', color: 'var(--color-ink-500)' }}>
+            <div style={{ fontSize: '0.74rem', color: 'var(--color-ink-500)', whiteSpace: 'nowrap' }}>
               {leadPublishedAt}
             </div>
           </div>

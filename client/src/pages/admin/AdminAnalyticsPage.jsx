@@ -193,7 +193,7 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* 2-Column: Popular Stories and Referral Sources */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '1.5rem', alignItems: 'start' }}>
         
         {/* Popular Stories */}
         <div style={{ backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', padding: '1.5rem' }}>
@@ -289,7 +289,7 @@ export default function AdminAnalyticsPage() {
               Status of verified external analytics, search console ownership, and monetization accounts.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem' }}>
               <div style={{ padding: '0.75rem', borderRadius: '4px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>GOOGLE ANALYTICS 4</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>

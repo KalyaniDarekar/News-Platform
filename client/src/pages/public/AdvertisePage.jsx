@@ -126,7 +126,7 @@ All commercial creative is subject to editorial board review. Political endorsem
           backgroundColor: '#0a101f',
           color: '#ffffff',
           borderRadius: '6px',
-          padding: '3rem 2.5rem',
+          padding: 'clamp(1.75rem, 4vw, 3rem) clamp(1.15rem, 3vw, 2.5rem)',
           backgroundImage: 'linear-gradient(135deg, #0a101f 0%, #172554 100%)',
           boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)',
           position: 'relative',
@@ -210,10 +210,10 @@ All commercial creative is subject to editorial board review. Political endorsem
         </div>
 
         {/* Grid: Formats Specifications & Verified Desk Details */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', marginBottom: '3rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '2rem', marginBottom: '3rem' }}>
           
           {/* Format Specifications Column */}
-          <div style={{ backgroundColor: '#ffffff', padding: '2rem', borderRadius: '6px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ backgroundColor: '#ffffff', padding: 'clamp(1.25rem, 3vw, 2rem)', borderRadius: '6px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
               Standard Inventory Formats
             </h2>
@@ -310,14 +310,14 @@ All commercial creative is subject to editorial board review. Political endorsem
         </div>
 
         {/* Campaign Enquiry Form Section */}
-        <div id="enquiry-form" style={{ backgroundColor: '#ffffff', padding: '2.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+        <div id="enquiry-form" style={{ backgroundColor: '#ffffff', padding: 'clamp(1.25rem, 3.5vw, 2.5rem)', borderRadius: '6px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Direct Advertiser Booking
               </span>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', marginTop: '0.35rem' }}>
+              <h2 style={{ fontSize: 'clamp(1.4rem, 3.5vw, 1.8rem)', fontWeight: 900, color: '#0f172a', marginTop: '0.35rem' }}>
                 Submit a Campaign Enquiry
               </h2>
               <p style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '0.4rem' }}>
@@ -354,7 +354,7 @@ All commercial creative is subject to editorial board review. Political endorsem
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 
                 {/* Company & Contact */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
                       Company / Organization Name *

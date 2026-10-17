@@ -139,8 +139,8 @@ export default function SearchResultsPage() {
         </p>
 
         {/* In-Page Search Bar */}
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', maxWidth: '640px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', maxWidth: '640px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: '1 1 240px' }}>
             <input
               type="text"
               value={searchTerm}
@@ -171,7 +171,8 @@ export default function SearchResultsPage() {
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
               border: 0,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              flexShrink: 0
             }}
           >
             Search
@@ -251,7 +252,7 @@ export default function SearchResultsPage() {
       </div>
 
       {/* Results Header Meta */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--color-ink-600)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--color-ink-600)', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           {loading ? (
             <span>Searching archive dispatches...</span>
@@ -310,7 +311,7 @@ export default function SearchResultsPage() {
         <div>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
             gap: '2rem'
           }}>
             {articles.map((story) => (

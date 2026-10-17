@@ -25,7 +25,7 @@ export default function ArticleCard({
 
   if (variant === 'horizontal') {
     return (
-      <article className={`editorial-card-hover ${className}`} style={{
+      <article className={`editorial-card-hover article-card-horizontal ${className}`} style={{
         display: 'grid',
         gridTemplateColumns: '180px 1fr',
         gap: '1.25rem',

@@ -620,12 +620,7 @@ export default function AdminArticleEditPage() {
       ) : (
 
         /* ================= 2-COLUMN MAIN EDITING GRID ================= */
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.05fr)',
-          gap: '1.5rem',
-          alignItems: 'start'
-        }}>
+        <div className="admin-two-col-grid">
           
           {/* ---- LEFT COLUMN: EDITORIAL CONTENT & BODY ---- */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

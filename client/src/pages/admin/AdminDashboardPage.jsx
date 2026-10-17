@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
       {/* Metrics 6-Card Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
         gap: '1rem'
       }}>
         {metrics.map((m, idx) => {
@@ -213,7 +213,7 @@ export default function AdminDashboardPage() {
       {/* 2-Column Split: Expiring & Scheduled Queue vs Recent Editorial Activity */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
         gap: '1.5rem',
         alignItems: 'start'
       }}>
