@@ -1,5 +1,5 @@
--- ========================================================================
--- The Bharat Chronicle — Phase 2 Seed Data with Multilingual Articles
+﻿-- ========================================================================
+-- JANTA JOURNAL — Phase 2 Seed Data with Multilingual Articles
 -- Default Password for all seeded users: Editorial@2026
 -- Hashed using bcrypt: $2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse
 -- ========================================================================
@@ -7,10 +7,10 @@
 -- 1. Seed Editorial Staff Users
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`, `designation`, `bio`, `status`)
 VALUES 
-(1, 'Vikramaditya Sharma', 'admin@bharatchronicle.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'super_admin', 'Editor-in-Chief & Managing Director', 'Veteran correspondent with over 25 years covering Indian diplomacy, constitutional law, and national security.', 'active'),
-(2, 'Dr. Arundhati Sen', 'editor@bharatchronicle.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'editor', 'Senior Editor (National & Economy)', 'Former financial policy researcher covering the Reserve Bank of India, fiscal budgets, and international corridors.', 'active'),
-(3, 'Rajeshwari Nair', 'reporter@bharatchronicle.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'reporter', 'Chief Technology Bureau Correspondent', 'Specializing in deep tech, semiconductor foundries, AI governance, and space exploration.', 'active'),
-(4, 'Siddharth Roy', 'ads@bharatchronicle.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'ad_manager', 'Head of Monetization & Ad Operations', 'Managing commercial inventory, sponsored partner programs, and programmatic yield monetization.', 'active')
+(1, 'Vikramaditya Sharma', 'admin@jantajournal.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'super_admin', 'Editor-in-Chief & Managing Director', 'Veteran correspondent with over 25 years covering Indian diplomacy, constitutional law, and national security.', 'active'),
+(2, 'Dr. Arundhati Sen', 'editor@jantajournal.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'editor', 'Senior Editor (National & Economy)', 'Former financial policy researcher covering the Reserve Bank of India, fiscal budgets, and international corridors.', 'active'),
+(3, 'Rajeshwari Nair', 'reporter@jantajournal.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'reporter', 'Chief Technology Bureau Correspondent', 'Specializing in deep tech, semiconductor foundries, AI governance, and space exploration.', 'active'),
+(4, 'Siddharth Roy', 'ads@jantajournal.com', '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse', 'ad_manager', 'Head of Monetization & Ad Operations', 'Managing commercial inventory, sponsored partner programs, and programmatic yield monetization.', 'active')
 ON DUPLICATE KEY UPDATE `full_name`=VALUES(`full_name`), `password_hash`=VALUES(`password_hash`), `role`=VALUES(`role`);
 
 -- 2. Seed Role Permissions
@@ -76,12 +76,12 @@ VALUES
   'From Gujarat\'s Dholera to Karnataka\'s hardware corridors, billions in sovereign capital and global foundry partnerships are racing to anchor domestic microchip sovereignty before the decade turns.',
   '<p class="lead-paragraph">In the arid plains of Dholera, 100 kilometers southwest of Ahmedabad, the drone of precision construction never pauses. Inside mammoth climate-controlled facilities that dwarf football stadiums, vibration-isolated foundation slabs five meters deep have been cast to anchor lithography machines capable of engraving circuits thinner than a strand of DNA.</p><p>This is ground zero for India’s ₹76,000-crore ($9.1 billion) Semiconductor Mission—a calculated gambit to break free from the geopolitical vulnerabilities that have plagued global tech hardware supply chains since the pandemic.</p><blockquote>"Chip autonomy is not simply an industrial objective; it is the cornerstone of national technological sovereignty in the artificial intelligence century."</blockquote><h3>From Silicon Valley to Dholera: The Global Foundry Pivot</h3><p>For decades, India provided the design brains for the world\'s leading semiconductor firms—nearly 20% of global chip design talent is stationed in Bengaluru, Hyderabad, and Noida—while the lucrative, capital-intensive manufacturing stayed locked in Taiwan, South Korea, and the United States.</p><p>Today, that imbalance is undergoing its most radical transformation in fifty years. Joint ventures pairing domestic industrial conglomerates with established Taiwanese, Japanese, and American foundry operators are bringing commercial wafer fabrication onto Indian soil for the first time.</p>',
   'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-  'Inside the cleanroom facilities of the national advanced packaging facility at Sanand, Gujarat. (Photo: Special Bureau / The Bharat Chronicle)',
+  'Inside the cleanroom facilities of the national advanced packaging facility at Sanand, Gujarat. (Photo: Special Bureau / JANTA JOURNAL)',
   3, 4, 'published', 10, 1, 0, 0, NULL, 7, 14820, 'en', NULL,
   '2026-10-12 09:30:00',
-  'Inside India’s Semiconductor Corridor Buildout | The Bharat Chronicle',
+  'Inside India’s Semiconductor Corridor Buildout | JANTA JOURNAL',
   'Deep investigation into India’s multi-billion dollar domestic silicon fabrication facilities across Dholera and Sanand.',
-  'https://bharatchronicle.com/article/inside-indias-multibillion-dollar-silicon-fab-buildout'
+  'https://jantajournal.com/article/inside-indias-multibillion-dollar-silicon-fab-buildout'
 ),
 (
   2,
@@ -94,9 +94,9 @@ VALUES
   'Mint Street, Mumbai: Reserve Bank of India central headquarters.',
   2, 3, 'published', 8, 1, 0, 0, NULL, 4, 8410, 'en', NULL,
   '2026-10-12 11:15:00',
-  'Reserve Bank Monetary Policy Review 2026 | The Bharat Chronicle',
+  'Reserve Bank Monetary Policy Review 2026 | JANTA JOURNAL',
   'RBI signals monetary policy normalization as inflation drops to 3.9%.',
-  'https://bharatchronicle.com/article/reserve-bank-signals-liquidity-normalisation-inflation-stabilises'
+  'https://jantajournal.com/article/reserve-bank-signals-liquidity-normalisation-inflation-stabilises'
 ),
 (
   3,
@@ -111,7 +111,7 @@ VALUES
   '2026-10-12 12:00:00',
   'भारताची सेमीकंडक्टर क्रांती | द भारत क्रॉनिकल',
   'धोलेरा व महाराष्ट्रातील सेमीकंडक्टर फॅब्रिकेशन प्रकल्पाचा सविस्तर आढावा.',
-  'https://bharatchronicle.com/article/marathi-indias-semiconductor-revolution'
+  'https://jantajournal.com/article/marathi-indias-semiconductor-revolution'
 ),
 (
   4,
@@ -126,7 +126,7 @@ VALUES
   '2026-10-12 14:00:00',
   'इसरो शुक्रयान मिशन | द भारत क्रॉनिकल',
   'इसरो के शुक्रयान डीप-स्पेस मिशन की ताज़ा प्रगति रिपोर्ट।',
-  'https://bharatchronicle.com/article/hindi-isro-shukrayaan-mission-deep-space'
+  'https://jantajournal.com/article/hindi-isro-shukrayaan-mission-deep-space'
 ),
 (
   5,
@@ -139,9 +139,9 @@ VALUES
   'Supreme Court of India, Tilak Marg, New Delhi.',
   1, 1, 'published', 4, 0, 0, 0, NULL, 5, 3120, 'en', NULL,
   '2026-10-11 18:30:00',
-  'Supreme Court Riparian Rights Review | The Bharat Chronicle',
+  'Supreme Court Riparian Rights Review | JANTA JOURNAL',
   'Seven-judge Supreme Court bench to review inter-state river basin allocations.',
-  'https://bharatchronicle.com/article/supreme-court-bench-inter-state-water-sharing'
+  'https://jantajournal.com/article/supreme-court-bench-inter-state-water-sharing'
 ),
 (
   6,
@@ -156,7 +156,7 @@ VALUES
   '2026-10-11 10:00:00',
   'Green Industry Transition Blueprint | Partner Content',
   'CII and Clean Energy Alliance industrial decarbonization report.',
-  'https://bharatchronicle.com/article/partner-decarbonising-heavy-industry-cii'
+  'https://jantajournal.com/article/partner-decarbonising-heavy-industry-cii'
 ),
 (
   7,
@@ -169,9 +169,9 @@ VALUES
   'Tokyo Diplomatic Chancery: Quantum accord initialing ceremony.',
   1, 2, 'scheduled', 6, 0, 0, 0, NULL, 4, 0, 'en',
   '2026-10-13 18:00:00', NULL,
-  'Bilateral Indo-Japanese Quantum Accord | The Bharat Chronicle',
+  'Bilateral Indo-Japanese Quantum Accord | JANTA JOURNAL',
   'Confidential scheduled dispatch awaiting diplomatic release.',
-  'https://bharatchronicle.com/article/diplomatic-brief-indo-japanese-quantum-accord'
+  'https://jantajournal.com/article/diplomatic-brief-indo-japanese-quantum-accord'
 ),
 (
   8,
@@ -184,7 +184,7 @@ VALUES
   'Regional rapid transit corridor trials.',
   3, 1, 'draft', 1, 0, 0, 0, NULL, 4, 0, 'en',
   NULL, NULL,
-  'Draft: Regional Rail Fare Subsidy | The Bharat Chronicle',
+  'Draft: Regional Rail Fare Subsidy | JANTA JOURNAL',
   'Internal working draft.',
   NULL
 )
@@ -227,12 +227,12 @@ ON DUPLICATE KEY UPDATE `title`=VALUES(`title`);
 -- 10. Seed Platform Settings
 INSERT INTO `site_settings` (`setting_key`, `setting_value`, `setting_group`, `is_public`, `description`)
 VALUES
-('site_name', 'The Bharat Chronicle', 'general', 1, 'Master publication brand title'),
+('site_name', 'JANTA JOURNAL', 'general', 1, 'Master publication brand title'),
 ('site_tagline', 'Independent National Daily of Record', 'general', 1, 'Official masthead subtitle'),
 ('site_motto', 'Veritas et Libertas • Est. 1928', 'general', 1, 'Classical heritage motto'),
 ('press_council_registration', 'REG-BC-2026-DEL-0941', 'compliance', 1, 'Press Council of India accreditation code'),
-('editorial_email', 'editorial@bharatchronicle.com', 'contact', 1, 'Central newsroom desk address'),
-('ad_sales_email', 'advertising@bharatchronicle.com', 'monetization', 1, 'Commercial sponsorships desk email'),
+('editorial_email', 'editorial@jantajournal.com', 'contact', 1, 'Central newsroom desk address'),
+('ad_sales_email', 'advertising@jantajournal.com', 'monetization', 1, 'Commercial sponsorships desk email'),
 ('breaking_news_enabled', '1', 'editorial', 1, 'Global breaking news ticker master switch'),
 ('comments_require_approval', '1', 'moderation', 0, 'Auto-quarantine reader submissions')
 ON DUPLICATE KEY UPDATE `setting_value`=VALUES(`setting_value`);

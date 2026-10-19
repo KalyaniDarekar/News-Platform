@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Video, Eye, Clock, Share2, RefreshCw, AlertCircle, Calendar, ExternalLink, Bell, Check } from 'lucide-react';
 import apiService, { formatEditorialDate, formatRelativeTime } from '../../services/api';
@@ -14,8 +14,8 @@ export default function VideoNewsPage() {
   const [videos, setVideos] = useState([]);
   const [activeVideo, setActiveVideo] = useState(null);
   const [channelInfo, setChannelInfo] = useState({
-    url: 'https://www.youtube.com/@TheBharatChronicle',
-    name: 'The Bharat Chronicle Digital Newsroom'
+    url: 'https://www.youtube.com/@JantaJournal',
+    name: 'JANTA JOURNAL Digital Newsroom'
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,7 +38,7 @@ export default function VideoNewsPage() {
       if (sRes?.data?.youtube_channel_url) {
         setChannelInfo({
           url: sRes.data.youtube_channel_url,
-          name: sRes.data.youtube_channel_name || 'The Bharat Chronicle Digital Newsroom'
+          name: sRes.data.youtube_channel_name || 'JANTA JOURNAL Digital Newsroom'
         });
       }
     } catch (err) {
@@ -248,7 +248,7 @@ export default function VideoNewsPage() {
               </div>
 
               <p style={{ fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.6 }}>
-                {activeVideo?.description || activeVideo?.short_description || activeVideo?.summary || 'Exclusive ground reporting produced by The Bharat Chronicle Special Investigations Unit.'}
+                {activeVideo?.description || activeVideo?.short_description || activeVideo?.summary || 'Exclusive ground reporting produced by JANTA JOURNAL Special Investigations Unit.'}
               </p>
 
               {activeVideo?.article_slug ? (

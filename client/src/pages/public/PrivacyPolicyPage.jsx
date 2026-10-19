@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', fontSize: '0.96rem', lineHeight: 1.7, color: 'var(--color-ink-800)' }}>
         <p>
-          The Bharat Chronicle Media Network Pvt. Ltd. ("we", "our", or "the Platform") respects reader privacy. This Policy outlines how data is gathered, processed, and safeguarded when you access our digital publications.
+          JANTA JOURNAL Media Network Pvt. Ltd. ("we", "our", or "the Platform") respects reader privacy. This Policy outlines how data is gathered, processed, and safeguarded when you access our digital publications.
         </p>
 
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-ink-950)' }}>1. Data We Collect</h3>
@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
 
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-ink-950)' }}>3. Data Principal Rights (DPDP Act)</h3>
         <p>
-          Under Indian data protection laws, readers have the right to request access to their collected email records, seek correction, or request erasure of subscriber accounts at any time by contacting our Data Protection Officer at <strong>privacy@bharatchronicle.com</strong>.
+          Under Indian data protection laws, readers have the right to request access to their collected email records, seek correction, or request erasure of subscriber accounts at any time by contacting our Data Protection Officer at <strong>privacy@jantajournal.com</strong>.
         </p>
       </div>
     </div>

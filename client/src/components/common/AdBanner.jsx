@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Info, Sparkles, X } from 'lucide-react';
 import apiService from '../../services/api';
@@ -147,7 +147,7 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
             <>
               <div style={{ overflow: 'hidden', paddingRight: '0.5rem', flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>{ad?.sponsor || 'SPONSORED'}</div>
-                <div style={{ fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ad?.title || 'Partner with The Bharat Chronicle'}</div>
+                <div style={{ fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ad?.title || 'Partner with JANTA JOURNAL'}</div>
               </div>
               <button type="button" style={{ fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#2563eb', color: '#fff', border: 'none', padding: '0.25rem 0.6rem', borderRadius: '2px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 Open

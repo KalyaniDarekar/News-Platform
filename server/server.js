@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -47,7 +47,7 @@ app.get('/api/health', async (req, res) => {
   const dbStatus = await checkDbConnection();
   res.json({
     status: 'online',
-    platform: 'The Bharat Chronicle Digital Publishing Platform',
+    platform: 'JANTA JOURNAL Digital Publishing Platform',
     version: '2.0.0-phase2',
     environment: process.env.NODE_ENV || 'development',
     serverTime: new Date().toISOString(),
@@ -157,7 +157,7 @@ app.get('*', (req, res, next) => {
   res.sendFile(indexFile, (err) => {
     if (err) {
       res.json({
-        message: 'The Bharat Chronicle API server running. Launch client with "npm run client:dev" or build client with "npm run client:build".'
+        message: 'JANTA JOURNAL API server running. Launch client with "npm run client:dev" or build client with "npm run client:build".'
       });
     }
   });
@@ -165,7 +165,7 @@ app.get('*', (req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`=======================================================`);
-  console.log(`  The Bharat Chronicle API Service`);
+  console.log(`  JANTA JOURNAL API Service`);
   console.log(`  Active Port: ${PORT}`);
   console.log(`  Target Client URL: ${CLIENT_URL}`);
   console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);

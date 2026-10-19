@@ -1,4 +1,4 @@
-// ========================================================================
+﻿// ========================================================================
 // Direct Advertiser Business & Sponsorship Enquiries Service (Phase 5)
 // Captures leads, logs audit trails, and manages pipeline lifecycle in MySQL/Store
 // ========================================================================
@@ -59,7 +59,7 @@ export const advertiserEnquiryService = {
       companyName,
       contactName,
       status: 'new',
-      message: 'Your advertising enquiry has been submitted to The Bharat Chronicle Commercial Desk. Our corporate partnerships team will review and respond within 24 business hours.'
+      message: 'Your advertising enquiry has been submitted to JANTA JOURNAL Commercial Desk. Our corporate partnerships team will review and respond within 24 business hours.'
     };
   },
 

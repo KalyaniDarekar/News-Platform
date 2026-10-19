@@ -1,4 +1,4 @@
-// ========================================================================
+﻿// ========================================================================
 // SEO, Sitemaps, RSS Feeds & Prerendering Service — Phase 4
 // Generates search-engine compliant XML sitemaps, RSS 2.0 dispatches,
 // robots.txt, and crawler meta tag injection for article pages.
@@ -95,7 +95,7 @@ export const seoService = {
       if (isRecent) {
         xml += `    <news:news>\n`;
         xml += `      <news:publication>\n`;
-        xml += `        <news:name>The Bharat Chronicle</news:name>\n`;
+        xml += `        <news:name>JANTA JOURNAL</news:name>\n`;
         xml += `        <news:language>${art.language || 'en'}</news:language>\n`;
         xml += `      </news:publication>\n`;
         xml += `      <news:publication_date>${pubDate.toISOString()}</news:publication_date>\n`;
@@ -132,7 +132,7 @@ export const seoService = {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xmlns:dc="http://purl.org/dc/elements/1.1/">\n`;
     xml += `  <channel>\n`;
-    xml += `    <title>The Bharat Chronicle</title>\n`;
+    xml += `    <title>JANTA JOURNAL</title>\n`;
     xml += `    <link>${cleanBase}</link>\n`;
     xml += `    <description>Independent National Daily of Record — Strategic Affairs, Economy, Science and Public Conscience</description>\n`;
     xml += `    <language>en-in</language>\n`;
@@ -170,7 +170,7 @@ export const seoService = {
    */
   getRobotsTxt(baseUrl = 'http://localhost:5173') {
     const cleanBase = baseUrl.replace(/\/+$/, '');
-    return `# The Bharat Chronicle Robots Exclusion Standard
+    return `# JANTA JOURNAL Robots Exclusion Standard
 User-agent: *
 Allow: /
 Disallow: /admin
@@ -191,7 +191,7 @@ Sitemap: ${cleanBase}/sitemap.xml
       const article = await articleService.getArticleBySlug(slug, null, {});
       if (!article) return { notFound: true };
 
-      const title = article.meta_title || `${article.title} — The Bharat Chronicle`;
+      const title = article.meta_title || `${article.title} — JANTA JOURNAL`;
       const description = article.meta_description || article.short_description || '';
       const canonical = article.canonical_url || `${cleanBase}/article/${article.slug}`;
       const ogImage = article.og_image || article.featured_image || `${cleanBase}/og-default.jpg`;
@@ -220,7 +220,7 @@ Sitemap: ${cleanBase}/sitemap.xml
         },
         publisher: {
           '@type': 'NewsMediaOrganization',
-          name: 'The Bharat Chronicle',
+          name: 'JANTA JOURNAL',
           url: cleanBase,
           logo: {
             '@type': 'ImageObject',
@@ -240,7 +240,7 @@ Sitemap: ${cleanBase}/sitemap.xml
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="article" />
-    <meta property="og:site_name" content="The Bharat Chronicle" />
+    <meta property="og:site_name" content="JANTA JOURNAL" />
     <meta property="og:url" content="${escapeXml(canonical)}" />
     <meta property="og:title" content="${escapeXml(title)}" />
     <meta property="og:description" content="${escapeXml(description)}" />

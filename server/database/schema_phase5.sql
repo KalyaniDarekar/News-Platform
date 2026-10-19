@@ -1,5 +1,5 @@
--- ========================================================================
--- The Bharat Chronicle — Phase 5 Database Schema Migration
+﻿-- ========================================================================
+-- JANTA JOURNAL — Phase 5 Database Schema Migration
 -- Revenue Infrastructure, Ad Placements, Direct Enquiries & First-Party Analytics
 -- Compatible with MySQL 8.0+ / MariaDB 10.4+ / cPanel MySQL
 -- ========================================================================
@@ -117,11 +117,11 @@ VALUES
   ('ads_provider_type', 'custom', 'monetization', 1, 'Active ad delivery mode: custom (direct), adsense, or hybrid'),
   ('google_analytics_id', '', 'integrations', 1, 'Google Analytics 4 Measurement ID (e.g. G-XXXXXXXXXX)'),
   ('google_search_console_code', '', 'integrations', 1, 'Google Search Console verification meta tag value'),
-  ('youtube_channel_url', 'https://www.youtube.com/@TheBharatChronicle', 'multimedia', 1, 'Official YouTube channel link for audience subscriptions'),
-  ('youtube_channel_name', 'The Bharat Chronicle Digital Newsroom', 'multimedia', 1, 'Display channel branding title'),
+  ('youtube_channel_url', 'https://www.youtube.com/@JantaJournal', 'multimedia', 1, 'Official YouTube channel link for audience subscriptions'),
+  ('youtube_channel_name', 'JANTA JOURNAL Digital Newsroom', 'multimedia', 1, 'Display channel branding title'),
   ('featured_youtube_video_id', 'dQw4w9WgXcQ', 'multimedia', 1, 'Featured video displayed in homepage broadcast block'),
-  ('media_kit_url', '/downloads/Bharat_Chronicle_Media_Kit_2026.pdf', 'monetization', 1, 'Direct link to downloadable media kit specifications'),
-  ('advertiser_desk_email', 'advertising@bharatchronicle.com', 'monetization', 1, 'Commercial partnership enquiries inbox'),
+  ('media_kit_url', '/downloads/Janta_Journal_Media_Kit_2026.pdf', 'monetization', 1, 'Direct link to downloadable media kit specifications'),
+  ('advertiser_desk_email', 'advertising@jantajournal.com', 'monetization', 1, 'Commercial partnership enquiries inbox'),
   ('advertiser_desk_phone', '+91 (11) 4890-2800', 'monetization', 1, 'Commercial desks direct hotline'),
   ('privacy_compliance_mode', 'dpdp_act_india', 'compliance', 1, 'Privacy compliance mode: dpdp_act_india or gdpr'),
   ('cookie_consent_required', '1', 'compliance', 1, 'Show consent banner on visitor initial arrival')
@@ -130,7 +130,7 @@ ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 -- 8. Seed Sample Approved YouTube Videos
 INSERT INTO `youtube_videos` (`id`, `youtube_id`, `title`, `description`, `thumbnail_url`, `published_at`, `is_featured`, `is_active`, `related_article_id`, `display_order`)
 VALUES
-  (1, 'dQw4w9WgXcQ', 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand', 'Exclusive Bharat Chronicle video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80', NOW(), 1, 1, 1, 1),
+  (1, 'dQw4w9WgXcQ', 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand', 'Exclusive Janta Journal video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80', NOW(), 1, 1, 1, 1),
   (2, '7NOSDKb0HlU', 'Monetary Policy Briefing: Reserve Bank Governor on Inflation Targets', 'Key takeaways from the RBI Monetary Policy Committee resolution and economic growth forecast.', 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80', NOW(), 0, 1, 2, 2),
   (3, 'kJQP7kiw5Fk', 'Himalayan Clean Energy: Assessing Run-of-the-River Hydro Projects', 'Field report on ecological balance and clean power transmission in the northern states.', 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=800&q=80', NOW(), 0, 1, 3, 3)
 ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);

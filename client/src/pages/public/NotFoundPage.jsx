@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, Search, Home } from 'lucide-react';
 
@@ -40,7 +40,7 @@ export default function NotFoundPage() {
           lineHeight: 1.6,
           marginBottom: '2rem'
         }}>
-          The page or story dispatch you requested does not exist or may have been retired under our editorial expiration standards. The Bharat Chronicle ensures all public records remain verified.
+          The page or story dispatch you requested does not exist or may have been retired under our editorial expiration standards. JANTA JOURNAL ensures all public records remain verified.
         </p>
 
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { ShieldCheck, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 
 export default function EditorialPoliciesPage() {
@@ -23,13 +23,13 @@ export default function EditorialPoliciesPage() {
             <AlertCircle size={22} style={{ color: 'var(--color-breaking)' }} /> 1. Factual Corrections Policy
           </h2>
           <p>
-            The Bharat Chronicle is committed to immediate, transparent correction of factual errors. When a report is found to contain inaccurate information:
+            JANTA JOURNAL is committed to immediate, transparent correction of factual errors. When a report is found to contain inaccurate information:
           </p>
           <ul style={{ paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <li>The error is corrected in the digital text promptly.</li>
             <li>A distinct, italicized <strong>Correction Note</strong> is appended at the top or bottom of the article specifying exactly what was erroneous, the date/time of amendment, and the updated record.</li>
             <li>Significant errors of law or public fact are logged in our public monthly Corrections Record.</li>
-            <li>Readers may submit correction requests with supporting documentation directly to <strong>corrections@bharatchronicle.com</strong>.</li>
+            <li>Readers may submit correction requests with supporting documentation directly to <strong>corrections@jantajournal.com</strong>.</li>
           </ul>
         </section>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X, TrendingUp } from 'lucide-react';
 import { TRENDING_TAGS } from '../../data/mockNewsData';
@@ -79,7 +79,7 @@ export default function SearchModal({ isOpen, onClose }) {
         {/* Modal Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-ink-600)' }}>
-            Search The Bharat Chronicle Archive
+            Search JANTA JOURNAL Archive
           </span>
           <button onClick={onClose} style={{ color: 'var(--color-ink-500)', padding: '0.2rem' }}>
             <X size={20} />

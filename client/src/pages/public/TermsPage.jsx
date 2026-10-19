@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 export default function TermsPage() {
   return (
@@ -15,17 +15,17 @@ export default function TermsPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', fontSize: '0.96rem', lineHeight: 1.7, color: 'var(--color-ink-800)' }}>
         <p>
-          By accessing or reading dispatches published by The Bharat Chronicle, you agree to comply with and be bound by the following Terms of Service.
+          By accessing or reading dispatches published by JANTA JOURNAL, you agree to comply with and be bound by the following Terms of Service.
         </p>
 
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-ink-950)' }}>1. Copyright & Intellectual Property</h3>
         <p>
-          All journalistic articles, photographs, infographics, video reels, audio dispatches, and headlines are the protected intellectual property of The Bharat Chronicle Media Network Pvt. Ltd. Unauthorized commercial scraping, automated AI model ingestion without syndication license, or verbatim replication is strictly prohibited under the Indian Copyright Act, 1957.
+          All journalistic articles, photographs, infographics, video reels, audio dispatches, and headlines are the protected intellectual property of JANTA JOURNAL Media Network Pvt. Ltd. Unauthorized commercial scraping, automated AI model ingestion without syndication license, or verbatim replication is strictly prohibited under the Indian Copyright Act, 1957.
         </p>
 
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-ink-950)' }}>2. Fair Dealing & Quotation</h3>
         <p>
-          Scholarly, educational, and commentary citations are permitted under fair dealing provided that clear, prominent attribution with an active canonical hyperlink to the original Bharat Chronicle URL is maintained.
+          Scholarly, educational, and commentary citations are permitted under fair dealing provided that clear, prominent attribution with an active canonical hyperlink to the original Janta Journal URL is maintained.
         </p>
 
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-ink-950)' }}>3. Jurisdiction</h3>

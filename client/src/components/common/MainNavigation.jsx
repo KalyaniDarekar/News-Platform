@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Flame, Search, ChevronRight } from 'lucide-react';
 import apiService from '../../services/api';
@@ -241,7 +241,7 @@ export default function MainNavigation({ onSearchClick }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-ink-200)', paddingBottom: '0.75rem' }}>
               <span style={{ fontFamily: 'var(--font-masthead)', fontWeight: 900, fontSize: '1.1rem', color: 'var(--color-ink-950)' }}>
-                THE BHARAT CHRONICLE
+                JANTA JOURNAL
               </span>
               <button type="button" onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--color-ink-600)' }} aria-label="Close menu">
                 <X size={20} />

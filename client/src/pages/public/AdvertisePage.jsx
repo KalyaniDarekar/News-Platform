@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { 
   Building2, Mail, Phone, MapPin, Download, CheckCircle, 
   Send, Sparkles, Layout, Smartphone, Video, Compass, 
@@ -79,11 +79,11 @@ export default function AdvertisePage() {
 
   const handleMediaKitDownload = () => {
     // Media kit summary download
-    const mediaKitContent = `THE BHARAT CHRONICLE — COMMERCIAL PARTNERSHIPS & MEDIA KIT 2026
+    const mediaKitContent = `JANTA JOURNAL — COMMERCIAL PARTNERSHIPS & MEDIA KIT 2026
 Independent National Daily of Record • Established 1928 • Press Council Registration: REG-BC-2026-DEL-0941
 
 COMMERCIAL DESK CONTACT:
-• Desk Email: advertising@bharatchronicle.com
+• Desk Email: advertising@jantajournal.com
 • Phone: +91 (11) 4890-2800
 • Address: Chronicle Bhavan, 14 Parliament Street, New Delhi 110001
 
@@ -103,7 +103,7 @@ All commercial creative is subject to editorial board review. Political endorsem
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'Bharat_Chronicle_Media_Kit_2026.txt';
+    link.download = 'Janta_Journal_Media_Kit_2026.txt';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -163,7 +163,7 @@ All commercial creative is subject to editorial board review. Political endorsem
             </h1>
 
             <p style={{ fontSize: '1.05rem', color: '#cbd5e1', lineHeight: 1.6, marginBottom: '2rem', maxWidth: '720px' }}>
-              The Bharat Chronicle provides verified, high-impact sponsorship placements for organizations, sovereign institutions, and forward-thinking enterprises. Partner directly with an editorial environment committed to journalistic rigor and reader trust.
+              JANTA JOURNAL provides verified, high-impact sponsorship placements for organizations, sovereign institutions, and forward-thinking enterprises. Partner directly with an editorial environment committed to journalistic rigor and reader trust.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
@@ -263,8 +263,8 @@ All commercial creative is subject to editorial board review. Political endorsem
                   </div>
                   <div>
                     <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Direct Sponsorship Inbox</div>
-                    <a href="mailto:advertising@bharatchronicle.com" style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>
-                      advertising@bharatchronicle.com
+                    <a href="mailto:advertising@jantajournal.com" style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>
+                      advertising@jantajournal.com
                     </a>
                   </div>
                 </div>
@@ -301,7 +301,7 @@ All commercial creative is subject to editorial board review. Political endorsem
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
                 <AlertCircle size={16} color="#64748b" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong>Audited Circulation Policy:</strong> In compliance with truthful media representation standards, The Bharat Chronicle does not publish unverified or simulated audience reach claims. Customized flight proposals provide audited delivery metrics upon campaign completion.
+                  <strong>Audited Circulation Policy:</strong> In compliance with truthful media representation standards, JANTA JOURNAL does not publish unverified or simulated audience reach claims. Customized flight proposals provide audited delivery metrics upon campaign completion.
                 </div>
               </div>
             </div>

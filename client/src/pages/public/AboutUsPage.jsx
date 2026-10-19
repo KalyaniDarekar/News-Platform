@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Award, ShieldCheck, Users, Globe, BookOpen } from 'lucide-react';
 
 export default function AboutUsPage() {
@@ -8,16 +8,16 @@ export default function AboutUsPage() {
       <header style={{ borderBottom: '2px solid var(--color-ink-950)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
         <span className="kicker kicker-neutral">Institutional Charter</span>
         <h1 style={{ fontFamily: 'var(--font-masthead)', fontSize: 'clamp(2.2rem, 4vw, 3rem)', fontWeight: 900, color: 'var(--color-ink-950)', lineHeight: 1.15 }}>
-          About The Bharat Chronicle
+          About JANTA JOURNAL
         </h1>
         <p style={{ fontSize: '1.15rem', color: 'var(--color-ink-600)', fontFamily: 'var(--font-serif)', marginTop: '0.75rem', lineHeight: 1.5 }}>
-          Founded on principles of unwavering truth, fearless inquiry, and constitutional values, The Bharat Chronicle is India’s independent digital daily of record.
+          Founded on principles of unwavering truth, fearless inquiry, and constitutional values, JANTA JOURNAL is India’s independent digital daily of record.
         </p>
       </header>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', fontSize: '1.05rem', lineHeight: 1.8, fontFamily: 'var(--font-serif)', color: 'var(--color-ink-800)' }}>
         <p>
-          Established as a beacon of independent journalism, <strong>The Bharat Chronicle</strong> serves readers across India and the global diaspora who demand deep investigative reporting, macroeconomic insight, and strategic geopolitical clarity without partisan noise.
+          Established as a beacon of independent journalism, <strong>JANTA JOURNAL</strong> serves readers across India and the global diaspora who demand deep investigative reporting, macroeconomic insight, and strategic geopolitical clarity without partisan noise.
         </p>
 
         <p>
@@ -79,7 +79,7 @@ export default function AboutUsPage() {
           fontFamily: 'var(--font-sans)',
           color: 'var(--color-ink-700)'
         }}>
-          <strong>Statutory Accreditation:</strong> The Bharat Chronicle is registered under the Press Council of India and adheres to the ethical code framed under the Working Journalists and Other Newspaper Employees Act.
+          <strong>Statutory Accreditation:</strong> JANTA JOURNAL is registered under the Press Council of India and adheres to the ethical code framed under the Working Journalists and Other Newspaper Employees Act.
         </div>
       </section>
 

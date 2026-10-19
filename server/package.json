@@ -1,7 +1,7 @@
-{
-  "name": "bharat-chronicle-api",
+﻿{
+  "name": "janta-journal-api",
   "version": "1.0.0",
-  "description": "Production-ready backend API for Bharat Chronicle News Platform (cPanel/Node.js/MySQL)",
+  "description": "Production-ready backend API for Janta Journal News Platform (cPanel/Node.js/MySQL)",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -32,6 +32,6 @@
     "mysql",
     "cpanel"
   ],
-  "author": "The Bharat Chronicle Media Group",
+  "author": "JANTA JOURNAL Media Group",
   "license": "ISC"
 }

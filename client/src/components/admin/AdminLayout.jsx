@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, PlusCircle, FolderTree, Image, 
@@ -50,7 +50,7 @@ export default function AdminLayout() {
               EDITORIAL WORKSPACE
             </div>
             <div style={{ fontFamily: 'var(--font-masthead)', fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.04em' }}>
-              BHARAT CHRONICLE
+              Janta Journal
             </div>
           </div>
           <span style={{ backgroundColor: '#1e3a8a', color: '#bfdbfe', fontSize: '0.62rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '3px' }}>
@@ -277,7 +277,7 @@ export default function AdminLayout() {
                   EDITORIAL WORKSPACE
                 </div>
                 <div style={{ fontFamily: 'var(--font-masthead)', fontSize: '1rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.04em' }}>
-                  BHARAT CHRONICLE
+                  Janta Journal
                 </div>
               </div>
               <button

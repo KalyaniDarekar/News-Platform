@@ -1,4 +1,4 @@
-// ========================================================================
+﻿// ========================================================================
 // Admin Article Edit & Newsroom Dispatch Desk — Phase 3
 // Full editorial workflow: Draft, Review, Schedule, Publish, Expire
 // Connected directly to Express /api/v1 API and MySQL database.
@@ -834,7 +834,7 @@ export default function AdminArticleEditPage() {
                     type="url"
                     value={canonicalUrl}
                     onChange={(e) => setCanonicalUrl(e.target.value)}
-                    placeholder="https://bharatchronicle.com/article/original-slug"
+                    placeholder="https://jantajournal.com/article/original-slug"
                     style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
                   />
                 </div>

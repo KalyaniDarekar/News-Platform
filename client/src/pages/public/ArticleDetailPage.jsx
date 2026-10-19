@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   Clock, Share2, Check, Volume2, ArrowLeft, ShieldCheck, 
@@ -71,7 +71,7 @@ export default function ArticleDetailPage() {
     if (!article) return;
 
     const originalTitle = document.title;
-    document.title = `${article.title} - The Bharat Chronicle`;
+    document.title = `${article.title} - JANTA JOURNAL`;
 
     // Meta description update
     let metaDesc = document.querySelector('meta[name="description"]');
@@ -107,7 +107,7 @@ export default function ArticleDetailPage() {
           '@id': `${window.location.href}#article`,
           'headline': article.title,
           'description': article.short_description || article.summary,
-          'image': [article.featured_image || 'https://bharatchronicle.com/default.jpg'],
+          'image': [article.featured_image || 'https://jantajournal.com/default.jpg'],
           'datePublished': article.publication_time || new Date().toISOString(),
           'dateModified': article.updated_at || article.publication_time || new Date().toISOString(),
           'author': [{
@@ -117,7 +117,7 @@ export default function ArticleDetailPage() {
           }],
           'publisher': {
             '@type': 'NewsMediaOrganization',
-            'name': 'The Bharat Chronicle',
+            'name': 'JANTA JOURNAL',
             'url': window.location.origin,
             'logo': {
               '@type': 'ImageObject',
@@ -199,7 +199,7 @@ export default function ArticleDetailPage() {
             Story Not Found or Expired
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--color-ink-600)', lineHeight: 1.6, marginBottom: '1.75rem' }}>
-            The requested dispatch could not be located in our active public registry. The Bharat Chronicle automatically unpublishes expired or embargoed content to protect archival integrity.
+            The requested dispatch could not be located in our active public registry. JANTA JOURNAL automatically unpublishes expired or embargoed content to protect archival integrity.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
@@ -283,7 +283,7 @@ export default function ArticleDetailPage() {
     : (article.readingTime || '5 min read');
   const imageUrl = article.featured_image || article.image;
   const imageAlt = article.alt_text || article.title;
-  const imageCaption = article.image_caption || article.imageCaption || 'Photograph: Bureau Archives / The Bharat Chronicle';
+  const imageCaption = article.image_caption || article.imageCaption || 'Photograph: Bureau Archives / JANTA JOURNAL';
   const youtubeId = extractYouTubeId(article.youtube_url);
 
   // Parse tags
@@ -630,7 +630,7 @@ export default function ArticleDetailPage() {
               color: 'var(--color-ink-600)',
               lineHeight: 1.5
             }}>
-              <strong style={{ color: 'var(--color-ink-900)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editorial Standards & Code:</strong> The Bharat Chronicle adheres strictly to Press Council of India standards. Dispatches do not contain undisclosed commercial endorsements. Report factual errors to <span style={{ color: 'var(--color-breaking)', textDecoration: 'underline' }}>corrections@bharatchronicle.com</span>.
+              <strong style={{ color: 'var(--color-ink-900)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editorial Standards & Code:</strong> JANTA JOURNAL adheres strictly to Press Council of India standards. Dispatches do not contain undisclosed commercial endorsements. Report factual errors to <span style={{ color: 'var(--color-breaking)', textDecoration: 'underline' }}>corrections@jantajournal.com</span>.
             </div>
 
             {/* Author Bio Box */}
@@ -654,7 +654,7 @@ export default function ArticleDetailPage() {
                   Written by {authorName}
                 </h4>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-ink-600)', marginTop: '0.25rem', lineHeight: 1.4 }}>
-                  {authorTitle} for The Bharat Chronicle. Covers constitutional policy, national affairs, and economic developments.
+                  {authorTitle} for JANTA JOURNAL. Covers constitutional policy, national affairs, and economic developments.
                 </p>
               </div>
             </div>
@@ -684,7 +684,7 @@ export default function ArticleDetailPage() {
                 COMMERCIAL DESK
               </span>
               <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--color-ink-950)', margin: 0, lineHeight: 1.3 }}>
-                Advertise With The Bharat Chronicle
+                Advertise With JANTA JOURNAL
               </h4>
               <p style={{ fontSize: '0.78rem', color: 'var(--color-ink-600)', margin: 0, lineHeight: 1.45 }}>
                 Direct advertiser packages across 7 audited positions. Access decision-makers across business, policy, and public leadership.
@@ -722,7 +722,7 @@ export default function ArticleDetailPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
                 <ShieldCheck size={14} color="#059669" /> Editorial Independence
               </div>
-              The Bharat Chronicle newsroom operates autonomously from commercial sponsorships. Paid placements are strictly labeled.
+              JANTA JOURNAL newsroom operates autonomously from commercial sponsorships. Paid placements are strictly labeled.
             </div>
           </aside>
 

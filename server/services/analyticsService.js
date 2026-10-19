@@ -1,4 +1,4 @@
-// ========================================================================
+﻿// ========================================================================
 // First-Party Analytics & Operational Telemetry Service (Phase 5)
 // Privacy-conscious, anti-inflation (15-min debounce), bot filtering,
 // and honest first-party reporting without fabricated numbers.
@@ -40,7 +40,7 @@ export function categorizeReferrer(referrer = '') {
     if (host.includes('instagram.com')) return 'Instagram';
     if (host.includes('reddit.com')) return 'Reddit';
     if (host.includes('bing.com') || host.includes('duckduckgo.com') || host.includes('yahoo.com')) return 'Other Search Engines';
-    if (host.includes('localhost') || host.includes('127.0.0.1') || host.includes('bharatchronicle.com')) return 'Internal Navigation';
+    if (host.includes('localhost') || host.includes('127.0.0.1') || host.includes('jantajournal.com')) return 'Internal Navigation';
     return host.replace(/^www\./, '');
   } catch {
     return 'Other Referral';

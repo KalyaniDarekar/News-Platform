@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, CloudSun, Calendar, ShieldCheck, Globe, BookOpen, X, Download } from 'lucide-react';
 import apiService, { formatEditorialDate } from '../../services/api';
@@ -239,7 +239,7 @@ export default function TopInfoBar() {
             }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-masthead)', fontSize: '1.1rem', fontWeight: 900, letterSpacing: '0.04em' }}>
-                  THE BHARAT CHRONICLE — DIGITAL E-PAPER
+                  JANTA JOURNAL — DIGITAL E-PAPER
                 </h3>
                 <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
                   {currentDate} • Daily Print Replica (16 Pages)

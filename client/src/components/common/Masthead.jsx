@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Bell, Sparkles, Check, Mail, X } from 'lucide-react';
 import apiService from '../../services/api';
 
 export default function Masthead({ onSearchClick }) {
   const [siteSettings, setSiteSettings] = useState({
-    site_name: 'THE BHARAT CHRONICLE',
+    site_name: 'JANTA JOURNAL',
     site_tagline: 'Journal of Strategic Affairs, Economy, Science & Public Conscience',
     site_motto: 'Veritas et Libertas • Est. 1928'
   });
@@ -209,7 +209,7 @@ export default function Masthead({ onSearchClick }) {
                     <Check size={26} />
                   </div>
                   <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', color: 'var(--color-ink-950)' }}>
-                    Welcome to The Bharat Chronicle Circle
+                    Welcome to JANTA JOURNAL Circle
                   </h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-600)', marginTop: '0.5rem' }}>
                     A confirmation dispatch and morning editorial brief has been sent to <strong>{subEmail}</strong>.

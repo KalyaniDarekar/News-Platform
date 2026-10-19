@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Video, TrendingUp, Clock, Eye, AlertCircle, RefreshCw, Flame, Play } from 'lucide-react';
 import HeroPackage from '../../components/editorial/HeroPackage';
@@ -389,7 +389,7 @@ export default function HomePage() {
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <a
-                    href="https://www.youtube.com/@TheBharatChronicle?sub_confirmation=1"
+                    href="https://www.youtube.com/@JantaJournal?sub_confirmation=1"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Lock, Send, Check } from 'lucide-react';
 
 export default function ContactUsPage() {
@@ -37,7 +37,7 @@ export default function ContactUsPage() {
           <p style={{ fontSize: '0.82rem', color: '#4b5563', lineHeight: 1.5 }}>
             Press Enclave, Bahadur Shah Zafar Marg<br />
             New Delhi 110002, India<br />
-            <strong>editorial@bharatchronicle.com</strong>
+            <strong>editorial@jantajournal.com</strong>
           </p>
         </div>
 
@@ -48,7 +48,7 @@ export default function ContactUsPage() {
           <p style={{ fontSize: '0.82rem', color: '#4b5563', lineHeight: 1.5 }}>
             Bandra-Kurla Complex (BKC)<br />
             Mumbai 400051, India<br />
-            <strong>markets@bharatchronicle.com</strong>
+            <strong>markets@jantajournal.com</strong>
           </p>
         </div>
 
@@ -59,7 +59,7 @@ export default function ContactUsPage() {
           <p style={{ fontSize: '0.82rem', color: '#4b5563', lineHeight: 1.5 }}>
             MG Road / Indiranagar Tech Corridor<br />
             Bengaluru 560001, India<br />
-            <strong>techdesk@bharatchronicle.com</strong>
+            <strong>techdesk@jantajournal.com</strong>
           </p>
         </div>
       </div>

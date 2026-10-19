@@ -1,5 +1,5 @@
-// ========================================================================
-// The Bharat Chronicle — Public & Editorial API Client Service (Phase 4)
+﻿// ========================================================================
+// JANTA JOURNAL — Public & Editorial API Client Service (Phase 4)
 // Connects all public content interfaces to the live Express + MySQL backend.
 // ========================================================================
 
@@ -339,8 +339,8 @@ export const apiService = {
     const fallback = AD_BANNERS[placementCode] || AD_BANNERS.headerLeaderboard;
     return {
       id: null,
-      title: fallback?.title || 'Partner with The Bharat Chronicle',
-      sponsor: fallback?.sponsor || 'The Bharat Chronicle Commercial Desk',
+      title: fallback?.title || 'Partner with JANTA JOURNAL',
+      sponsor: fallback?.sponsor || 'JANTA JOURNAL Commercial Desk',
       adType: 'image',
       imageUrl: null,
       adCode: null,
@@ -424,7 +424,7 @@ export const apiService = {
           id: 1,
           youtube_id: 'dQw4w9WgXcQ',
           title: 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand',
-          description: 'Exclusive Bharat Chronicle video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
+          description: 'Exclusive Janta Journal video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
           thumbnail_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
           embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
           is_featured: 1
@@ -470,7 +470,7 @@ export const apiService = {
       data: {
         youtube_id: 'dQw4w9WgXcQ',
         title: 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand',
-        description: 'Exclusive Bharat Chronicle video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
+        description: 'Exclusive Janta Journal video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
         embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
       },
       source: 'DEMONSTRATION_MODE'
@@ -513,14 +513,14 @@ export const apiService = {
 
     return {
       data: {
-        site_name: 'The Bharat Chronicle',
+        site_name: 'JANTA JOURNAL',
         site_tagline: 'Independent National Daily of Record',
         site_motto: 'Veritas et Libertas • Est. 1928',
-        youtube_channel_url: 'https://www.youtube.com/@TheBharatChronicle',
-        youtube_channel_name: 'The Bharat Chronicle Digital Newsroom',
+        youtube_channel_url: 'https://www.youtube.com/@JantaJournal',
+        youtube_channel_name: 'JANTA JOURNAL Digital Newsroom',
         featured_youtube_video_id: 'dQw4w9WgXcQ',
-        media_kit_url: '/downloads/Bharat_Chronicle_Media_Kit_2026.pdf',
-        advertiser_desk_email: 'advertising@bharatchronicle.com',
+        media_kit_url: '/downloads/Janta_Journal_Media_Kit_2026.pdf',
+        advertiser_desk_email: 'advertising@jantajournal.com',
         advertiser_desk_phone: '+91 (11) 4890-2800',
         privacy_compliance_mode: 'dpdp_act_india',
         cookie_consent_required: '1'
@@ -545,10 +545,10 @@ export const apiService = {
 
     return {
       data: {
-        site_name: 'The Bharat Chronicle',
+        site_name: 'JANTA JOURNAL',
         site_tagline: 'Independent National Daily of Record',
         site_motto: 'Veritas et Libertas • Est. 1928',
-        editorial_email: 'editorial@bharatchronicle.com',
+        editorial_email: 'editorial@jantajournal.com',
         press_council_registration: 'REG-BC-2026-DEL-0941'
       },
       source: 'DEMONSTRATION_MODE'

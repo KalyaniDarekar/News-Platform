@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { LEAD_STORY, SECONDARY_LEADS, OPINIONS, THE_WIRE_UPDATES } from '../../data/mockNewsData';
@@ -68,7 +68,7 @@ export default function HeroPackage({
             </Link>
           )}
           <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)', fontStyle: 'italic', marginTop: '-0.35rem' }}>
-            {lead.image_caption || lead.imageCaption || `Photograph: Bureau Archives / The Bharat Chronicle`}
+            {lead.image_caption || lead.imageCaption || `Photograph: Bureau Archives / JANTA JOURNAL`}
           </div>
 
           {/* Excerpt */}

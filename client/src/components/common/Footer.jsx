@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Shield, CheckCircle, Award, ArrowUp } from 'lucide-react';
 import AdBanner from './AdBanner';
@@ -17,7 +17,7 @@ export default function Footer() {
         <div className="container-editorial" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <span style={{ fontFamily: 'var(--font-masthead)', fontSize: '1.4rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.04em' }}>
-              THE BHARAT CHRONICLE
+              JANTA JOURNAL
             </span>
             <p style={{ fontSize: '0.76rem', color: '#9ca3af', marginTop: '0.2rem' }}>
               Independent National Journal of Record • Committed to Truth, Analytical Rigour and Public Interest
@@ -165,10 +165,10 @@ export default function Footer() {
           color: '#6b7280'
         }}>
           <div>
-            © 2026 The Bharat Chronicle Media Network Pvt. Ltd. All rights reserved.
+            © 2026 JANTA JOURNAL Media Network Pvt. Ltd. All rights reserved.
           </div>
           <div>
-            Grievance Officer: <strong style={{ color: '#d1d5db' }}>grievance@bharatchronicle.com</strong> • New Delhi, India
+            Grievance Officer: <strong style={{ color: '#d1d5db' }}>grievance@jantajournal.com</strong> • New Delhi, India
           </div>
         </div>
 

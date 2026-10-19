@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Cookie, Lock, X, Check, Settings, ExternalLink } from 'lucide-react';
 
 const CONSENT_STORAGE_KEY = 'bc_dpdp_consent';
@@ -111,7 +111,7 @@ export default function ConsentBanner() {
                   Privacy & Data Stewardship Notice (DPDP Act & Global Compliance)
                 </h4>
                 <p style={{ fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, maxWidth: '680px' }}>
-                  The Bharat Chronicle operates strictly first-party, privacy-preserving telemetry and essential operational cookies. We do not sell your personal data or execute cross-site tracking brokers. In compliance with the <strong>Digital Personal Data Protection (DPDP) Act, 2023</strong> and GDPR, you have full control over analytics and advertising preferences.
+                  JANTA JOURNAL operates strictly first-party, privacy-preserving telemetry and essential operational cookies. We do not sell your personal data or execute cross-site tracking brokers. In compliance with the <strong>Digital Personal Data Protection (DPDP) Act, 2023</strong> and GDPR, you have full control over analytics and advertising preferences.
                 </p>
               </div>
             </div>
