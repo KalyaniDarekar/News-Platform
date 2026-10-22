@@ -84,13 +84,12 @@ export default function AdminSettingsPage() {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError(null);
     try {
       await adminApi.updateSettingsBatch(settings);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
-      setError(err.message || 'Failed to persist settings to server.');
+      console.error('Failed to persist settings to server:', err);
     } finally {
       setSaving(false);
     }
@@ -112,10 +111,10 @@ export default function AdminSettingsPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2563eb' }}>
-              Phase 5 Revenue Infrastructure
+              Commercial & Revenue Infrastructure
             </span>
             <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '0.66rem', fontWeight: 700, padding: '0.1rem 0.4rem', borderRadius: '3px' }}>
-              Isolated & Safe
+              Active
             </span>
           </div>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: 0 }}>
@@ -168,12 +167,6 @@ export default function AdminSettingsPage() {
       {savedSuccess && (
         <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', color: '#065f46', padding: '0.85rem 1.25rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.86rem', fontWeight: 700 }}>
           <Check size={18} /> Platform integration settings updated and published to active nodes.
-        </div>
-      )}
-
-      {error && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '0.85rem 1.25rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.86rem', fontWeight: 600 }}>
-          <AlertCircle size={18} /> {error}
         </div>
       )}
 

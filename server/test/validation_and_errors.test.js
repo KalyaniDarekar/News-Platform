@@ -14,7 +14,7 @@ describe('Validation & Centralized Error Suite', () => {
     const res = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'editor@bharatchronicle.com', password: 'Editorial@2026' })
+      body: JSON.stringify({ username: 'Editor', password: 'Editor@123' })
     });
     const body = await res.json();
     assert.equal(res.status, 200);
@@ -45,13 +45,13 @@ describe('Validation & Centralized Error Suite', () => {
     assert.ok(fields.includes('shortDescription'), 'shortDescription must be flagged');
   });
 
-  test('POST /auth/login - Rejects malformed email string with 400', async () => {
+  test('POST /auth/login - Rejects missing credentials with 400', async () => {
     const res = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'this-is-not-an-email',
-        password: 'Password123'
+        email: '',
+        password: ''
       })
     });
 

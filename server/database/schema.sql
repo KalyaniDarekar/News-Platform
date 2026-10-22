@@ -10,6 +10,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. Users and Role-Based Permissions
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `username` VARCHAR(60) NULL UNIQUE,
   `full_name` VARCHAR(150) NOT NULL,
   `email` VARCHAR(191) NOT NULL UNIQUE,
   `password_hash` VARCHAR(255) NOT NULL,

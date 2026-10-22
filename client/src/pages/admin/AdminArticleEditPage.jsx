@@ -1,7 +1,6 @@
-﻿// ========================================================================
-// Admin Article Edit & Newsroom Dispatch Desk — Phase 3
+// ========================================================================
+// Admin Article Edit & Newsroom Dispatch Desk
 // Full editorial workflow: Draft, Review, Schedule, Publish, Expire
-// Connected directly to Express /api/v1 API and MySQL database.
 // ========================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -21,7 +20,12 @@ export default function AdminArticleEditPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const userRole = user?.role || 'reporter';
+  const isReporter = userRole === 'reporter';
+  const canPublish = userRole === 'super_admin' || userRole === 'editor';
+
   // ---- Form State ----
+  const [authorName, setAuthorName] = useState('');
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [autoSlug, setAutoSlug] = useState(true);
@@ -102,6 +106,7 @@ export default function AdminArticleEditPage() {
         const res = await adminApi.getArticleById(id);
         const a = res.data;
 
+        setAuthorName(a.author_name || (a.author && a.author.full_name) || '');
         setTitle(a.title || '');
         setSlug(a.slug || '');
         setAutoSlug(false);
@@ -137,7 +142,7 @@ export default function AdminArticleEditPage() {
           setTags(a.tags.map(t => (typeof t === 'string' ? t : t.name)));
         }
       } catch (err) {
-        setErrorMsg(`Failed to load article #${id}: ${err.message}`);
+        console.error(`Failed to load article #${id}:`, err);
       } finally {
         setLoading(false);
       }
@@ -224,7 +229,7 @@ export default function AdminArticleEditPage() {
         setTimeout(() => setSuccessToast(null), 3500);
       }
     } catch (err) {
-      setErrorMsg(`Image upload failed: ${err.message}`);
+      console.error('Image upload failed:', err);
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -280,11 +285,26 @@ export default function AdminArticleEditPage() {
       return;
     }
 
-    // Confirmation dialogs
-    if (targetStatus === 'published' && !window.confirm('Are you sure you want to publish this story live to the public portal immediately?')) {
+    // Role-based status guard
+    if (isReporter && (targetStatus === 'published' || targetStatus === 'scheduled')) {
+      setErrorMsg('Staff reporters do not have permission to directly publish or schedule news. Please save as draft or submit for editorial review.');
       return;
     }
+
+    // Confirmation dialogs
+    if (targetStatus === 'published') {
+      const confirmMsg = status === 'in_review'
+        ? 'Approve and publish this story live to the public portal immediately?'
+        : 'Are you sure you want to publish this story live to the public portal immediately?';
+      if (!window.confirm(confirmMsg)) return;
+    }
+    if (targetStatus === 'in_review' && status !== 'in_review') {
+      if (!window.confirm('Submit this story to Editors and Super Admins for review and publishing approval?')) return;
+    }
     if (targetStatus === 'draft' && status === 'published' && !window.confirm('Revert this article to draft? It will be removed from public view.')) {
+      return;
+    }
+    if (targetStatus === 'draft' && status === 'in_review' && canPublish && !window.confirm('Return this story to draft mode and request revisions from the reporter?')) {
       return;
     }
 
@@ -319,17 +339,33 @@ export default function AdminArticleEditPage() {
     try {
       if (isEditMode) {
         await adminApi.updateArticle(id, payload);
+        const prevStatus = status;
         setStatus(targetStatus);
-        setSuccessToast(`Story #${id} updated successfully (${targetStatus.toUpperCase()})!`);
+        if (targetStatus === 'in_review') {
+          setSuccessToast(`Story #${id} submitted for editorial review!`);
+        } else if (targetStatus === 'published' && prevStatus === 'in_review') {
+          setSuccessToast(`Story #${id} approved and published live to readers!`);
+        } else if (targetStatus === 'draft' && prevStatus === 'in_review') {
+          setSuccessToast(`Story #${id} returned to draft status.`);
+        } else {
+          setSuccessToast(`Story #${id} updated successfully (${targetStatus.toUpperCase()})!`);
+        }
       } else {
         const res = await adminApi.createArticle(payload);
-        setSuccessToast(`Article created and saved as ${targetStatus.toUpperCase()}!`);
-        setTimeout(() => {
-          navigate('/admin/articles');
-        }, 1200);
+        if (targetStatus === 'in_review') {
+          setSuccessToast('Article created and submitted for editorial review!');
+          setTimeout(() => {
+            navigate('/admin/review');
+          }, 1200);
+        } else {
+          setSuccessToast(`Article created and saved as ${targetStatus.toUpperCase()}!`);
+          setTimeout(() => {
+            navigate('/admin/articles');
+          }, 1200);
+        }
       }
     } catch (err) {
-      setErrorMsg(`Save failed: ${err.message}`);
+      console.error('Save failed:', err);
     } finally {
       setSaving(false);
     }
@@ -441,88 +477,281 @@ export default function AdminArticleEditPage() {
             Save Draft
           </button>
 
-          {/* Submit for Review */}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => handleSave('in_review')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.55rem 0.95rem',
-              backgroundColor: '#eff6ff',
-              color: '#1d4ed8',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              border: '1px solid #bfdbfe',
-              cursor: saving ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <Send size={14} /> Submit for Review
-          </button>
+          {/* If Staff Reporter: only allow Submit for Review */}
+          {isReporter ? (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => handleSave('in_review')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem 1.15rem',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 4px rgba(37,99,235,0.25)'
+              }}
+            >
+              <Send size={14} /> {saving ? 'Submitting...' : status === 'in_review' ? 'Re-submit for Review' : 'Submit for Review'}
+            </button>
+          ) : (
+            /* If Editor / Super Admin: Full Review, Schedule & Publishing controls */
+            <>
+              {status === 'in_review' && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSave('draft')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.55rem 0.95rem',
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    borderRadius: '4px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    border: '1px solid #fde68a',
+                    cursor: saving ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <ArrowLeft size={14} /> Return to Draft
+                </button>
+              )}
 
-          {/* Schedule Trigger */}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => setShowScheduleModal(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.55rem 0.95rem',
-              backgroundColor: '#faf5ff',
-              color: '#7e22ce',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              border: '1px solid #e9d5ff',
-              cursor: saving ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <Calendar size={14} /> Schedule...
-          </button>
+              {status !== 'published' && status !== 'in_review' && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSave('in_review')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.55rem 0.95rem',
+                    backgroundColor: '#eff6ff',
+                    color: '#1d4ed8',
+                    borderRadius: '4px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    border: '1px solid #bfdbfe',
+                    cursor: saving ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Send size={14} /> Mark In Review
+                </button>
+              )}
 
-          {/* Publish Now */}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => handleSave('published')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.55rem 1.25rem',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              border: 'none',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
-            }}
-          >
-            <Save size={14} /> {saving ? 'Publishing...' : 'Publish Immediately'}
-          </button>
+              {/* Schedule Trigger */}
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setShowScheduleModal(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.55rem 0.95rem',
+                  backgroundColor: '#faf5ff',
+                  color: '#7e22ce',
+                  borderRadius: '4px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  border: '1px solid #e9d5ff',
+                  cursor: saving ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <Calendar size={14} /> {status === 'in_review' ? 'Approve & Schedule...' : 'Schedule...'}
+              </button>
+
+              {/* Publish / Approve & Publish */}
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => handleSave('published')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.55rem 1.25rem',
+                  backgroundColor: status === 'in_review' ? '#16a34a' : '#2563eb',
+                  color: '#ffffff',
+                  borderRadius: '4px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  border: 'none',
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  boxShadow: status === 'in_review' ? '0 2px 4px rgba(22,163,74,0.3)' : '0 2px 4px rgba(37,99,235,0.2)'
+                }}
+              >
+                {status === 'in_review' ? (
+                  <>
+                    <CheckCircle2 size={15} /> {saving ? 'Approving...' : 'Approve & Publish Live'}
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} /> {saving ? 'Publishing...' : status === 'published' ? 'Update Published' : 'Publish Immediately'}
+                  </>
+                )}
+              </button>
+            </>
+          )}
 
         </div>
       </div>
 
       {/* Notifications / Alerts */}
-      {errorMsg && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-          <AlertCircle size={16} style={{ flexShrink: 0 }} />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
       {successToast && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.75rem 1rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
           <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
           <span>{successToast}</span>
+        </div>
+      )}
+
+      {/* ================= EDITORIAL REVIEW & APPROVAL DESK BANNERS ================= */}
+      {status === 'in_review' && canPublish && (
+        <div style={{
+          backgroundColor: '#fffbeb',
+          border: '2px solid #facc15',
+          borderRadius: '6px',
+          padding: '1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          boxShadow: '0 2px 8px rgba(202, 138, 4, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <div style={{
+              backgroundColor: '#ca8a04',
+              color: '#ffffff',
+              width: 42,
+              height: 42,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <ShieldAlert size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#854d0e', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>Editorial Review Desk — Approval Required</span>
+                <span style={{ fontSize: '0.68rem', backgroundColor: '#ca8a04', color: '#ffffff', padding: '0.12rem 0.5rem', borderRadius: '999px', textTransform: 'uppercase', fontWeight: 800 }}>
+                  Awaiting Review
+                </span>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#a16207', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                Submitted by <strong>{authorName || 'Staff Correspondent'}</strong>. As an <strong>{user?.role === 'super_admin' ? 'Super Admin' : 'Editor'}</strong>, please inspect accuracy, grammar, legal guidelines, and taxonomy before giving publishing approval.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => handleSave('draft')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.5rem 0.85rem',
+                backgroundColor: '#ffffff',
+                color: '#854d0e',
+                border: '1px solid #eab308',
+                borderRadius: '4px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Request Revisions (Draft)
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setShowScheduleModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.5rem 0.85rem',
+                backgroundColor: '#faf5ff',
+                color: '#7e22ce',
+                border: '1px solid #d8b4fe',
+                borderRadius: '4px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <Calendar size={13} /> Approve & Schedule
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => handleSave('published')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.5rem 1.15rem',
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: saving ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 4px rgba(22, 163, 74, 0.25)'
+              }}
+            >
+              <CheckCircle2 size={15} /> Approve & Publish Live
+            </button>
+          </div>
+        </div>
+      )}
+
+      {status === 'in_review' && isReporter && (
+        <div style={{
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '6px',
+          padding: '1rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem'
+        }}>
+          <Clock size={22} style={{ color: '#2563eb', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.82rem', color: '#1e40af', lineHeight: 1.45 }}>
+            <strong>Submitted for Editorial Review:</strong> This story is currently in the newsroom review queue. Editors and Super Admins have been notified to review your headline, content, and media before giving live publication approval. You can make revisions and re-submit anytime.
+          </div>
+        </div>
+      )}
+
+      {status === 'draft' && isReporter && (
+        <div style={{
+          backgroundColor: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '6px',
+          padding: '0.85rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.65rem'
+        }}>
+          <FileText size={18} style={{ color: '#64748b', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+            <strong>Staff Reporter Workflow:</strong> Save your draft while writing. Once ready, click <strong>"Submit for Review"</strong> to send this story to the Senior Editor and Super Admin for review and publishing approval.
+          </div>
         </div>
       )}
 
@@ -846,7 +1075,7 @@ export default function AdminArticleEditPage() {
           {/* ---- RIGHT COLUMN: METADATA, SCHEDULING, EXPIRY & ASSETS ---- */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
-            {/* 1. Expiration & Lifecycle Desk (CORE PHASE 3 REQUIREMENT) */}
+            {/* 1. Expiration & Lifecycle Desk */}
             <div style={{
               backgroundColor: '#ffffff',
               padding: '1.25rem',
@@ -957,7 +1186,7 @@ export default function AdminArticleEditPage() {
                     cursor: uploadingImage ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <Upload size={14} /> {uploadingImage ? 'Uploading to MySQL / Server...' : 'Upload Image from Computer'}
+                  <Upload size={14} /> {uploadingImage ? 'Uploading Image...' : 'Upload Image from Computer'}
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1234,7 +1463,7 @@ export default function AdminArticleEditPage() {
             </div>
 
             <p style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '1.25rem' }}>
-              The cPanel cron processor will automatically transition this article to <strong>published</strong> status at the scheduled time.
+              The automated scheduler will automatically transition this article to <strong>published</strong> status at the scheduled time.
             </p>
 
             <div style={{ marginBottom: '1rem' }}>

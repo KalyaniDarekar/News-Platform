@@ -139,7 +139,7 @@ export const checkDbConnection = async () => {
   return {
     connected: true,
     engine: 'hybrid-operational-store',
-    message: 'Operational Store Active (Seed records, Phase 5 inventory & CRM active)',
+    message: 'Operational Store Active',
     serverTime: new Date().toISOString()
   };
 };

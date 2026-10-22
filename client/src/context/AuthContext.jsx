@@ -1,7 +1,6 @@
 // ========================================================================
-// Authentication Context — Phase 3 (Task 4)
+// Authentication Context
 // Manages JWT token lifecycle, user state, and auth session persistence
-// Works with live Express/MySQL JWT tokens with dev offline fallback.
 // ========================================================================
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -69,12 +68,12 @@ export function AuthProvider({ children }) {
     verifyAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (identifier, password) => {
     try {
       const res = await fetch(`${API_BASE}/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: identifier, username: identifier, password })
       });
 
       const data = await res.json();
@@ -91,31 +90,6 @@ export function AuthProvider({ children }) {
 
       return receivedUser;
     } catch (err) {
-      // If backend database is unreachable or returning connection error in local development,
-      // provide seamless fallback so the editor is never locked out of testing.
-      const errMsg = err.message || '';
-      const isDbError = errMsg.toLowerCase().includes('database') || 
-                        errMsg.toLowerCase().includes('access denied') || 
-                        errMsg.toLowerCase().includes('failed to fetch') || 
-                        errMsg.toLowerCase().includes('networkerror');
-
-      if (isDbError) {
-        console.warn('Database connection unavailable. Initializing fallback newsroom session:', errMsg);
-        const demoRole = email.includes('admin') ? 'super_admin' : email.includes('reporter') ? 'reporter' : 'editor';
-        const demoUser = {
-          id: 1,
-          fullName: demoRole === 'super_admin' ? 'Super Administrator' : demoRole === 'reporter' ? 'Staff Reporter' : 'Vikramaditya Sharma',
-          email,
-          role: demoRole
-        };
-        const demoToken = 'mock_jwt_' + Date.now();
-        localStorage.setItem(TOKEN_KEY, demoToken);
-        localStorage.setItem(BC_TOKEN_KEY, demoToken);
-        localStorage.setItem(USER_KEY, JSON.stringify(demoUser));
-        setToken(demoToken);
-        setUser(demoUser);
-        return demoUser;
-      }
       throw err;
     }
   };

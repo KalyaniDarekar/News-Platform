@@ -16,8 +16,8 @@ describe('Admin Authentication & RBAC Suite', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@bharatchronicle.com',
-        password: 'Editorial@2026'
+        username: 'SuperAdmin',
+        password: 'Admin@123'
       })
     });
 
@@ -25,7 +25,7 @@ describe('Admin Authentication & RBAC Suite', () => {
     assert.equal(res.status, 200, `Expected 200, got ${res.status}: ${JSON.stringify(body)}`);
     assert.equal(body.success, true);
     assert.ok(body.data.token, 'Token must be present in login response');
-    assert.equal(body.data.user.email, 'admin@bharatchronicle.com');
+    assert.equal(body.data.user.username, 'SuperAdmin');
     assert.equal(body.data.user.role, 'super_admin');
     assert.ok(Array.isArray(body.data.permissions), 'Permissions must be returned as array');
 
@@ -37,7 +37,7 @@ describe('Admin Authentication & RBAC Suite', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'admin@bharatchronicle.com',
+        username: 'SuperAdmin',
         password: 'WrongPassword999!'
       })
     });
@@ -53,8 +53,8 @@ describe('Admin Authentication & RBAC Suite', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'nobody@bharatchronicle.com',
-        password: 'Editorial@2026'
+        username: 'NonExistentUser',
+        password: 'Admin@123'
       })
     });
 
@@ -72,7 +72,7 @@ describe('Admin Authentication & RBAC Suite', () => {
     const body = await res.json();
     assert.equal(res.status, 200);
     assert.equal(body.success, true);
-    assert.equal(body.data.email, 'admin@bharatchronicle.com');
+    assert.equal(body.data.username, 'SuperAdmin');
     assert.equal(body.data.role, 'super_admin');
   });
 
@@ -99,8 +99,8 @@ describe('Admin Authentication & RBAC Suite', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'reporter@bharatchronicle.com',
-        password: 'Editorial@2026'
+        username: 'Reporter',
+        password: 'Reporter@123'
       })
     });
 

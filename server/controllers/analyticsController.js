@@ -45,7 +45,16 @@ export const analyticsController = {
       const report = await analyticsService.getAnalyticsOverview({ timeRange });
       res.json({
         success: true,
-        data: report
+        data: {
+          ...report,
+          overview: {
+            totalArticleViews: report.summary?.totalArticleViewsLifetime || 0,
+            periodViews: report.summary?.periodViews || 0,
+            activeCampaigns: report.summary?.activeAdCampaigns || 0
+          },
+          topArticles: report.topStories || [],
+          recentActions: []
+        }
       });
     } catch (error) {
       next(error);

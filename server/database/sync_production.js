@@ -1,0 +1,103 @@
+import bcrypt from 'bcryptjs';
+import { getDbPool } from '../config/database.js';
+
+export async function syncProductionDatabase() {
+  const pool = getDbPool();
+  if (!pool) {
+    console.log('[Sync] No direct MySQL pool available, skipping MySQL sync.');
+    return;
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    console.log('[Sync] Connected to MySQL. Verifying schema...');
+
+    // 1. Check & add username column to users table
+    const [cols] = await conn.query('SHOW COLUMNS FROM users');
+    const hasUsername = cols.some(c => c.Field === 'username');
+    if (!hasUsername) {
+      console.log('[Sync] Adding username column to users table...');
+      await conn.query('ALTER TABLE users ADD COLUMN username VARCHAR(60) NULL UNIQUE AFTER id');
+      console.log('[Sync] ✓ Added username column to users table');
+    }
+
+    // 2. Check & add missing columns to articles table
+    const [artCols] = await conn.query('SHOW COLUMNS FROM articles');
+    const artColNames = artCols.map(c => c.Field);
+    if (!artColNames.includes('alt_text')) {
+      await conn.query('ALTER TABLE articles ADD COLUMN alt_text VARCHAR(255) NULL AFTER image_caption');
+    }
+    if (!artColNames.includes('youtube_url')) {
+      await conn.query('ALTER TABLE articles ADD COLUMN youtube_url VARCHAR(255) NULL AFTER alt_text');
+    }
+    if (!artColNames.includes('expiry_time')) {
+      await conn.query('ALTER TABLE articles ADD COLUMN expiry_time DATETIME NULL AFTER publication_time');
+    }
+
+    // 3. Purge demo data
+    console.log('[Sync] Purging demo data from MySQL...');
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+    await conn.query('DELETE FROM article_tags');
+    await conn.query('DELETE FROM article_multimedia');
+    await conn.query('DELETE FROM article_revisions');
+    await conn.query('DELETE FROM articles');
+    await conn.query('DELETE FROM advertisements');
+    await conn.query('DELETE FROM advertiser_enquiries');
+    await conn.query('DELETE FROM youtube_videos');
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+    console.log('[Sync] ✓ Purged demo data from MySQL');
+
+    // 4. Upsert production users with exact credentials
+    const pSuper = await bcrypt.hash('Admin@123', 10);
+    const pEditor = await bcrypt.hash('Editor@123', 10);
+    const pReporter = await bcrypt.hash('Reporter@123', 10);
+
+    const users = [
+      { id: 1, username: 'SuperAdmin', full_name: 'Super Admin', email: 'superadmin@jantajournal.com', password_hash: pSuper, role: 'super_admin' },
+      { id: 2, username: 'Editor', full_name: 'Lead Editor', email: 'editor@jantajournal.com', password_hash: pEditor, role: 'editor' },
+      { id: 3, username: 'Reporter', full_name: 'Staff Reporter', email: 'reporter@jantajournal.com', password_hash: pReporter, role: 'reporter' }
+    ];
+
+    for (const u of users) {
+      await conn.query(
+        `INSERT INTO users (id, username, full_name, email, password_hash, role, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'active')
+         ON DUPLICATE KEY UPDATE
+           username = VALUES(username),
+           email = VALUES(email),
+           full_name = VALUES(full_name),
+           password_hash = VALUES(password_hash),
+           role = VALUES(role),
+           status = 'active'`,
+        [u.id, u.username, u.full_name, u.email, u.password_hash, u.role]
+      );
+    }
+    // Delete any users not in the production staff list
+    await conn.query('DELETE FROM users WHERE id > 3');
+    console.log('[Sync] ✓ Production accounts updated in MySQL');
+
+    const [uRows] = await conn.query('SELECT id, username, email, role FROM users');
+    console.log('[Sync] Current MySQL staff users:', uRows);
+
+    return true;
+  } catch (err) {
+    console.error('[Sync] MySQL sync error:', err.message);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+// CLI direct execution
+if (process.argv[1]?.endsWith('sync_production.js')) {
+  syncProductionDatabase()
+    .then(() => {
+      console.log('[Sync] Done.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('[Sync] Failed:', err);
+      process.exit(1);
+    });
+}

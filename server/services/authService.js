@@ -10,23 +10,24 @@ import { query } from '../config/database.js';
 import auditService from './auditService.js';
 
 export const authService = {
-  // Login with email and password
-  async login(email, password, ipAddress) {
+  // Login with username or email and password
+  async login(identifier, password, ipAddress) {
+    const cleanId = (identifier || '').toLowerCase().trim();
     const users = await query(
-      `SELECT id, full_name, email, password_hash, role, designation, avatar_url, status 
+      `SELECT id, username, full_name, email, password_hash, role, designation, avatar_url, status 
        FROM users 
-       WHERE email = ? LIMIT 1`,
-      [email.toLowerCase().trim()]
+       WHERE LOWER(username) = ? OR LOWER(email) = ? LIMIT 1`,
+      [cleanId, cleanId]
     );
 
     if (users.length === 0) {
       await auditService.logAction({
         action: 'LOGIN_FAILED',
         entityType: 'user',
-        details: { email, reason: 'User not found' },
+        details: { identifier, reason: 'User not found' },
         ipAddress
       });
-      const error = new Error('Invalid email or password');
+      const error = new Error('Invalid username, email, or password');
       error.statusCode = 401;
       error.code = 'INVALID_CREDENTIALS';
       throw error;
@@ -100,6 +101,7 @@ export const authService = {
       token,
       user: {
         id: user.id,
+        username: user.username || user.email.split('@')[0],
         fullName: user.full_name,
         email: user.email,
         role: user.role,
@@ -114,7 +116,7 @@ export const authService = {
   // Get current logged-in user profile with permissions
   async getCurrentUser(userId) {
     const users = await query(
-      `SELECT id, full_name, email, role, designation, bio, avatar_url, status, last_login_at, created_at
+      `SELECT id, username, full_name, email, role, designation, bio, avatar_url, status, last_login_at, created_at
        FROM users 
        WHERE id = ? AND status = 'active' LIMIT 1`,
       [userId]
@@ -135,6 +137,7 @@ export const authService = {
 
     return {
       id: user.id,
+      username: user.username || user.email.split('@')[0],
       fullName: user.full_name,
       email: user.email,
       role: user.role,

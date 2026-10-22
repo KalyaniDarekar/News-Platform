@@ -1,5 +1,5 @@
 // ========================================================================
-// Admin Categories Desk — Phase 3
+// Admin Categories Desk
 // Real-time CRUD for editorial desks, color accents, and navigation taxonomies.
 // ========================================================================
 
@@ -23,7 +23,7 @@ export default function AdminCategoriesPage() {
       const res = await adminApi.getCategories();
       if (res.data) setCategories(res.data);
     } catch (err) {
-      setErrorMsg(`Failed to load categories: ${err.message}`);
+      console.error('Failed to load categories:', err);
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function AdminCategoriesPage() {
       setShowModal(false);
       fetchCategories();
     } catch (err) {
-      setErrorMsg(`Failed to save category: ${err.message}`);
+      console.error('Failed to save category:', err);
     } finally {
       setSubmitting(false);
     }
@@ -84,7 +84,7 @@ export default function AdminCategoriesPage() {
       await adminApi.deleteCategory(id);
       fetchCategories();
     } catch (err) {
-      setErrorMsg(`Delete failed: ${err.message}`);
+      console.error('Delete failed:', err);
     }
   };
 
@@ -142,12 +142,6 @@ export default function AdminCategoriesPage() {
           </button>
         </div>
       </div>
-
-      {errorMsg && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem' }}>
-          {errorMsg}
-        </div>
-      )}
 
       {/* Categories Table */}
       <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>

@@ -1,20 +1,31 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { LEAD_STORY, SECONDARY_LEADS, OPINIONS, THE_WIRE_UPDATES } from '../../data/mockNewsData';
 import { formatRelativeTime } from '../../services/api';
 
 export default function HeroPackage({ 
   leadStory, 
-  secondaryStories, 
-  wireUpdates, 
-  opinions 
+  secondaryStories = [], 
+  wireUpdates = [], 
+  opinions = [] 
 }) {
-  // Use provided props or graceful defaults
-  const lead = leadStory || LEAD_STORY;
-  const secondaries = (secondaryStories && secondaryStories.length > 0) ? secondaryStories : SECONDARY_LEADS;
-  const wire = (wireUpdates && wireUpdates.length > 0) ? wireUpdates : THE_WIRE_UPDATES;
-  const opList = (opinions && opinions.length > 0) ? opinions : OPINIONS;
+  const lead = leadStory;
+  const secondaries = secondaryStories || [];
+  const wire = wireUpdates || [];
+  const opList = opinions || [];
+
+  if (!lead) {
+    return (
+      <div style={{ padding: '3.5rem 1.5rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid var(--color-ink-200)', margin: '1.5rem 0' }}>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-ink-900)', marginBottom: '0.4rem' }}>
+          No Articles Published Yet
+        </h2>
+        <p style={{ margin: 0, color: 'var(--color-ink-500)', fontSize: '0.88rem' }}>
+          The editorial desk is currently preparing the latest dispatches. Published stories will appear here in real-time.
+        </p>
+      </div>
+    );
+  }
 
   const leadTitle = lead.title;
   const leadSlug = lead.slug;
@@ -23,8 +34,8 @@ export default function HeroPackage({
   const leadAlt = lead.alt_text || lead.title;
   const leadKicker = lead.kicker || lead.category_name || 'LEAD INVESTIGATION';
   const leadReadingTime = lead.reading_time_minutes ? `${lead.reading_time_minutes} min read` : (lead.readingTime || '5 min read');
-  const leadAuthorName = lead.author_name || (lead.author && lead.author.name) || 'Vikramaditya Sharma';
-  const leadAuthorTitle = lead.author_designation || (lead.author && lead.author.title) || 'Senior Editorial Correspondent';
+  const leadAuthorName = lead.author_name || (lead.author && lead.author.name) || 'Staff Reporter';
+  const leadAuthorTitle = lead.author_designation || (lead.author && lead.author.title) || 'Editorial Bureau';
   const leadAuthorAvatar = lead.author_avatar || (lead.author && lead.author.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
   const leadPublishedAt = lead.publication_time ? formatRelativeTime(lead.publication_time) : (lead.published_at || lead.publishedAt || 'Today');
 

@@ -11,6 +11,7 @@ import Footer from './components/common/Footer';
 import SearchModal from './components/common/SearchModal';
 import ConsentBanner from './components/common/ConsentBanner';
 import AdBanner from './components/common/AdBanner';
+import ScrollToTop from './components/common/ScrollToTop';
 import usePageTracking from './hooks/usePageTracking';
 
 // Public Pages
@@ -99,6 +100,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           
           {/* ================= PUBLIC WEBSITE ROUTES ================= */}
@@ -130,6 +132,7 @@ export default function App() {
           >
             <Route index element={<AdminDashboardPage />} />
             <Route path="articles" element={<AdminArticlesPage />} />
+            <Route path="review" element={<AdminArticlesPage defaultStatus="in_review" />} />
             <Route path="articles/new" element={<AdminArticleEditPage />} />
             <Route path="articles/:id/edit" element={<AdminArticleEditPage />} />
             <Route path="categories" element={<AdminCategoriesPage />} />

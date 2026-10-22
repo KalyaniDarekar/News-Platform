@@ -15,7 +15,7 @@ describe('Admin Capabilities & Taxonomy Suite', () => {
     const adminRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@bharatchronicle.com', password: 'Editorial@2026' })
+      body: JSON.stringify({ username: 'SuperAdmin', password: 'Admin@123' })
     });
     const adminBody = await adminRes.json();
     assert.equal(adminRes.status, 200);
@@ -24,7 +24,7 @@ describe('Admin Capabilities & Taxonomy Suite', () => {
     const edRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'editor@bharatchronicle.com', password: 'Editorial@2026' })
+      body: JSON.stringify({ username: 'Editor', password: 'Editor@123' })
     });
     const edBody = await edRes.json();
     assert.equal(edRes.status, 200);

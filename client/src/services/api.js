@@ -1,12 +1,10 @@
-﻿// ========================================================================
-// JANTA JOURNAL — Public & Editorial API Client Service (Phase 4)
+// ========================================================================
+// JANTA JOURNAL — Public & Editorial API Client Service
 // Connects all public content interfaces to the live Express + MySQL backend.
 // ========================================================================
 
 import {
-  ALL_STORIES,
   CATEGORIES,
-  BREAKING_NEWS,
   MARKET_DATA,
   WEATHER_DATA,
   AD_BANNERS
@@ -108,35 +106,18 @@ export const apiService = {
           return {
             data: json.data || [],
             pagination: json.pagination || { page: 1, limit, total: json.data?.length || 0, totalPages: 1 },
-            source: 'MYSQL_LIVE'
+            source: 'LIVE'
           };
         }
       }
     } catch (err) {
-      console.warn('[API Warning] Articles fetch failed, attempting graceful fallback:', err.message);
-    }
-
-    // Graceful fallback to demonstration dataset if backend unavailable
-    let filtered = [...ALL_STORIES];
-    if (category) {
-      filtered = filtered.filter(
-        item =>
-          (item.categorySlug && item.categorySlug.toLowerCase() === category.toLowerCase()) ||
-          (item.category && item.category.toLowerCase().includes(category.toLowerCase()))
-      );
-    }
-    if (search) {
-      filtered = filtered.filter(
-        item =>
-          item.title.toLowerCase().includes(search.toLowerCase()) ||
-          (item.summary && item.summary.toLowerCase().includes(search.toLowerCase()))
-      );
+      console.warn('[API Warning] Articles fetch failed:', err.message);
     }
 
     return {
-      data: filtered.slice(0, limit),
-      pagination: { page: 1, limit, total: filtered.length, totalPages: Math.ceil(filtered.length / limit) },
-      source: 'DEMONSTRATION_MODE'
+      data: [],
+      pagination: { page: 1, limit, total: 0, totalPages: 1 },
+      source: 'LIVE'
     };
   },
 
@@ -147,7 +128,7 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
       if (res.status === 404 || res.status === 410) {
@@ -157,10 +138,6 @@ export const apiService = {
       console.warn(`[API Warning] getArticleBySlug("${slug}") failed:`, err.message);
     }
 
-    const found = ALL_STORIES.find(item => item.slug === slug);
-    if (found) {
-      return { data: found, source: 'DEMONSTRATION_MODE' };
-    }
     return { data: null, error: 'NOT_FOUND', status: 404 };
   },
 
@@ -171,16 +148,14 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn(`[API Warning] getRelatedArticles("${slug}") failed:`, err.message);
     }
 
-    // Fallback: exclude current slug
-    const fallback = ALL_STORIES.filter(s => s.slug !== slug).slice(0, limit);
-    return { data: fallback, source: 'DEMONSTRATION_MODE' };
+    return { data: [], source: 'LIVE' };
   },
 
   // Get active categories
@@ -190,14 +165,14 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn('[API Warning] getCategories failed:', err.message);
     }
 
-    return { data: CATEGORIES, source: 'DEMONSTRATION_MODE' };
+    return { data: CATEGORIES, source: 'LIVE' };
   },
 
   // Get single category by slug
@@ -207,7 +182,7 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
@@ -233,7 +208,7 @@ export const apiService = {
               time: formatRelativeTime(item.publication_time),
               kicker: item.kicker || 'BREAKING'
             })),
-            source: 'MYSQL_LIVE'
+            source: 'LIVE'
           };
         }
       }
@@ -241,7 +216,7 @@ export const apiService = {
       console.warn('[API Warning] getBreakingNews failed:', err.message);
     }
 
-    return { data: BREAKING_NEWS, source: 'DEMONSTRATION_MODE' };
+    return { data: [], source: 'LIVE' };
   },
 
   // Get video news articles (articles with youtube_url)
@@ -251,17 +226,16 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn('[API Warning] getVideoNews failed:', err.message);
     }
 
-    // Fallback: search articles with video or mock multimedia
     return {
-      data: ALL_STORIES.filter(s => s.youtube_url || s.videoUrl).slice(0, limit),
-      source: 'DEMONSTRATION_MODE'
+      data: [],
+      source: 'LIVE'
     };
   },
 
@@ -272,14 +246,14 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn('[API Warning] getTrendingArticles failed:', err.message);
     }
 
-    return { data: ALL_STORIES.slice(0, limit), source: 'DEMONSTRATION_MODE' };
+    return { data: [], source: 'LIVE' };
   },
 
   // Get editorial featured stories
@@ -289,14 +263,14 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn('[API Warning] getFeaturedArticles failed:', err.message);
     }
 
-    return { data: ALL_STORIES.filter(s => s.isLead || s.isFeatured).slice(0, limit), source: 'DEMONSTRATION_MODE' };
+    return { data: [], source: 'LIVE' };
   },
 
   // Get active advertisement for placement slot (supports all 7 standard slots)
@@ -328,7 +302,7 @@ export const apiService = {
             targetUrl: json.data.target_url,
             placementCode: json.data.placement_code,
             dimensions: json.data.dimensions,
-            source: 'MYSQL_LIVE'
+            source: 'LIVE'
           };
         }
       }
@@ -347,7 +321,7 @@ export const apiService = {
       targetUrl: fallback?.url || '/advertise',
       placementCode: targetCode,
       dimensions: '970x90',
-      source: 'DEMONSTRATION_MODE'
+      source: 'LIVE'
     };
   },
 
@@ -410,45 +384,16 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          return { data: json.data, pagination: json.pagination, source: 'MYSQL_LIVE' };
+          return { data: json.data, pagination: json.pagination, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn('[API Warning] getYoutubeVideos failed:', err.message);
     }
 
-    // Fallback to sample videos
     return {
-      data: [
-        {
-          id: 1,
-          youtube_id: 'dQw4w9WgXcQ',
-          title: 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand',
-          description: 'Exclusive Janta Journal video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
-          thumbnail_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
-          embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-          is_featured: 1
-        },
-        {
-          id: 2,
-          youtube_id: '7NOSDKb0HlU',
-          title: 'Monetary Policy Briefing: Reserve Bank Governor on Inflation Targets',
-          description: 'Key takeaways from the RBI Monetary Policy Committee resolution and economic growth forecast.',
-          thumbnail_url: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80',
-          embedUrl: 'https://www.youtube.com/embed/7NOSDKb0HlU',
-          is_featured: 0
-        },
-        {
-          id: 3,
-          youtube_id: 'kJQP7kiw5Fk',
-          title: 'Himalayan Clean Energy: Assessing Run-of-the-River Hydro Projects',
-          description: 'Field report on ecological balance and clean power transmission in the northern states.',
-          thumbnail_url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=800&q=80',
-          embedUrl: 'https://www.youtube.com/embed/kJQP7kiw5Fk',
-          is_featured: 0
-        }
-      ],
-      source: 'DEMONSTRATION_MODE'
+      data: [],
+      source: 'LIVE'
     };
   },
 
@@ -459,7 +404,7 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
@@ -467,13 +412,8 @@ export const apiService = {
     }
 
     return {
-      data: {
-        youtube_id: 'dQw4w9WgXcQ',
-        title: 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand',
-        description: 'Exclusive Janta Journal video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.',
-        embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-      },
-      source: 'DEMONSTRATION_MODE'
+      data: null,
+      source: 'LIVE'
     };
   },
 
@@ -504,7 +444,7 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
@@ -518,14 +458,14 @@ export const apiService = {
         site_motto: 'Veritas et Libertas • Est. 1928',
         youtube_channel_url: 'https://www.youtube.com/@JantaJournal',
         youtube_channel_name: 'JANTA JOURNAL Digital Newsroom',
-        featured_youtube_video_id: 'dQw4w9WgXcQ',
+        featured_youtube_video_id: '',
         media_kit_url: '/downloads/Janta_Journal_Media_Kit_2026.pdf',
         advertiser_desk_email: 'advertising@jantajournal.com',
         advertiser_desk_phone: '+91 (11) 4890-2800',
         privacy_compliance_mode: 'dpdp_act_india',
         cookie_consent_required: '1'
       },
-      source: 'DEMONSTRATION_MODE'
+      source: 'LIVE'
     };
   },
 
@@ -536,7 +476,7 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
@@ -551,7 +491,7 @@ export const apiService = {
         editorial_email: 'editorial@jantajournal.com',
         press_council_registration: 'REG-BC-2026-DEL-0941'
       },
-      source: 'DEMONSTRATION_MODE'
+      source: 'LIVE'
     };
   },
 
@@ -562,14 +502,14 @@ export const apiService = {
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
-          return { data: json.data, source: 'MYSQL_LIVE' };
+          return { data: json.data, source: 'LIVE' };
         }
       }
     } catch (err) {
       console.warn('[API Warning] getTags failed:', err.message);
     }
 
-    return { data: [], source: 'DEMONSTRATION_MODE' };
+    return { data: [], source: 'LIVE' };
   },
 
   // Financial and weather indicators

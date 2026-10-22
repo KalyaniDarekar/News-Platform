@@ -1,7 +1,7 @@
 // ========================================================================
-// Admin Media Library Desk — Phase 3
+// Admin Media Library Desk
 // Real-time photojournalism asset repository: upload via Multer,
-// asset list from MySQL, URL clipboard copy, and asset management.
+// asset list from database, URL clipboard copy, and asset management.
 // ========================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -26,7 +26,7 @@ export default function AdminMediaPage() {
       const res = await adminApi.getMediaAssets({ limit: 40 });
       if (res.data) setMediaItems(res.data);
     } catch (err) {
-      setErrorMsg(`Failed to load media assets: ${err.message}`);
+      console.error('Failed to load media assets:', err);
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function AdminMediaPage() {
       setTimeout(() => setSuccessMsg(null), 3500);
       fetchMedia();
     } catch (err) {
-      setErrorMsg(`Upload failed: ${err.message}`);
+      console.error('Upload failed:', err);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -77,7 +77,7 @@ export default function AdminMediaPage() {
       await adminApi.deleteMedia(id);
       fetchMedia();
     } catch (err) {
-      setErrorMsg(`Delete failed: ${err.message}`);
+      console.error('Delete failed:', err);
     }
   };
 
@@ -144,12 +144,6 @@ export default function AdminMediaPage() {
           </button>
         </div>
       </div>
-
-      {errorMsg && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem' }}>
-          {errorMsg}
-        </div>
-      )}
 
       {successMsg && (
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600 }}>

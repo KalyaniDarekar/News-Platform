@@ -31,6 +31,7 @@ export function getHybridDb() {
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
         full_name TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
@@ -110,6 +111,18 @@ export function getHybridDb() {
         article_id INTEGER NOT NULL,
         tag_id INTEGER NOT NULL,
         PRIMARY KEY (article_id, tag_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS article_multimedia (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        article_id INTEGER NOT NULL,
+        media_type TEXT NOT NULL,
+        embed_url TEXT NOT NULL,
+        duration_seconds INTEGER,
+        thumbnail_url TEXT,
+        transcript TEXT,
+        caption TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
       );
 
       CREATE TABLE IF NOT EXISTS article_revisions (
@@ -255,6 +268,12 @@ export function getHybridDb() {
       );
     `);
 
+    // Migration guards for dev db
+    try { sqliteDb.exec(`ALTER TABLE users ADD COLUMN username TEXT`); } catch (_) {}
+    try { sqliteDb.exec(`ALTER TABLE article_multimedia ADD COLUMN duration_seconds INTEGER`); } catch (_) {}
+    try { sqliteDb.exec(`ALTER TABLE article_multimedia ADD COLUMN thumbnail_url TEXT`); } catch (_) {}
+    try { sqliteDb.exec(`ALTER TABLE article_multimedia ADD COLUMN transcript TEXT`); } catch (_) {}
+
     seedInitialData(sqliteDb);
   } catch (err) {
     console.warn('Hybrid DB Init error:', err.message);
@@ -264,194 +283,201 @@ export function getHybridDb() {
 }
 
 function seedInitialData(db) {
-  // Check if users already seeded
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  if (userCount > 0) return;
+  console.log('🌱 Ensuring initial newsroom records, taxonomy, permissions and settings are seeded in operational store...');
 
-  console.log('🌱 Seeding initial newsroom records and Phase 5 commercial inventory into operational store...');
-
-  // 1. Users (bcrypt hash for "Editorial@2026")
-  const defaultHash = '$2b$10$EjjGmDG1TChKPVBabmF81.GOX3bo8M4sRBk26Ao7.uPjqIWT4dLse';
-  const insertUser = db.prepare(`
-    INSERT INTO users (id, full_name, email, password_hash, role, designation, bio, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  // 1. Production Users
+  const insertOrReplaceUser = db.prepare(`
+    INSERT OR REPLACE INTO users (id, username, full_name, email, password_hash, role, designation, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
   `);
 
-  insertUser.run(1, 'Vikramaditya Sharma', 'admin@bharatchronicle.com', defaultHash, 'super_admin', 'Editor-in-Chief & Managing Director', 'Veteran correspondent with over 25 years covering Indian diplomacy, constitutional law, and national security.', 'active');
-  insertUser.run(2, 'Dr. Arundhati Sen', 'editor@bharatchronicle.com', defaultHash, 'editor', 'Senior Editor (National & Economy)', 'Former financial policy researcher covering the Reserve Bank of India, fiscal budgets, and international corridors.', 'active');
-  insertUser.run(3, 'Rajeshwari Nair', 'reporter@bharatchronicle.com', defaultHash, 'reporter', 'Chief Technology Bureau Correspondent', 'Specializing in deep tech, semiconductor foundries, AI governance, and space exploration.', 'active');
-  insertUser.run(4, 'Siddharth Roy', 'ads@bharatchronicle.com', defaultHash, 'ad_manager', 'Head of Monetization & Ad Operations', 'Managing commercial inventory, sponsored partner programs, and programmatic yield monetization.', 'active');
+  insertOrReplaceUser.run(
+    1,
+    'SuperAdmin',
+    'Super Admin',
+    'superadmin@jantajournal.com',
+    '$2b$10$zGfw4eriJ2NoGUuFPLwh9.Sgb9tsUgoNUnKrD6c5W9yUbEEV9JnPO',
+    'super_admin',
+    'Editor-in-Chief & Managing Director'
+  );
+
+  insertOrReplaceUser.run(
+    2,
+    'Editor',
+    'Editorial Lead',
+    'editor@jantajournal.com',
+    '$2b$10$6mkekFVJNYxAvxIK3xSRPOAqHOXPrCZVV19PvqXmis80FDHYe4tbq',
+    'editor',
+    'Senior News Editor'
+  );
+
+  insertOrReplaceUser.run(
+    3,
+    'Reporter',
+    'Newsroom Reporter',
+    'reporter@jantajournal.com',
+    '$2b$10$uuOr5P2boHyrAjzv5l9PsukvKVRGBP0QIN7BKD9Jkcvo9mipidc6m',
+    'reporter',
+    'Field Correspondent'
+  );
+
+  // 1b. Role Permissions (Granular capability matrix)
+  const insertPerm = db.prepare(`
+    INSERT OR IGNORE INTO role_permissions (role, permission_key, description)
+    VALUES (?, ?, ?)
+  `);
+  insertPerm.run('super_admin', 'articles:all', 'Complete control over all articles');
+  insertPerm.run('super_admin', 'articles:publish', 'Publish or schedule articles to public website');
+  insertPerm.run('super_admin', 'articles:review', 'Review and approve articles submitted by staff');
+  insertPerm.run('super_admin', 'users:manage', 'Create, edit, suspend newsroom users');
+  insertPerm.run('super_admin', 'categories:manage', 'Manage categories and hierarchy');
+  insertPerm.run('super_admin', 'settings:manage', 'Manage site settings and legal accreditation');
+  insertPerm.run('super_admin', 'ads:manage', 'Manage commercial campaigns');
+  insertPerm.run('super_admin', 'audit:view', 'View newsroom audit trail');
+
+  insertPerm.run('editor', 'articles:create', 'Create new articles and drafts');
+  insertPerm.run('editor', 'articles:edit_all', 'Edit any staff article');
+  insertPerm.run('editor', 'articles:review', 'Review and approve articles submitted by staff');
+  insertPerm.run('editor', 'articles:publish', 'Publish or schedule articles to public website');
+  insertPerm.run('editor', 'articles:delete', 'Archive or delete articles');
+  insertPerm.run('editor', 'categories:manage', 'Manage categories and hierarchy');
+  insertPerm.run('editor', 'media:upload', 'Upload media assets');
+  insertPerm.run('editor', 'audit:view', 'View newsroom audit trail');
+
+  insertPerm.run('reporter', 'articles:create', 'Create new articles and drafts');
+  insertPerm.run('reporter', 'articles:edit_own', 'Edit own drafted articles');
+  insertPerm.run('reporter', 'articles:submit_review', 'Submit articles for editorial review');
+  insertPerm.run('reporter', 'media:upload', 'Upload media assets');
+
+  insertPerm.run('ad_manager', 'ads:manage', 'Manage ad slots, campaigns and sponsors');
+  insertPerm.run('ad_manager', 'analytics:view', 'View reader analytics and yield');
 
   // 2. Categories
-  const insertCat = db.prepare(`
-    INSERT INTO categories (id, name, slug, description, parent_id, display_order, color_badge, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-  `);
-  insertCat.run(1, 'National', 'national', 'Governance, policy, states, Parliament, and national affairs', null, 1, '#0A2540');
-  insertCat.run(2, 'World', 'world', 'Global geopolitics, diplomacy, international security, and bilateral pacts', null, 2, '#1E3A8A');
-  insertCat.run(3, 'Economy & Markets', 'economy', 'Fiscal policy, RBI, corporate earnings, stock markets, and trade', null, 3, '#047857');
-  insertCat.run(4, 'Tech & AI', 'tech', 'Artificial intelligence, semiconductors, digital public infra, and startups', null, 4, '#4338CA');
-  insertCat.run(5, 'Opinion & Editorial', 'opinion', 'In-depth perspectives, analytical essays, and editorial board stances', null, 5, '#B45309');
-  insertCat.run(6, 'Climate & Environment', 'climate', 'Clean energy transition, monsoons, agricultural economics, and climate summits', null, 6, '#065F46');
-  insertCat.run(7, 'Culture & Life', 'culture', 'Literature, architecture, heritage, art, food, and modern society', null, 7, '#7C3AED');
-  insertCat.run(8, 'Sports', 'sports', 'Cricket, Olympic disciplines, chess grandmasters, and world championships', null, 8, '#C2410C');
+  const catCount = db.prepare('SELECT COUNT(*) as count FROM categories').get().count;
+  if (catCount === 0) {
+    const insertCat = db.prepare(`
+      INSERT INTO categories (id, name, slug, description, parent_id, display_order, color_badge, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `);
+    insertCat.run(1, 'National', 'national', 'Governance, policy, states, Parliament, and national affairs', null, 1, '#0A2540');
+    insertCat.run(2, 'World', 'world', 'Global geopolitics, diplomacy, international security, and bilateral pacts', null, 2, '#1E3A8A');
+    insertCat.run(3, 'Economy & Markets', 'economy', 'Fiscal policy, RBI, corporate earnings, stock markets, and trade', null, 3, '#047857');
+    insertCat.run(4, 'Tech & AI', 'tech', 'Artificial intelligence, semiconductors, digital public infra, and startups', null, 4, '#4338CA');
+    insertCat.run(5, 'Opinion & Editorial', 'opinion', 'In-depth perspectives, analytical essays, and editorial board stances', null, 5, '#B45309');
+    insertCat.run(6, 'Climate & Environment', 'climate', 'Clean energy transition, monsoons, agricultural economics, and climate summits', null, 6, '#065F46');
+    insertCat.run(7, 'Culture & Life', 'culture', 'Literature, architecture, heritage, art, food, and modern society', null, 7, '#7C3AED');
+    insertCat.run(8, 'Sports', 'sports', 'Cricket, Olympic disciplines, chess grandmasters, and world championships', null, 8, '#C2410C');
+  }
 
   // 3. Tags
-  const insertTag = db.prepare(`INSERT INTO tags (id, name, slug) VALUES (?, ?, ?)`);
-  insertTag.run(1, 'SemiconductorMission', 'semiconductor-mission');
-  insertTag.run(2, 'RBIMonetaryPolicy', 'rbi-monetary-policy');
-  insertTag.run(3, 'SpaceTech', 'space-tech');
-  insertTag.run(4, 'SupremeCourtReview', 'supreme-court-review');
-  insertTag.run(5, 'DeepTech', 'deep-tech');
-  insertTag.run(6, 'GreenHydrogen', 'green-hydrogen');
+  const tagCount = db.prepare('SELECT COUNT(*) as count FROM tags').get().count;
+  if (tagCount === 0) {
+    const insertTag = db.prepare(`INSERT INTO tags (id, name, slug) VALUES (?, ?, ?)`);
+    insertTag.run(1, 'SemiconductorMission', 'semiconductor-mission');
+    insertTag.run(2, 'RBIMonetaryPolicy', 'rbi-monetary-policy');
+    insertTag.run(3, 'SpaceTech', 'space-tech');
+    insertTag.run(4, 'SupremeCourtReview', 'supreme-court-review');
+    insertTag.run(5, 'DeepTech', 'deep-tech');
+    insertTag.run(6, 'GreenHydrogen', 'green-hydrogen');
+  }
 
-  // 4. Articles
-  const insertArt = db.prepare(`
-    INSERT INTO articles (
-      id, title, slug, kicker, short_description, article_body,
-      featured_image, image_caption, alt_text, youtube_url, author_id, category_id, status,
-      priority, is_featured, is_breaking, is_sponsored, sponsor_client,
-      reading_time_minutes, view_count, language, publication_time,
-      meta_title, meta_description, canonical_url
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?, ?
-    )
-  `);
-
-  insertArt.run(
-    1,
-    'The Semiconductor Corridor: Inside India’s Multi-Billion Dollar Silicon Fab Buildout',
-    'inside-indias-multibillion-dollar-silicon-fab-buildout',
-    'SPECIAL INVESTIGATION',
-    'From Gujarat\'s Dholera to Karnataka\'s hardware corridors, billions in sovereign capital and global foundry partnerships are racing to anchor domestic microchip sovereignty before the decade turns.',
-    '<p class="lead-paragraph">In the arid plains of Dholera, 100 kilometers southwest of Ahmedabad, the drone of precision construction never pauses. Inside mammoth climate-controlled facilities that dwarf football stadiums, vibration-isolated foundation slabs five meters deep have been cast to anchor lithography machines capable of engraving circuits thinner than a strand of DNA.</p><p>This is ground zero for India’s ₹76,000-crore ($9.1 billion) Semiconductor Mission—a calculated gambit to break free from the geopolitical vulnerabilities that have plagued global tech hardware supply chains since the pandemic.</p><blockquote>"Chip autonomy is not simply an industrial objective; it is the cornerstone of national technological sovereignty in the artificial intelligence century."</blockquote><h3>From Silicon Valley to Dholera: The Global Foundry Pivot</h3><p>For decades, India provided the design brains for the world\'s leading semiconductor firms—nearly 20% of global chip design talent is stationed in Bengaluru, Hyderabad, and Noida—while the lucrative, capital-intensive manufacturing stayed locked in Taiwan, South Korea, and the United States.</p><p>Today, that imbalance is undergoing its most radical transformation in fifty years. Joint ventures pairing domestic industrial conglomerates with established Taiwanese, Japanese, and American foundry operators are bringing commercial wafer fabrication onto Indian soil for the first time.</p>',
-    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-    'Inside the cleanroom facilities of the national advanced packaging facility at Sanand, Gujarat. (Photo: Special Bureau / The Bharat Chronicle)',
-    'Advanced semiconductor wafer processing cleanroom',
-    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    3, 4, 'published',
-    10, 1, 0, 0, null,
-    7, 14820, 'en', '2026-10-12 09:30:00',
-    'Inside India’s Semiconductor Corridor Buildout | The Bharat Chronicle',
-    'Deep investigation into India’s multi-billion dollar domestic silicon fabrication facilities across Dholera and Sanand.',
-    'https://bharatchronicle.com/article/inside-indias-multibillion-dollar-silicon-fab-buildout'
-  );
-
-  insertArt.run(
-    2,
-    'Reserve Bank Signals Liquidity Normalisation as Core Inflation Stabilises at 3.9%',
-    'reserve-bank-signals-liquidity-normalisation-inflation-stabilises',
-    'CAPITAL MARKETS',
-    'Governor\'s Monetary Policy Statement underscores prudent fiscal stewardship while maintaining growth projections at a robust 7.2% for the fiscal year.',
-    '<p>The Reserve Bank of India has maintained its key policy repo rate steady while signaling a gradual transition toward liquidity neutrality. The monetary policy committee noted that core inflation has durably settled inside the target band.</p><p>Financial institutions responded favorably, with benchmark government bond yields easing three basis points in early afternoon trade.</p>',
-    'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80',
-    'Mint Street, Mumbai: Reserve Bank of India central headquarters.',
-    'RBI Headquarters building facade in Mumbai',
-    'https://www.youtube.com/watch?v=7NOSDKb0HlU',
-    2, 3, 'published',
-    8, 1, 0, 0, null,
-    4, 8410, 'en', '2026-10-12 11:15:00',
-    'Reserve Bank Monetary Policy Review 2026 | The Bharat Chronicle',
-    'RBI signals monetary policy normalization as inflation drops to 3.9%.',
-    'https://bharatchronicle.com/article/reserve-bank-signals-liquidity-normalisation-inflation-stabilises'
-  );
-
-  insertArt.run(
-    3,
-    'Gaganyaan Orbital Test: Crew Module Completes Hypersonic Re-entry in Bay of Bengal',
-    'gaganyaan-orbital-test-crew-module-hypersonic-reentry-success',
-    'AEROSPACE MILESTONE',
-    'Naval divers recover the uncrewed test vehicle within 38 minutes of splashdown, certifying apex thermal shielding systems.',
-    '<p>The Indian Space Research Organisation has achieved another decisive validation milestone for the nation’s human spaceflight program.</p><p>Launched aboard the human-rated LVM3 vehicle from the Satish Dhawan Space Centre at Sriharikota, the test craft completed nominal orbital maneuvers before executing a controlled atmospheric descent.</p>',
-    'https://images.unsplash.com/photo-1517976487502-570a9a4b087a?auto=format&fit=crop&w=800&q=80',
-    'Naval recovery teams alongside the orbital module off the coast of Visakhapatnam.',
-    'Gaganyaan crew module splashdown recovery',
-    'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
-    3, 4, 'published',
-    9, 1, 1, 0, null,
-    5, 11250, 'en', '2026-10-12 14:00:00',
-    'Gaganyaan Hypersonic Re-entry Mission Success | The Bharat Chronicle',
-    'ISRO crew capsule successfully recovered in Bay of Bengal following uncrewed orbital test.',
-    'https://bharatchronicle.com/article/gaganyaan-orbital-test-crew-module-hypersonic-reentry-success'
-  );
-
+  // 4. Articles: Clean production store (no demo data)
   // 5. Ad Placements (All 7 standard placements)
-  const insertPlacement = db.prepare(`
-    INSERT INTO ad_placements (id, placement_code, name, dimensions, is_active)
-    VALUES (?, ?, ?, ?, 1)
-  `);
-  insertPlacement.run(1, 'header_leaderboard', 'Header Super Leaderboard', '970x90');
-  insertPlacement.run(2, 'homepage_hero_adjacent', 'Homepage Hero-Adjacent Half-Page / Display', '300x600');
-  insertPlacement.run(3, 'article_inline', 'In-Article Inline Native Leaderboard', '728x90');
-  insertPlacement.run(4, 'article_sidebar_top', 'Article Sidebar Top Medium Rectangle', '300x250');
-  insertPlacement.run(5, 'category_page_banner', 'Category Page Header Billboard', '728x90');
-  insertPlacement.run(6, 'footer_banner', 'Global Footer Super Leaderboard', '970x90');
-  insertPlacement.run(7, 'mobile_anchor_banner', 'Responsive Mobile Sticky Anchor Banner', '320x50');
+  const placementCount = db.prepare('SELECT COUNT(*) as count FROM ad_placements').get().count;
+  if (placementCount === 0) {
+    const insertPlacement = db.prepare(`
+      INSERT INTO ad_placements (id, placement_code, name, dimensions, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `);
+    insertPlacement.run(1, 'header_leaderboard', 'Header Super Leaderboard', '970x90');
+    insertPlacement.run(2, 'homepage_hero_adjacent', 'Homepage Hero-Adjacent Half-Page / Display', '300x600');
+    insertPlacement.run(3, 'article_inline', 'In-Article Inline Native Leaderboard', '728x90');
+    insertPlacement.run(4, 'article_sidebar_top', 'Article Sidebar Top Medium Rectangle', '300x250');
+    insertPlacement.run(5, 'category_page_banner', 'Category Page Header Billboard', '728x90');
+    insertPlacement.run(6, 'footer_banner', 'Global Footer Super Leaderboard', '970x90');
+    insertPlacement.run(7, 'mobile_anchor_banner', 'Responsive Mobile Sticky Anchor Banner', '320x50');
+  }
 
-  // 6. Advertisements
-  const insertAd = db.prepare(`
-    INSERT INTO advertisements (id, placement_id, title, client_name, ad_type, banner_image_url, target_url, impressions_count, clicks_count, start_date, end_date, is_active, priority)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-  `);
-  insertAd.run(1, 1, 'India Global Tech Summit 2026 — Registration Open', 'Confederation of Indian Industry', 'image', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=970&q=80', 'https://example.com/summit', 142400, 3540, '2026-01-01', '2026-12-31', 10);
-  insertAd.run(2, 4, 'Green Infrastructure Sovereign Bonds 2026', 'National Infrastructure Investment Fund', 'image', 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=300&q=80', 'https://example.com/greenfund', 98200, 2110, '2026-01-01', '2026-12-31', 8);
-  insertAd.run(3, 3, 'Bharat Green Hydrogen Mission — Sovereign Portfolio', 'Ministry of New & Renewable Energy Partner', 'image', 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=970&q=80', 'https://example.com/hydrogen', 64100, 1420, '2026-01-01', '2026-12-31', 7);
-  insertAd.run(4, 2, 'Tata Consultancy Services — Sovereign Cloud Infrastructure', 'Tata Sons', 'image', 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80', 'https://example.com/tata-cloud', 42000, 950, '2026-01-01', '2026-12-31', 9);
-  insertAd.run(5, 5, 'Mahindra Electric Mobility — Commercial Fleet Solutions', 'Mahindra Group', 'image', 'https://images.unsplash.com/photo-1558441719-74e50d60d381?auto=format&fit=crop&w=970&q=80', 'https://example.com/mahindra-ev', 31500, 680, '2026-01-01', '2026-12-31', 6);
-  insertAd.run(6, 6, 'State Bank of India — Global Trade Remittance Corridor', 'State Bank of India', 'image', 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=970&q=80', 'https://example.com/sbi-trade', 28900, 520, '2026-01-01', '2026-12-31', 5);
-  insertAd.run(7, 7, 'Infosys Digital Innovation Award 2026 — Nominate Now', 'Infosys Foundation', 'image', 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=400&q=80', 'https://example.com/infosys-awards', 51200, 1140, '2026-01-01', '2026-12-31', 9);
+  // 6. Site Settings
+  const settingCount = db.prepare('SELECT COUNT(*) as count FROM site_settings').get().count;
+  if (settingCount === 0) {
+    const insertSetting = db.prepare(`
+      INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    insertSetting.run('site_name', 'Janta Journal', 'general', 1, 'Master publication brand title');
+    insertSetting.run('site_tagline', 'Independent National Daily of Record', 'general', 1, 'Official masthead subtitle');
+    insertSetting.run('site_motto', 'Veritas et Libertas', 'general', 1, 'Classical heritage motto');
+    insertSetting.run('press_council_registration', 'REG-JJ-2026-DEL-0941', 'compliance', 1, 'Press Council of India accreditation code');
+    insertSetting.run('editorial_email', 'editorial@jantajournal.com', 'contact', 1, 'Central newsroom desk address');
+    insertSetting.run('ad_sales_email', 'advertising@jantajournal.com', 'monetization', 1, 'Commercial sponsorships desk email');
+    insertSetting.run('breaking_news_enabled', '1', 'editorial', 1, 'Global breaking news ticker master switch');
+    insertSetting.run('adsense_publisher_id', '', 'monetization', 1, 'Google AdSense publisher ID (e.g. ca-pub-XXXXXXXXXXXXXXXX)');
+    insertSetting.run('adsense_auto_ads_enabled', '0', 'monetization', 1, 'Enable AdSense Auto Ads tag');
+    insertSetting.run('ads_provider_type', 'custom', 'monetization', 1, 'Active ad delivery mode: custom, adsense, or hybrid');
+    insertSetting.run('google_analytics_id', '', 'integrations', 1, 'Google Analytics 4 Measurement ID (e.g. G-XXXXXXXXXX)');
+    insertSetting.run('google_search_console_code', '', 'integrations', 1, 'Google Search Console verification meta tag');
+    insertSetting.run('youtube_channel_url', '', 'multimedia', 1, 'Official YouTube channel link');
+    insertSetting.run('youtube_channel_name', 'Janta Journal Digital Newsroom', 'multimedia', 1, 'Display channel branding title');
+    insertSetting.run('featured_youtube_video_id', '', 'multimedia', 1, 'Featured video displayed on homepage');
+    insertSetting.run('media_kit_url', '', 'monetization', 1, 'Downloadable media kit specifications');
+    insertSetting.run('advertiser_desk_email', 'advertising@jantajournal.com', 'monetization', 1, 'Commercial partnership enquiries inbox');
+    insertSetting.run('advertiser_desk_phone', '+91 (11) 4890-2800', 'monetization', 1, 'Commercial desk direct hotline');
+    insertSetting.run('privacy_compliance_mode', 'dpdp_act_india', 'compliance', 1, 'Privacy compliance mode: dpdp_act_india or gdpr');
+    insertSetting.run('cookie_consent_required', '1', 'compliance', 1, 'Show consent banner on visitor initial arrival');
+  }
 
-  // 7. Site Settings
-  const insertSetting = db.prepare(`
-    INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  insertSetting.run('site_name', 'The Bharat Chronicle', 'general', 1, 'Master publication brand title');
-  insertSetting.run('site_tagline', 'Independent National Daily of Record', 'general', 1, 'Official masthead subtitle');
-  insertSetting.run('site_motto', 'Veritas et Libertas • Est. 1928', 'general', 1, 'Classical heritage motto');
-  insertSetting.run('press_council_registration', 'REG-BC-2026-DEL-0941', 'compliance', 1, 'Press Council of India accreditation code');
-  insertSetting.run('editorial_email', 'editorial@bharatchronicle.com', 'contact', 1, 'Central newsroom desk address');
-  insertSetting.run('ad_sales_email', 'advertising@bharatchronicle.com', 'monetization', 1, 'Commercial sponsorships desk email');
-  insertSetting.run('breaking_news_enabled', '1', 'editorial', 1, 'Global breaking news ticker master switch');
-  insertSetting.run('adsense_publisher_id', '', 'monetization', 1, 'Google AdSense publisher ID (e.g. ca-pub-XXXXXXXXXXXXXXXX)');
-  insertSetting.run('adsense_auto_ads_enabled', '0', 'monetization', 1, 'Enable AdSense Auto Ads tag');
-  insertSetting.run('ads_provider_type', 'custom', 'monetization', 1, 'Active ad delivery mode: custom, adsense, or hybrid');
-  insertSetting.run('google_analytics_id', '', 'integrations', 1, 'Google Analytics 4 Measurement ID (e.g. G-XXXXXXXXXX)');
-  insertSetting.run('google_search_console_code', '', 'integrations', 1, 'Google Search Console verification meta tag');
-  insertSetting.run('youtube_channel_url', 'https://www.youtube.com/@TheBharatChronicle', 'multimedia', 1, 'Official YouTube channel link');
-  insertSetting.run('youtube_channel_name', 'The Bharat Chronicle Digital Newsroom', 'multimedia', 1, 'Display channel branding title');
-  insertSetting.run('featured_youtube_video_id', 'dQw4w9WgXcQ', 'multimedia', 1, 'Featured video displayed on homepage');
-  insertSetting.run('media_kit_url', '/downloads/Bharat_Chronicle_Media_Kit_2026.pdf', 'monetization', 1, 'Downloadable media kit specifications');
-  insertSetting.run('advertiser_desk_email', 'advertising@bharatchronicle.com', 'monetization', 1, 'Commercial partnership enquiries inbox');
-  insertSetting.run('advertiser_desk_phone', '+91 (11) 4890-2800', 'monetization', 1, 'Commercial desk direct hotline');
-  insertSetting.run('privacy_compliance_mode', 'dpdp_act_india', 'compliance', 1, 'Privacy compliance mode: dpdp_act_india or gdpr');
-  insertSetting.run('cookie_consent_required', '1', 'compliance', 1, 'Show consent banner on visitor initial arrival');
+  // Purge lingering demo seed data to keep production store completely clean
+  try {
+    db.exec(`
+      DELETE FROM articles WHERE slug IN (
+        'inside-indias-multibillion-dollar-silicon-fab-buildout',
+        'reserve-bank-signals-liquidity-normalisation-inflation-stabilises',
+        'gaganyaan-orbital-test-crew-module-hypersonic-reentry-success',
+        'supreme-court-bench-inter-state-water-sharing',
+        'quad-foreign-ministers-maritime-infrastructure-compact',
+        'sensex-surges-past-record-manufacturing-expansion',
+        'indias-sovereign-ai-stack-prepares-open-foundation-release',
+        'architecture-of-trust-public-journalism-democracy',
+        'fiscal-neutrality-vs-capital-capex-rbi-trilemma',
+        'decarbonising-heavy-industry-national-green-hydrogen-grid',
+        'himalayan-cryosphere-monitoring-satellite-sensors',
+        'restoring-stepped-wells-western-india-ancient-hydrology',
+        'grandmaster-precision-indias-golden-age-global-chess',
+        'building-carbon-negative-data-infrastructure-sovereign-cloud',
+        'ground-zero-dholera-24-hour-drone-reconnaissance',
+        'arctic-shipping-corridor-geopolitics-melting-glaciers',
+        'marathi-indias-semiconductor-revolution',
+        'hindi-isro-shukrayaan-mission-deep-space'
+      );
+      DELETE FROM advertisements WHERE client_name IN (
+        'Confederation of Indian Industry',
+        'National Infrastructure Investment Fund',
+        'Ministry of New & Renewable Energy Partner',
+        'Tata Sons',
+        'Mahindra Group',
+        'State Bank of India',
+        'Infosys Foundation'
+      );
+    `);
+  } catch (_) {}
 
-  // 8. YouTube Videos
-  const insertYt = db.prepare(`
-    INSERT INTO youtube_videos (id, youtube_id, title, description, thumbnail_url, published_at, is_featured, is_active, related_article_id, display_order)
-    VALUES (?, ?, ?, ?, ?, datetime('now'), ?, 1, ?, ?)
-  `);
-  insertYt.run(1, 'dQw4w9WgXcQ', 'Inside India’s Semiconductor Corridor: Cleanroom Tour in Sanand', 'Exclusive Bharat Chronicle video dispatch examining the multi-billion dollar domestic chip fabrication buildout in Gujarat.', 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80', 1, 1, 1);
-  insertYt.run(2, '7NOSDKb0HlU', 'Monetary Policy Briefing: Reserve Bank Governor on Inflation Targets', 'Key takeaways from the RBI Monetary Policy Committee resolution and economic growth forecast.', 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&q=80', 0, 2, 2);
-  insertYt.run(3, 'kJQP7kiw5Fk', 'Himalayan Clean Energy: Assessing Run-of-the-River Hydro Projects', 'Field report on ecological balance and clean power transmission in the northern states.', 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=800&q=80', 0, 3, 3);
-
-  console.log('✓ Operational store seeded with initial staff, articles, placements, and settings.');
+  console.log('✓ Operational store initialized with production taxonomy, permissions and settings.');
 }
 
 // Translate common MySQL functions to SQLite
 export function translateMysqlToSqlite(sql) {
   let translated = sql
+    .replace(/\bINSERT\s+IGNORE\s+INTO\b/gi, 'INSERT OR IGNORE INTO')
+    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '+$1 hours')")
+    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '+$1 days')")
+    .replace(/DATE_ADD\s*\(\s*(?:CURDATE\(\)|date\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '+$1 days')")
+    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '-$1 hours')")
+    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '-$1 days')")
+    .replace(/DATE_SUB\s*\(\s*(?:CURDATE\(\)|date\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '-$1 days')")
     .replace(/\bNOW\(\)/gi, "datetime('now')")
     .replace(/\bCURDATE\(\)/gi, "date('now')")
     .replace(/\bRAND\(\)/gi, "random()")
-    .replace(/DATE_SUB\s*\(\s*NOW\(\)\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '-$1 hours')")
-    .replace(/DATE_SUB\s*\(\s*NOW\(\)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '-$1 days')")
-    .replace(/DATE_SUB\s*\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '-$1 days')")
     .replace(/DATE\s*\(([^)]+)\)\s*=\s*CURDATE\(\)/gi, "date($1) = date('now')")
     .replace(/DATE_FORMAT\s*\(\s*([^,]+)\s*,\s*'%Y-%m-%d %H:00'\s*\)/gi, "strftime('%Y-%m-%d %H:00', $1)")
     .replace(/DATE_FORMAT\s*\(\s*([^,]+)\s*,\s*'%Y-%m-%d'\s*\)/gi, "strftime('%Y-%m-%d', $1)")

@@ -8,9 +8,10 @@ export const authController = {
   // POST /api/v1/auth/login
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const identifier = (req.body.username || req.body.email || '').trim();
+      const { password } = req.body;
       const ipAddress = req.ip || req.connection.remoteAddress;
-      const result = await authService.login(email, password, ipAddress);
+      const result = await authService.login(identifier, password, ipAddress);
       res.json({
         success: true,
         data: result,

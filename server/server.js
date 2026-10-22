@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -11,6 +11,7 @@ import apiRouter from './routes/api.js';
 import { apiRateLimiter } from './middleware/rateLimitMiddleware.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 import seoService from './services/seoService.js';
+import { syncProductionDatabase } from './database/sync_production.js';
 
 dotenv.config();
 
@@ -39,7 +40,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
-// Static uploads directory (for media library in cPanel/local)
+// Static uploads directory (for media library)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Healthcheck & System Status Endpoint
@@ -48,11 +49,16 @@ app.get('/api/health', async (req, res) => {
   res.json({
     status: 'online',
     platform: 'JANTA JOURNAL Digital Publishing Platform',
-    version: '2.0.0-phase2',
+    version: '2.0.0',
     environment: process.env.NODE_ENV || 'development',
     serverTime: new Date().toISOString(),
     database: dbStatus
   });
+});
+
+// Auto-sync database schema & production accounts on startup
+syncProductionDatabase().catch(err => {
+  console.warn('[DB Sync Notice]', err.message);
 });
 
 // Apply rate limiter to all API endpoints

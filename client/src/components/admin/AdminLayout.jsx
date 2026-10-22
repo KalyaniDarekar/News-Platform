@@ -1,20 +1,48 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, PlusCircle, FolderTree, Image, 
   CalendarClock, Megaphone, BarChart3, Settings, LogOut, 
-  ExternalLink, Bell, Search, Shield, ChevronRight, Menu, X, Sparkles, Briefcase
+  ExternalLink, Bell, Search, Shield, ChevronRight, Menu, X, Sparkles, Briefcase, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import adminApi from '../../services/adminApi';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [inReviewCount, setInReviewCount] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchCounts = async () => {
+      try {
+        const res = await adminApi.getQuickCounts();
+        if (mounted && res?.data?.in_review !== undefined) {
+          setInReviewCount(Number(res.data.in_review));
+        }
+      } catch {
+        // silent fallback
+      }
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const navItems = [
     { label: 'Dashboard Overview', path: '/admin', icon: LayoutDashboard, end: true },
     { label: 'News Management', path: '/admin/articles', icon: FileText },
+    { 
+      label: 'Review & Approvals', 
+      path: '/admin/review', 
+      icon: ShieldAlert, 
+      badge: inReviewCount > 0 ? inReviewCount : null 
+    },
     { label: 'Create New Article', path: '/admin/articles/new', icon: PlusCircle },
     { label: 'Categories Desk', path: '/admin/categories', icon: FolderTree },
     { label: 'Media Library', path: '/admin/media', icon: Image },
@@ -81,7 +109,20 @@ export default function AdminLayout() {
                 })}
               >
                 <Icon size={16} />
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
+                  <span style={{
+                    backgroundColor: '#ca8a04',
+                    color: '#ffffff',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '999px',
+                    boxShadow: '0 1px 3px rgba(202, 138, 4, 0.4)'
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
               </NavLink>
             );
           })}
@@ -204,9 +245,8 @@ export default function AdminLayout() {
               fontSize: '0.72rem',
               fontWeight: 700
             }}>
-              <Sparkles size={12} />
-              <span className="hidden-mobile">Newsroom CMS Preview Mode</span>
-              <span className="show-mobile">CMS Preview</span>
+              <span className="hidden-mobile">Newsroom CMS</span>
+              <span className="show-mobile">CMS</span>
             </div>
           </div>
 
@@ -313,7 +353,20 @@ export default function AdminLayout() {
                     })}
                   >
                     <Icon size={16} />
-                    <span>{item.label}</span>
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
+                      <span style={{
+                        backgroundColor: '#ca8a04',
+                        color: '#ffffff',
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        padding: '0.12rem 0.5rem',
+                        borderRadius: '999px',
+                        boxShadow: '0 1px 3px rgba(202, 138, 4, 0.4)'
+                      }}>
+                        {item.badge}
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}

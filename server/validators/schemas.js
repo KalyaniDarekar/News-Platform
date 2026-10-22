@@ -5,9 +5,27 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.string().email('Valid newsroom email address is required'),
+  email: z.string().min(1).optional(),
+  username: z.string().min(1).optional(),
   password: z.string().min(6, 'Password must be at least 6 characters')
+}).refine(data => Boolean(data.email || data.username), {
+  message: 'Valid newsroom username or email address is required',
+  path: ['email']
 });
+
+const urlOrPathSchema = z.string().max(500).refine(
+  (val) => {
+    if (!val || val.trim() === '') return true;
+    if (val.startsWith('/') || val.startsWith('./') || val.startsWith('data:image/')) return true;
+    try {
+      new URL(val);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: 'Must be a valid web URL or local upload path (e.g. /uploads/...)' }
+);
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -16,6 +34,7 @@ export const changePasswordSchema = z.object({
 
 export const createUserSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters').max(150),
+  username: z.string().min(2, 'Username must be at least 2 characters').max(60).optional(),
   email: z.string().email('Valid email address is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['super_admin', 'editor', 'reporter', 'ad_manager']).default('reporter'),
@@ -29,7 +48,7 @@ const baseArticleSchema = z.object({
   kicker: z.string().max(100).optional(),
   shortDescription: z.string().min(10, 'Short description must be at least 10 characters'),
   articleBody: z.string().min(20, 'Article body must be at least 20 characters'),
-  featuredImage: z.string().url('Featured image must be a valid URL').optional().nullable(),
+  featuredImage: urlOrPathSchema.optional().nullable(),
   imageCaption: z.string().max(255).optional().nullable(),
   altText: z.string().max(255).optional().nullable(),
   youtubeUrl: z
@@ -74,8 +93,8 @@ const baseArticleSchema = z.object({
   metaTitle: z.string().max(255).optional().nullable(),
   metaDescription: z.string().max(320).optional().nullable(),
   metaKeywords: z.string().max(255).optional().nullable(),
-  canonicalUrl: z.string().url().optional().nullable(),
-  ogImage: z.string().url().optional().nullable()
+  canonicalUrl: urlOrPathSchema.optional().nullable(),
+  ogImage: urlOrPathSchema.optional().nullable()
 });
 
 export const createArticleSchema = baseArticleSchema.extend({
@@ -113,9 +132,9 @@ const campaignBaseSchema = z.object({
   title: z.string().min(3, 'Campaign title must be at least 3 characters').max(180),
   clientName: z.string().min(2, 'Client / Sponsor name is required').max(150),
   adType: z.enum(['image', 'code']).default('image'),
-  bannerImageUrl: z.string().url('Banner image must be a valid URL').optional().nullable(),
+  bannerImageUrl: urlOrPathSchema.optional().nullable(),
   adCode: z.string().max(5000, 'Ad code exceeds maximum allowed size').optional().nullable(),
-  targetUrl: z.string().url('Target URL must be a valid URL').optional().nullable(),
+  targetUrl: z.string().max(500).optional().nullable(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Start date must start with YYYY-MM-DD'),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'End date must start with YYYY-MM-DD'),
   priority: z.number().int().min(0).max(100).default(5),

@@ -69,6 +69,7 @@ export default function CategoryPage() {
 
   // Reload when slug or sortBy changes
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     loadInitial();
   }, [slug, sortBy]);
 

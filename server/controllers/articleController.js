@@ -86,7 +86,7 @@ export const articleController = {
   async createArticle(req, res, next) {
     try {
       const ipAddress = req.ip || req.connection.remoteAddress;
-      const result = await articleService.createArticle(req.body, req.user.id, ipAddress);
+      const result = await articleService.createArticle(req.body, req.user, ipAddress);
       res.status(201).json({
         success: true,
         data: result

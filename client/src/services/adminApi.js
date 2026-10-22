@@ -1,7 +1,6 @@
 // ========================================================================
-// Admin API Service Layer — Phase 3
+// Admin API Service Layer
 // Communicates with Express /api/v1 backend with Bearer JWT tokens.
-// No mock fallbacks — all calls target live MySQL database endpoints.
 // ========================================================================
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -99,6 +98,27 @@ export const adminApi = {
     return request(`/articles/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ status: 'published' })
+    });
+  },
+
+  async submitForReview(id) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'in_review' })
+    });
+  },
+
+  async approveAndPublishArticle(id) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'published' })
+    });
+  },
+
+  async rejectArticleToDraft(id, revisionNotes = 'Returned to draft by editor for revisions') {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'draft', revisionNotes })
     });
   },
 
@@ -211,7 +231,7 @@ export const adminApi = {
     return request('/auth/me');
   },
 
-  // ================= PHASE 5 ENDPOINTS ================= //
+  // ================= COMMERCIAL & REVENUE ENDPOINTS ================= //
 
   // ---- Commercial Ad Management ----
   async getAdPlacements() {

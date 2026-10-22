@@ -27,7 +27,8 @@ export const dashboardService = {
         expiringArticles,
         scheduledArticles,
         recentActivity,
-        topArticles
+        topArticles,
+        inReviewArticlesRow
       ] = await Promise.all([
 
         // 1. Count per status
@@ -120,6 +121,20 @@ export const dashboardService = {
             AND (a.expiry_time IS NULL OR a.expiry_time > NOW())
           ORDER BY a.view_count DESC
           LIMIT 5
+        `),
+
+        // 9. Articles awaiting editorial review
+        query(`
+          SELECT
+            a.id, a.title, a.slug, a.updated_at, a.created_at,
+            c.name AS category_name,
+            u.full_name AS author_name
+          FROM articles a
+          LEFT JOIN categories c ON a.category_id = c.id
+          LEFT JOIN users u ON a.author_id = u.id
+          WHERE a.status = 'in_review'
+          ORDER BY a.updated_at DESC, a.created_at DESC
+          LIMIT 10
         `)
       ]);
 
@@ -127,6 +142,7 @@ export const dashboardService = {
       const expiringSoon = Number(expiringSoonRow[0]?.count || 0);
       const totalViews = Number(totalViewsRow[0]?.total_views || 0);
       const publishedToday = Number(todayPublishedRow[0]?.count || 0);
+      const inReviewArticles = inReviewArticlesRow || [];
 
       const counts = {
         published:      Number(sc.published),
@@ -153,6 +169,8 @@ export const dashboardService = {
         expiringArticles,
         upcoming_scheduled:   scheduledArticles,
         scheduledArticles,
+        in_review_articles:   inReviewArticles,
+        inReviewArticles,
         recent_activity:      recentActivity,
         recentActivity,
         top_articles:         topArticles,
@@ -161,54 +179,35 @@ export const dashboardService = {
     } catch (err) {
       console.warn('[Dashboard] Database query notice:', err.message);
 
-      // Safe fallback data so the dashboard never breaks on database access issues
+      // Safe fallback data on operational notice
       return {
         counts: {
-          published: 18,
-          draft: 4,
-          scheduled: 3,
-          in_review: 2,
-          expired: 1,
+          published: 0,
+          draft: 0,
+          scheduled: 0,
+          in_review: 0,
+          expired: 0,
           archived: 0,
-          total: 28,
-          expiringSoon: 2,
-          publishedToday: 4
+          total: 0,
+          expiringSoon: 0,
+          publishedToday: 0
         },
-        expiring_soon_24h: 2,
-        expiringSoon: 2,
-        total_views: 48920,
-        totalViews: 48920,
-        published_today: 4,
-        publishedToday: 4,
-        expiring_next_7_days: [
-          { id: 101, title: 'Intraday Financial Stock Indices & Market Closing Bulletin', expiry_time: new Date(Date.now() + 3600000 * 18).toISOString(), status: 'published' }
-        ],
-        expiringArticles: [
-          { id: 101, title: 'Intraday Financial Stock Indices & Market Closing Bulletin', expiry_time: new Date(Date.now() + 3600000 * 18).toISOString(), status: 'published' }
-        ],
-        upcoming_scheduled: [
-          { id: 102, title: 'Diplomatic Communique: Bilateral Indo-Japanese Quantum Computing Accord', category_name: 'World & Technology', scheduled_publication_time: new Date(Date.now() + 3600000 * 24).toISOString() }
-        ],
-        scheduledArticles: [
-          { id: 102, title: 'Diplomatic Communique: Bilateral Indo-Japanese Quantum Computing Accord', category_name: 'World & Technology', scheduled_publication_time: new Date(Date.now() + 3600000 * 24).toISOString() }
-        ],
-        recent_activity: [
-          { id: 1, actor_name: 'Vikramaditya Sharma', action: 'ARTICLE_PUBLISH', entity_id: 101, created_at: new Date().toISOString() },
-          { id: 2, actor_name: 'Dr. Arundhati Sen', action: 'ARTICLE_SCHEDULE', entity_id: 102, created_at: new Date().toISOString() }
-        ],
-        recentActivity: [
-          { id: 1, actor_name: 'Vikramaditya Sharma', action: 'ARTICLE_PUBLISH', entity_id: 101, created_at: new Date().toISOString() },
-          { id: 2, actor_name: 'Dr. Arundhati Sen', action: 'ARTICLE_SCHEDULE', entity_id: 102, created_at: new Date().toISOString() }
-        ],
-        top_articles: [
-          { id: 1, title: 'Semiconductor Fabrication Corridor Cleared in Dholera', category_name: 'National', view_count: 14200, status: 'published' },
-          { id: 2, title: 'Reserve Bank Projects Real GDP Growth at 7.2% for Current Fiscal', category_name: 'Economy', view_count: 9840, status: 'published' }
-        ],
-        topArticles: [
-          { id: 1, title: 'Semiconductor Fabrication Corridor Cleared in Dholera', category_name: 'National', view_count: 14200, status: 'published' },
-          { id: 2, title: 'Reserve Bank Projects Real GDP Growth at 7.2% for Current Fiscal', category_name: 'Economy', view_count: 9840, status: 'published' }
-        ],
-        isDemoFallback: true
+        expiring_soon_24h: 0,
+        expiringSoon: 0,
+        total_views: 0,
+        totalViews: 0,
+        published_today: 0,
+        publishedToday: 0,
+        expiring_next_7_days: [],
+        expiringArticles: [],
+        upcoming_scheduled: [],
+        scheduledArticles: [],
+        in_review_articles: [],
+        inReviewArticles: [],
+        recent_activity: [],
+        recentActivity: [],
+        top_articles: [],
+        topArticles: []
       };
     }
   },
@@ -225,6 +224,8 @@ export const dashboardService = {
           COALESCE(SUM(status = 'scheduled'), 0) AS scheduled,
           COALESCE(SUM(status = 'in_review'), 0) AS in_review,
           COALESCE(SUM(status = 'expired'),   0) AS expired,
+          COALESCE(SUM(status = 'archived'),  0) AS archived,
+          COUNT(*)                                AS total,
           COALESCE(SUM(
             status = 'published'
             AND expiry_time IS NOT NULL
@@ -240,18 +241,23 @@ export const dashboardService = {
         scheduled:    Number(row.scheduled),
         in_review:    Number(row.in_review),
         expired:      Number(row.expired),
+        archived:     Number(row.archived || 0),
+        total:        Number(row.total || 0),
         expiringSoon: Number(row.expiring_soon),
         totalViews:   Number(row.total_views)
       };
-    } catch {
+    } catch (err) {
+      console.error('[Dashboard Quick Counts Error]', err);
       return {
-        published: 18,
-        draft: 4,
-        scheduled: 3,
-        in_review: 2,
-        expired: 1,
-        expiringSoon: 2,
-        totalViews: 48920
+        published: 0,
+        draft: 0,
+        scheduled: 0,
+        in_review: 0,
+        expired: 0,
+        archived: 0,
+        total: 0,
+        expiringSoon: 0,
+        totalViews: 0
       };
     }
   }

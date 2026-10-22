@@ -10,16 +10,27 @@ const BASE_URL = process.env.API_URL || 'http://localhost:5000/api/v1';
 describe('News Articles & Multilingual Publishing Suite', () => {
   let editorToken = '';
   let reporterToken = '';
+  let adminToken = '';
   let createdArticleId = null;
   let marathiArticleSlug = '';
 
-  // Setup: Authenticate editor and reporter
-  test('Setup - Obtain Editor & Reporter JWT tokens', async () => {
+  // Setup: Authenticate admin, editor, and reporter
+  test('Setup - Obtain Editor, Reporter & Admin JWT tokens', async () => {
+    // Admin login
+    const admRes = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'SuperAdmin', password: 'Admin@123' })
+    });
+    const admBody = await admRes.json();
+    assert.equal(admRes.status, 200);
+    adminToken = admBody.data.token;
+
     // Editor login
     const edRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'editor@bharatchronicle.com', password: 'Editorial@2026' })
+      body: JSON.stringify({ username: 'Editor', password: 'Editor@123' })
     });
     const edBody = await edRes.json();
     assert.equal(edRes.status, 200);
@@ -29,11 +40,31 @@ describe('News Articles & Multilingual Publishing Suite', () => {
     const repRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'reporter@bharatchronicle.com', password: 'Editorial@2026' })
+      body: JSON.stringify({ username: 'Reporter', password: 'Reporter@123' })
     });
     const repBody = await repRes.json();
     assert.equal(repRes.status, 200);
     reporterToken = repBody.data.token;
+
+    // Create and publish baseline article for public feed tests
+    const initRes = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${editorToken}`
+      },
+      body: JSON.stringify({
+        title: 'Inside India Silicon Fab Buildout',
+        slug: 'inside-indias-multibillion-dollar-silicon-fab-buildout',
+        kicker: 'Special Investigation',
+        shortDescription: 'National capital infrastructure blueprint receives full parliamentary assent today.',
+        articleBody: '<p>A multi-billion rupee infrastructure corridor connecting industrial zones was officially ratified today.</p>',
+        categoryId: 1,
+        status: 'published',
+        tags: ['technology']
+      })
+    });
+    assert.equal(initRes.status, 201);
   });
 
   test('GET /articles - Public visitor can list published stories with pagination', async () => {
@@ -426,5 +457,170 @@ describe('News Articles & Multilingual Publishing Suite', () => {
     const checkBody = await checkRes.json();
     assert.equal(checkBody.data.status, 'expired', 'Status must stay expired until deliberate republish');
   });
+
+  // =========================================================================
+  // Role-Based Review & Publishing Workflow Tests
+  // Staff: creates draft & submits for review (cannot directly publish/schedule)
+  // Editor & Super Admin: review dispatches, approve and publish
+  // =========================================================================
+
+  let staffSubmittedArticleId = null;
+
+  test('Workflow - Staff Reporter cannot directly create an article with status=published (403 forbidden)', async () => {
+    const res = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${reporterToken}`
+      },
+      body: JSON.stringify({
+        title: 'Bypassing Review: Direct Publish Attempt by Reporter',
+        shortDescription: 'Reporter attempts to publish directly to live readers without editorial review.',
+        articleBody: '<p>This story should be blocked from direct publishing by staff reporters.</p>',
+        categoryId: 1,
+        status: 'published'
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 403, 'Reporters must not be permitted to publish news directly');
+    assert.equal(body.error?.code, 'FORBIDDEN_PUBLISH');
+  });
+
+  test('Workflow - Staff Reporter cannot directly create an article with status=scheduled (403 forbidden)', async () => {
+    const res = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${reporterToken}`
+      },
+      body: JSON.stringify({
+        title: 'Bypassing Review: Direct Schedule Attempt by Reporter',
+        shortDescription: 'Reporter attempts to schedule publication directly without editorial review.',
+        articleBody: '<p>This story should be blocked from direct scheduling by staff reporters.</p>',
+        categoryId: 1,
+        status: 'scheduled',
+        scheduledPublicationTime: new Date(Date.now() + 3600000).toISOString()
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 403, 'Reporters must not be permitted to schedule news directly');
+    assert.equal(body.error?.code, 'FORBIDDEN_PUBLISH');
+  });
+
+  test('Workflow - Staff Reporter creates news and submits for review (status=in_review)', async () => {
+    const res = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${reporterToken}`
+      },
+      body: JSON.stringify({
+        title: 'Groundwater Sensor Network Deployed Across Marathwada Agriculture Hub',
+        kicker: 'AGRITECH REPORT',
+        shortDescription: 'IoT telemetry wells transmit hydrological readings to state agriculture boards.',
+        articleBody: '<p>A sensor grid spanning 800 villages across Marathwada was deployed this week to track subsoil moisture and groundwater depletion in real time.</p>',
+        categoryId: 6,
+        status: 'in_review'
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 201, `Failed to submit for review: ${JSON.stringify(body)}`);
+    assert.equal(body.data.status, 'in_review', 'Article must be created in in_review status');
+    assert.ok(body.data.id);
+    staffSubmittedArticleId = body.data.id;
+  });
+
+  test('Workflow - Editor and Super Admin can view submitted article in GET /articles?status=in_review', async () => {
+    assert.ok(staffSubmittedArticleId, 'Article ID must be set');
+
+    // 1. Editor views in_review queue
+    const editorRes = await fetch(`${BASE_URL}/articles?status=in_review`, {
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const editorBody = await editorRes.json();
+    assert.equal(editorRes.status, 200);
+    assert.ok(Array.isArray(editorBody.data));
+    const editorFound = editorBody.data.find(a => a.id === staffSubmittedArticleId);
+    assert.ok(editorFound, 'Editor must see the reporter-submitted article in in_review queue');
+    assert.equal(editorFound.status, 'in_review');
+
+    // 2. Super Admin views in_review queue
+    const adminRes = await fetch(`${BASE_URL}/articles?status=in_review`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    const adminBody = await adminRes.json();
+    assert.equal(adminRes.status, 200);
+    const adminFound = adminBody.data.find(a => a.id === staffSubmittedArticleId);
+    assert.ok(adminFound, 'Super Admin must see the reporter-submitted article in in_review queue');
+
+    // 3. Dashboard counts reflect in_review article
+    const countRes = await fetch(`${BASE_URL}/dashboard/counts`, {
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const countBody = await countRes.json();
+    assert.equal(countRes.status, 200);
+    assert.ok(countBody.data.in_review >= 1, 'Quick counts in_review must be at least 1');
+
+    // 4. Full dashboard stats reflect in_review count and article
+    const statsRes = await fetch(`${BASE_URL}/dashboard/stats`, {
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const statsBody = await statsRes.json();
+    assert.equal(statsRes.status, 200);
+    assert.ok(statsBody.data.counts.in_review >= 1, 'Dashboard stats in_review count must be at least 1');
+    assert.ok(Array.isArray(statsBody.data.in_review_articles), 'in_review_articles must be an array');
+    const statsFound = statsBody.data.in_review_articles.find(a => a.id === staffSubmittedArticleId);
+    assert.ok(statsFound, 'Story must be present in dashboard in_review_articles list');
+  });
+
+  test('Workflow - Staff Reporter cannot directly update their own article to status=published (403 forbidden)', async () => {
+    assert.ok(staffSubmittedArticleId, 'Article ID must be set');
+
+    const res = await fetch(`${BASE_URL}/articles/${staffSubmittedArticleId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${reporterToken}`
+      },
+      body: JSON.stringify({
+        status: 'published'
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 403, 'Reporters must not be permitted to directly set status to published');
+    assert.equal(body.error?.code, 'FORBIDDEN_PUBLISH');
+  });
+
+  test('Workflow - Editor reviews in_review story and grants approval to publish (status=published)', async () => {
+    assert.ok(staffSubmittedArticleId, 'Article ID must be set');
+
+    const res = await fetch(`${BASE_URL}/articles/${staffSubmittedArticleId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${editorToken}`
+      },
+      body: JSON.stringify({
+        status: 'published',
+        revisionNotes: 'Reviewed by Senior Editor Arundhati Sen and approved for immediate publication.'
+      })
+    });
+
+    const body = await res.json();
+    assert.equal(res.status, 200, `Editor approval failed: ${JSON.stringify(body)}`);
+    assert.equal(body.data.status, 'published', 'Article must be published following editor approval');
+
+    // Confirm it is now published and accessible
+    const checkRes = await fetch(`${BASE_URL}/articles/id/${staffSubmittedArticleId}`, {
+      headers: { Authorization: `Bearer ${editorToken}` }
+    });
+    const checkBody = await checkRes.json();
+    assert.equal(checkBody.data.status, 'published');
+  });
 });
+
 

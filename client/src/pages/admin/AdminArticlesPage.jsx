@@ -1,34 +1,62 @@
 // ========================================================================
-// Admin Articles Desk — Phase 3
-// Real-time MySQL-backed article management: list, filter, search,
+// Admin Articles Desk
+// Real-time article management: list, filter, search,
 // status moderation, quick publish/unpublish, and archive controls.
 // ========================================================================
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   PlusCircle, Search, Filter, Edit, Trash2, Eye, 
   CheckCircle2, Clock, FileEdit, Flame, Sparkles, RefreshCw, 
-  ChevronLeft, ChevronRight, AlertCircle, ExternalLink, Archive, Send
+  ChevronLeft, ChevronRight, AlertCircle, ExternalLink, Archive, Send,
+  ArrowLeft, ShieldAlert, Check
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
+import { useAuth } from '../../context/AuthContext';
 
-export default function AdminArticlesPage() {
+export default function AdminArticlesPage({ defaultStatus }) {
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [actionFeedback, setActionFeedback] = useState(null);
+  const [statusCounts, setStatusCounts] = useState(null);
 
-  // Filters & Pagination
-  const [statusFilter, setStatusFilter] = useState('all');
+  const { user } = useAuth();
+  const userRole = user?.role || 'reporter';
+  const isReporter = userRole === 'reporter';
+  const canPublish = userRole === 'super_admin' || userRole === 'editor';
+
+  // Filters & Pagination with URL param support
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetStatus = searchParams.get('status') || defaultStatus || 'all';
+  const [statusFilter, setStatusFilter] = useState(targetStatus);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Load Categories on mount
+  // Sync state if URL query param or defaultStatus changes
+  useEffect(() => {
+    const currentParam = searchParams.get('status') || defaultStatus || 'all';
+    if (currentParam !== statusFilter) {
+      setStatusFilter(currentParam);
+      setCurrentPage(1);
+    }
+  }, [searchParams, defaultStatus]);
+
+  // Load Categories & Counts on mount
+  const fetchCounts = async () => {
+    try {
+      const res = await adminApi.getQuickCounts();
+      if (res.data) setStatusCounts(res.data);
+    } catch {
+      // silent fallback
+    }
+  };
+
   useEffect(() => {
     async function loadCategories() {
       try {
@@ -39,6 +67,7 @@ export default function AdminArticlesPage() {
       }
     }
     loadCategories();
+    fetchCounts();
   }, []);
 
   // Fetch Articles on filter/page change
@@ -61,8 +90,9 @@ export default function AdminArticlesPage() {
           setTotalCount(res.pagination.total || res.data.length);
         }
       }
+      fetchCounts();
     } catch (err) {
-      setErrorMsg(`Failed to load articles: ${err.message}`);
+      console.error('Failed to load articles:', err);
     } finally {
       setLoading(false);
     }
@@ -72,22 +102,63 @@ export default function AdminArticlesPage() {
     fetchArticles();
   }, [statusFilter, categoryFilter, currentPage]);
 
+  const handleTabClick = (tabId) => {
+    setStatusFilter(tabId);
+    setCurrentPage(1);
+    const newParams = new URLSearchParams(searchParams);
+    if (tabId === 'all') {
+      newParams.delete('status');
+    } else {
+      newParams.set('status', tabId);
+    }
+    setSearchParams(newParams);
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setCurrentPage(1);
     fetchArticles();
   };
 
-  // Quick Action: Publish
-  const handlePublish = async (id) => {
-    if (!window.confirm('Publish this article live to the public portal immediately?')) return;
+  // Quick Action: Publish or Approve & Publish (Editor / Super Admin only)
+  const handlePublish = async (id, isApproval = false) => {
+    const confirmPrompt = isApproval
+      ? 'Approve and publish this story live to the public portal immediately?'
+      : 'Publish this article live to the public portal immediately?';
+    if (!window.confirm(confirmPrompt)) return;
     try {
       await adminApi.publishArticle(id);
-      setActionFeedback(`Article #${id} published live!`);
+      setActionFeedback(isApproval ? `Article #${id} approved and published live!` : `Article #${id} published live!`);
       setTimeout(() => setActionFeedback(null), 3000);
       fetchArticles();
     } catch (err) {
-      setErrorMsg(`Publish failed: ${err.message}`);
+      console.error('Publish failed:', err);
+    }
+  };
+
+  // Quick Action: Submit for Editorial Review (Staff reporter or editor)
+  const handleSubmitReview = async (id) => {
+    if (!window.confirm('Submit this draft to Editors and Super Admins for review and publishing approval?')) return;
+    try {
+      await adminApi.submitForReview(id);
+      setActionFeedback(`Article #${id} submitted for editorial review!`);
+      setTimeout(() => setActionFeedback(null), 3000);
+      handleTabClick('in_review');
+    } catch (err) {
+      console.error('Submission failed:', err);
+    }
+  };
+
+  // Quick Action: Return in-review article to draft (Editor / Super Admin)
+  const handleReturnToDraft = async (id) => {
+    if (!window.confirm('Return this story to draft status to request revisions from staff?')) return;
+    try {
+      await adminApi.rejectArticleToDraft(id);
+      setActionFeedback(`Article #${id} returned to draft status.`);
+      setTimeout(() => setActionFeedback(null), 3000);
+      fetchArticles();
+    } catch (err) {
+      console.error('Action failed:', err);
     }
   };
 
@@ -100,7 +171,7 @@ export default function AdminArticlesPage() {
       setTimeout(() => setActionFeedback(null), 3000);
       fetchArticles();
     } catch (err) {
-      setErrorMsg(`Unpublish failed: ${err.message}`);
+      console.error('Unpublish failed:', err);
     }
   };
 
@@ -113,7 +184,7 @@ export default function AdminArticlesPage() {
       setTimeout(() => setActionFeedback(null), 3000);
       fetchArticles();
     } catch (err) {
-      setErrorMsg(`Archive failed: ${err.message}`);
+      console.error('Archive failed:', err);
     }
   };
 
@@ -171,12 +242,6 @@ export default function AdminArticlesPage() {
         </div>
       )}
 
-      {errorMsg && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.65rem 1rem', borderRadius: '4px', fontSize: '0.82rem' }}>
-          {errorMsg}
-        </div>
-      )}
-
       {/* Search & Filter Toolbar */}
       <div style={{
         backgroundColor: '#ffffff',
@@ -191,35 +256,82 @@ export default function AdminArticlesPage() {
         {/* Status Tabs */}
         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
           {[
-            { id: 'all', label: 'All Dispatches' },
-            { id: 'published', label: 'Published' },
-            { id: 'in_review', label: 'In Review' },
-            { id: 'scheduled', label: 'Scheduled' },
-            { id: 'draft', label: 'Drafts' },
-            { id: 'expired', label: 'Expired' },
-            { id: 'archived', label: 'Archived' }
+            { id: 'all', label: 'All Dispatches', count: statusCounts?.total },
+            { id: 'published', label: 'Published', count: statusCounts?.published },
+            { id: 'in_review', label: 'In Review (Pending Approval)', count: statusCounts?.in_review, isReview: true },
+            { id: 'scheduled', label: 'Scheduled', count: statusCounts?.scheduled },
+            { id: 'draft', label: 'Drafts', count: statusCounts?.draft },
+            { id: 'expired', label: 'Expired', count: statusCounts?.expired },
+            { id: 'archived', label: 'Archived', count: statusCounts?.archived }
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => {
-                setStatusFilter(tab.id);
-                setCurrentPage(1);
-              }}
+              onClick={() => handleTabClick(tab.id)}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
                 padding: '0.4rem 0.75rem',
                 borderRadius: '4px',
                 fontSize: '0.78rem',
                 fontWeight: statusFilter === tab.id ? 700 : 500,
-                backgroundColor: statusFilter === tab.id ? '#0f172a' : '#f1f5f9',
-                color: statusFilter === tab.id ? '#ffffff' : '#475569',
-                border: 'none',
+                backgroundColor: statusFilter === tab.id ? '#0f172a' : tab.id === 'in_review' ? '#fefce8' : '#f1f5f9',
+                color: statusFilter === tab.id ? '#ffffff' : tab.id === 'in_review' ? '#854d0e' : '#475569',
+                border: tab.id === 'in_review' && statusFilter !== tab.id ? '1px solid #fef08a' : 'none',
                 cursor: 'pointer'
               }}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              {typeof tab.count === 'number' && (
+                <span style={{
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '999px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  backgroundColor: statusFilter === tab.id 
+                    ? '#334155' 
+                    : tab.id === 'in_review' && tab.count > 0 
+                      ? '#ca8a04' 
+                      : '#e2e8f0',
+                  color: statusFilter === tab.id 
+                    ? '#f8fafc' 
+                    : tab.id === 'in_review' && tab.count > 0 
+                      ? '#ffffff' 
+                      : '#64748b'
+                }}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
+
+        {/* Review Queue Information Banner */}
+        {statusFilter === 'in_review' && (
+          <div style={{
+            backgroundColor: '#fffbeb',
+            border: '1px solid #fef08a',
+            borderRadius: '6px',
+            padding: '0.85rem 1.15rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
+          }}>
+            <div style={{ backgroundColor: '#ca8a04', color: '#fff', width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ShieldAlert size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#854d0e' }}>
+                Editorial Review & Moderation Queue
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#a16207' }}>
+                {canPublish
+                  ? 'Dispatches submitted by staff reporters. Inspect headlines, copy accuracy, and categories before giving final approval to publish.'
+                  : 'Your submitted dispatches are waiting in this queue. Senior Editors or Super Admins will inspect and approve them for public release.'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search & Category Filter Row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -383,23 +495,108 @@ export default function AdminArticlesPage() {
                             <Edit size={14} />
                           </Link>
 
-                          {/* Quick Publish / Unpublish */}
-                          {art.status !== 'published' ? (
-                            <button
-                              onClick={() => handlePublish(art.id)}
-                              title="Publish Live Now"
-                              style={{ padding: '0.35rem 0.5rem', borderRadius: '4px', backgroundColor: '#dcfce7', color: '#15803d', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
+                          {/* Quick Publish / Review / Approval Actions based on Role */}
+                          {canPublish ? (
+                            art.status === 'in_review' ? (
+                              <>
+                                <button
+                                  onClick={() => handlePublish(art.id, true)}
+                                  title="Approve & Publish Live Immediately"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    padding: '0.35rem 0.65rem',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#16a34a',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    boxShadow: '0 1px 2px rgba(22,163,74,0.2)'
+                                  }}
+                                >
+                                  <CheckCircle2 size={13} /> Approve
+                                </button>
+                                <button
+                                  onClick={() => handleReturnToDraft(art.id)}
+                                  title="Return to Draft (Request Revisions)"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem',
+                                    padding: '0.35rem 0.5rem',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#fef3c7',
+                                    color: '#92400e',
+                                    border: '1px solid #fde68a',
+                                    cursor: 'pointer',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  <ArrowLeft size={13} /> Draft
+                                </button>
+                              </>
+                            ) : art.status !== 'published' ? (
+                              <button
+                                onClick={() => handlePublish(art.id, false)}
+                                title="Publish Live Now"
+                                style={{ padding: '0.35rem 0.5rem', borderRadius: '4px', backgroundColor: '#dcfce7', color: '#15803d', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                              >
+                                <CheckCircle2 size={14} />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleUnpublish(art.id)}
+                                title="Revert to Draft"
+                                style={{ padding: '0.35rem 0.5rem', borderRadius: '4px', backgroundColor: '#fefce8', color: '#ca8a04', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                              >
+                                <Clock size={14} />
+                              </button>
+                            )
                           ) : (
-                            <button
-                              onClick={() => handleUnpublish(art.id)}
-                              title="Revert to Draft"
-                              style={{ padding: '0.35rem 0.5rem', borderRadius: '4px', backgroundColor: '#fefce8', color: '#ca8a04', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            >
-                              <Clock size={14} />
-                            </button>
+                            /* Staff Reporter Actions */
+                            art.status === 'draft' ? (
+                              <button
+                                onClick={() => handleSubmitReview(art.id)}
+                                title="Submit for Editorial Review & Approval"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '4px',
+                                  backgroundColor: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  cursor: 'pointer',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700
+                                }}
+                              >
+                                <Send size={12} /> Submit
+                              </button>
+                            ) : art.status === 'in_review' ? (
+                              <span
+                                title="Submitted for Review - Awaiting Editor Approval"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.35rem 0.55rem',
+                                  borderRadius: '4px',
+                                  backgroundColor: '#fefce8',
+                                  color: '#ca8a04',
+                                  border: '1px solid #fef08a',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700
+                                }}
+                              >
+                                <Clock size={12} /> Pending Approval
+                              </span>
+                            ) : null
                           )}
 
                           {/* View Reader Link if published */}

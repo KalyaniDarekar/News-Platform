@@ -212,10 +212,16 @@ export const articleService = {
     }
 
     // ---- Sorting ----
-    let orderBy = 'a.publication_time DESC, a.created_at DESC';
-    if (sort === 'priority')   orderBy = 'a.priority DESC, a.publication_time DESC';
-    else if (sort === 'views') orderBy = 'a.view_count DESC';
-    else if (sort === 'oldest') orderBy = 'a.created_at ASC';
+    let orderBy = 'COALESCE(a.publication_time, a.created_at) DESC, a.created_at DESC';
+    if (status === 'in_review') {
+      orderBy = 'a.updated_at DESC, a.created_at DESC';
+    } else if (sort === 'priority') {
+      orderBy = 'a.priority DESC, COALESCE(a.publication_time, a.created_at) DESC';
+    } else if (sort === 'views') {
+      orderBy = 'a.view_count DESC';
+    } else if (sort === 'oldest') {
+      orderBy = 'a.created_at ASC';
+    }
 
     // ---- Count ----
     const countRows = await query(
@@ -484,7 +490,10 @@ export const articleService = {
   // -------------------------------------------------------------------------
   // CREATE article (Draft / In-Review / Published)
   // -------------------------------------------------------------------------
-  async createArticle(data, authorId, ipAddress) {
+  async createArticle(data, currentUser, ipAddress) {
+    const authorId = typeof currentUser === 'object' && currentUser !== null ? currentUser.id : currentUser;
+    const userRole = typeof currentUser === 'object' && currentUser !== null ? currentUser.role : null;
+
     const {
       title,
       slug: customSlug = null,
@@ -513,9 +522,21 @@ export const articleService = {
       ogImage = null
     } = data;
 
+    // ---- Enforce role-based permissions ----
+    // Only editor and super_admin can directly publish or schedule articles
+    if (userRole === 'reporter' && (data.status === 'published' || data.status === 'scheduled')) {
+      const error = new Error('Staff reporters do not have permission to publish or schedule articles directly. Please save as draft or submit for editorial review.');
+      error.statusCode = 403;
+      error.code = 'FORBIDDEN_PUBLISH';
+      throw error;
+    }
+
     // ---- Validate status transition ----
     const allowedStatuses = ['draft', 'in_review', 'scheduled', 'published'];
-    const safeStatus = allowedStatuses.includes(status) ? status : 'draft';
+    let safeStatus = allowedStatuses.includes(status) ? status : 'draft';
+    if (userRole === 'reporter' && safeStatus !== 'in_review') {
+      safeStatus = 'draft';
+    }
 
     // ---- Validate expiry is in the future ----
     if (expiryTime) {
@@ -706,8 +727,16 @@ export const articleService = {
     let newStatus = updateData.status !== undefined ? updateData.status : current.status;
     if (!allowedStatuses.includes(newStatus)) newStatus = current.status;
 
-    // Reporters cannot directly set published status
-    if (currentUser.role === 'reporter' && newStatus === 'published') {
+    // Staff reporters cannot directly publish or schedule articles
+    if (currentUser.role === 'reporter' && (updateData.status === 'published' || updateData.status === 'scheduled')) {
+      const error = new Error('Staff reporters do not have permission to publish or schedule articles directly. Please submit for editorial review.');
+      error.statusCode = 403;
+      error.code = 'FORBIDDEN_PUBLISH';
+      throw error;
+    }
+
+    // Reporters cannot directly set published or scheduled status
+    if (currentUser.role === 'reporter' && (newStatus === 'published' || newStatus === 'scheduled')) {
       newStatus = 'in_review';
     }
 
@@ -814,11 +843,23 @@ export const articleService = {
       }
 
       // ---- Audit log ----
+      let auditAction = 'ARTICLE_UPDATE';
+      if (current.status === 'in_review' && newStatus === 'published') {
+        auditAction = 'ARTICLE_APPROVED';
+      } else if (current.status !== 'published' && newStatus === 'published') {
+        auditAction = 'ARTICLE_PUBLISH';
+      } else if (current.status === 'in_review' && newStatus === 'draft') {
+        auditAction = 'ARTICLE_RETURNED_TO_DRAFT';
+      } else if (newStatus === 'in_review' && current.status !== 'in_review') {
+        auditAction = 'ARTICLE_SUBMIT_REVIEW';
+      }
+
       await conn.query(
         `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address)
-         VALUES (?, 'ARTICLE_UPDATE', 'article', ?, ?, ?)`,
+         VALUES (?, ?, 'article', ?, ?, ?)`,
         [
           currentUser.id,
+          auditAction,
           articleId,
           JSON.stringify({
             status: newStatus,
@@ -826,7 +867,12 @@ export const articleService = {
             slug,
             expiryTime,
             contentChanged,
-            revisionCreated: contentChanged
+            revisionCreated: contentChanged,
+            approvedBy: (current.status === 'in_review' && newStatus === 'published') ? {
+              id: currentUser.id,
+              name: currentUser.full_name,
+              role: currentUser.role
+            } : undefined
           }),
           ipAddress
         ]

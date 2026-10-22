@@ -46,11 +46,10 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Database query error in /api/articles:', error);
     res.status(503).json({
       success: false,
-      message: 'Database query unfulfilled - MySQL connection required for live data.',
-      error: error.message,
-      phaseNote: 'Phase 1 development mode: Ensure MySQL database is configured with server/database/schema.sql'
+      message: 'Service unavailable. Please retry later.'
     });
   }
 });
@@ -80,10 +79,10 @@ router.get('/:slug', async (req, res) => {
 
     res.json({ success: true, data: rows[0] });
   } catch (error) {
+    console.error(`Database query error in /api/articles/${slug}:`, error);
     res.status(503).json({
       success: false,
-      message: 'Database query unfulfilled - MySQL connection required for live data.',
-      error: error.message
+      message: 'Service unavailable. Please retry later.'
     });
   }
 });

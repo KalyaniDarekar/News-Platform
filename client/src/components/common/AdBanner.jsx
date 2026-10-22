@@ -1,10 +1,10 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Info, Sparkles, X } from 'lucide-react';
 import apiService from '../../services/api';
 
 /**
- * AdBanner - Universal Commercial Display & Sponsorship Component (Phase 5)
+ * AdBanner - Universal Commercial Display & Sponsorship Component
  * Supports all 7 standard newsroom placements:
  * - header_leaderboard (970x90 / 728x90)
  * - homepage_hero_adjacent (300x600 / 300x250)

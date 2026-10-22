@@ -1,6 +1,6 @@
 // ========================================================================
-// Admin Scheduled & Expiry Management Desk — Phase 3
-// Real-time control of scheduled releases, expiring articles, and cron trigger.
+// Admin Scheduled & Expiry Management Desk
+// Real-time control of scheduled releases, expiring articles, and automated trigger.
 // ========================================================================
 
 import React, { useState, useEffect } from 'react';
@@ -10,10 +10,14 @@ import {
   RotateCcw, RefreshCw, Edit, ExternalLink, Calendar, AlertTriangle
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
+import { useAuth } from '../../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function AdminScheduledPage() {
+  const { user } = useAuth();
+  const canPublish = user?.role === 'super_admin' || user?.role === 'editor';
+
   const [scheduledArticles, setScheduledArticles] = useState([]);
   const [expiredArticles, setExpiredArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,19 +142,13 @@ export default function AdminScheduledPage() {
         </div>
       )}
 
-      {errorMsg && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.82rem' }}>
-          {errorMsg}
-        </div>
-      )}
-
       {/* Cron Info Callout */}
       <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '1rem 1.25rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <Clock size={18} color="#2563eb" />
           <div>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1e40af' }}>
-              cPanel Automation Cron Target: <code>node server/cron/expiry-processor.js</code>
+              Automated Lifecycle Processor: <code>node server/cron/expiry-processor.js</code>
             </div>
             <div style={{ fontSize: '0.74rem', color: '#3b82f6', marginTop: '0.15rem' }}>
               All database times stored in UTC. The cron evaluates <code>scheduled_publication_time &lt;= NOW()</code> and <code>expiry_time &lt;= NOW()</code>.
@@ -158,7 +156,7 @@ export default function AdminScheduledPage() {
           </div>
         </div>
         <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '0.7rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '4px' }}>
-          IDEMPOTENT &amp; AUDITED
+          AUTOMATED &amp; AUDITED
         </span>
       </div>
 
@@ -221,12 +219,14 @@ export default function AdminScheduledPage() {
                         >
                           Edit
                         </Link>
-                        <button
-                          onClick={() => handlePublishNow(art.id)}
-                          style={{ padding: '0.3rem 0.6rem', borderRadius: '3px', backgroundColor: '#dcfce7', color: '#15803d', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-                        >
-                          Release Now
-                        </button>
+                        {canPublish && (
+                          <button
+                            onClick={() => handlePublishNow(art.id)}
+                            style={{ padding: '0.3rem 0.6rem', borderRadius: '3px', backgroundColor: '#dcfce7', color: '#15803d', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                          >
+                            Release Now
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
