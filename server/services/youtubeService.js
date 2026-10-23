@@ -77,7 +77,7 @@ export const youtubeService = {
     return {
       data: (videos || []).map(v => ({
         ...v,
-        embedUrl: `https://www.youtube.com/embed/${v.youtube_id}?enablejsapi=1&origin=${encodeURIComponent(process.env.CLIENT_URL || 'http://localhost:5173')}`
+        embedUrl: `https://www.youtube.com/embed/${v.youtube_id}?enablejsapi=1&origin=${encodeURIComponent(process.env.CLIENT_URL || 'https://news-platform-chi-lovat.vercel.app')}`
       })),
       pagination: {
         total,

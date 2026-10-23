@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UploadCloud, Image as ImageIcon, Copy, Check, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
 import adminApi from '../../services/adminApi';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://news-platform-2goj.onrender.com';
 
 export default function AdminMediaPage() {
   const [copiedId, setCopiedId] = useState(null);

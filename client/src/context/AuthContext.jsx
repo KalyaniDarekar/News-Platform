@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://news-platform-2goj.onrender.com/api';
 const TOKEN_KEY = 'auth_token';
 const BC_TOKEN_KEY = 'bc_auth_token';
 const USER_KEY = 'auth_user';

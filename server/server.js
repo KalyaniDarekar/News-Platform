@@ -19,8 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = process.env.CLIENT_URL || 'https://news-platform-chi-lovat.vercel.app';
 
 // Security & Utility Middleware
 app.use(helmet({
@@ -28,8 +27,13 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin or any localhost / 127.0.0.1 port (5173, 5174, etc.)
-    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || (CLIENT_URL && origin === CLIENT_URL)) {
+    // Allow requests with no origin, any localhost, or Vercel origins
+    if (
+      !origin ||
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      (CLIENT_URL && origin === CLIENT_URL) ||
+      origin.endsWith('.vercel.app')
+    ) {
       return callback(null, true);
     }
     return callback(null, true);

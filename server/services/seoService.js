@@ -1,4 +1,4 @@
-﻿// ========================================================================
+// ========================================================================
 // SEO, Sitemaps, RSS Feeds & Prerendering Service — Phase 4
 // Generates search-engine compliant XML sitemaps, RSS 2.0 dispatches,
 // robots.txt, and crawler meta tag injection for article pages.
@@ -22,7 +22,7 @@ export const seoService = {
    * Generate standard XML sitemap for eligible published articles & categories.
    * Excludes drafts, scheduled articles, and expired articles.
    */
-  async generateSitemapXml(baseUrl = 'http://localhost:5173') {
+  async generateSitemapXml(baseUrl = 'https://news-platform-chi-lovat.vercel.app') {
     const cleanBase = baseUrl.replace(/\/+$/, '');
 
     // 1. Fetch active categories
@@ -113,7 +113,7 @@ export const seoService = {
   /**
    * Generate RSS 2.0 XML feed of the latest published eligible articles.
    */
-  async generateRssXml(baseUrl = 'http://localhost:5173') {
+  async generateRssXml(baseUrl = 'https://news-platform-chi-lovat.vercel.app') {
     const cleanBase = baseUrl.replace(/\/+$/, '');
 
     const articles = await query(
@@ -168,7 +168,7 @@ export const seoService = {
   /**
    * Return standard robots.txt.
    */
-  getRobotsTxt(baseUrl = 'http://localhost:5173') {
+  getRobotsTxt(baseUrl = 'https://news-platform-chi-lovat.vercel.app') {
     const cleanBase = baseUrl.replace(/\/+$/, '');
     return `# JANTA JOURNAL Robots Exclusion Standard
 User-agent: *
@@ -184,7 +184,7 @@ Sitemap: ${cleanBase}/sitemap.xml
   /**
    * Prerender article metadata, Open Graph, Twitter cards, and JSON-LD structured data into index.html
    */
-  async prerenderArticleHtml(slug, baseUrl = 'http://localhost:5173', baseHtml = '') {
+  async prerenderArticleHtml(slug, baseUrl = 'https://news-platform-chi-lovat.vercel.app', baseHtml = '') {
     const cleanBase = baseUrl.replace(/\/+$/, '');
 
     try {

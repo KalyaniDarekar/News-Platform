@@ -3,7 +3,7 @@
 // Communicates with Express /api/v1 backend with Bearer JWT tokens.
 // ========================================================================
 
-const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const RAW_API_BASE = import.meta.env.VITE_API_URL || 'https://news-platform-2goj.onrender.com/api';
 const API_BASE = RAW_API_BASE.replace(/\/v1\/?$/, '');
 const TOKEN_KEY = 'auth_token';
 

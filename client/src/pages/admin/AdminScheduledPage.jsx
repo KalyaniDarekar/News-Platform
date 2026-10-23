@@ -12,7 +12,7 @@ import {
 import adminApi from '../../services/adminApi';
 import { useAuth } from '../../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://news-platform-2goj.onrender.com/api';
 
 export default function AdminScheduledPage() {
   const { user } = useAuth();

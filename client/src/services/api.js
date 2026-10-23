@@ -10,7 +10,8 @@ import {
   AD_BANNERS
 } from '../data/mockNewsData';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const RAW_API_BASE = import.meta.env.VITE_API_URL || 'https://news-platform-2goj.onrender.com/api';
+const API_BASE = RAW_API_BASE.endsWith('/v1') ? RAW_API_BASE : `${RAW_API_BASE.replace(/\/+$/, '')}/v1`;
 
 // Timezone configured for newsroom publications (IST: Asia/Kolkata)
 const EDITORIAL_TIMEZONE = 'Asia/Kolkata';
@@ -185,8 +186,9 @@ export const apiService = {
   async checkBackendHealth() {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch('http://localhost:5000/api/health', { signal: controller.signal });
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const rootUrl = RAW_API_BASE.replace(/\/api(\/v1)?\/?$/, '');
+      const res = await fetch(`${rootUrl}/api/health`, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (res.ok) {
         return await res.json();
