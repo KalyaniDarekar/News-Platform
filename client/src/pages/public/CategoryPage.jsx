@@ -4,6 +4,7 @@ import { ArrowLeft, RefreshCw, AlertCircle, TrendingUp, Sparkles, Filter, Chevro
 import ArticleCard from '../../components/editorial/ArticleCard';
 import AdBanner from '../../components/common/AdBanner';
 import EmptyState from '../../components/common/EmptyState';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 import apiService, { formatPublishTime } from '../../services/api';
 
 export default function CategoryPage() {

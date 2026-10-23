@@ -72,6 +72,7 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
   };
 
   if (dismissed) return null;
+  if (!ad || !ad.id) return null;
 
   // Dimensions & layout detection based on slot
   const isSidebar = slot === 'sidebarRectangle' || slot === 'article_sidebar_top';

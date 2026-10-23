@@ -5,6 +5,7 @@ import HeroPackage from '../../components/editorial/HeroPackage';
 import ArticleCard from '../../components/editorial/ArticleCard';
 import AdBanner from '../../components/common/AdBanner';
 import NewsletterBox from '../../components/editorial/NewsletterBox';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 import apiService, { formatPublishTime } from '../../services/api';
 
 function extractYouTubeId(url) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Play, Video, Eye, Clock, Share2, RefreshCw, AlertCircle, Calendar, ExternalLink, Bell, Check } from 'lucide-react';
 import apiService, { formatEditorialDate, formatPublishTime } from '../../services/api';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
 

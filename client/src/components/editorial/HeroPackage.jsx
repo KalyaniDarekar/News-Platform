@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Clock } from 'lucide-react';
 import { formatPublishTime } from '../../services/api';
 
 export default function HeroPackage({ 

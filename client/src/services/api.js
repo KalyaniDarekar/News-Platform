@@ -437,19 +437,8 @@ export const apiService = {
       console.warn(`[API Warning] getActiveAd("${targetCode}") failed:`, err.message);
     }
 
-    const fallback = AD_BANNERS[placementCode] || AD_BANNERS.headerLeaderboard;
-    return {
-      id: null,
-      title: fallback?.title || 'Partner with JANTA JOURNAL',
-      sponsor: fallback?.sponsor || 'JANTA JOURNAL Commercial Desk',
-      adType: 'image',
-      imageUrl: null,
-      adCode: null,
-      targetUrl: fallback?.url || '/advertise',
-      placementCode: targetCode,
-      dimensions: '970x90',
-      source: 'LIVE'
-    };
+    // When no active commercial advertisement is found, return null instead of fallback partnership promo
+    return null;
   },
 
   // Record advertisement impression telemetry
