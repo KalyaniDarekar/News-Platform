@@ -220,7 +220,8 @@ export const apiService = {
   },
 
   // Get video news articles (articles with youtube_url)
-  async getVideoNews({ limit = 12 } = {}) {
+  async getVideoNews(options = {}) {
+    const limit = typeof options === 'number' ? options : (options?.limit || 12);
     try {
       const res = await fetch(`${API_BASE}/articles?hasVideo=true&limit=${limit}`);
       if (res.ok) {
@@ -240,7 +241,8 @@ export const apiService = {
   },
 
   // Get trending & most-read news based on view telemetry
-  async getTrendingArticles({ limit = 8 } = {}) {
+  async getTrendingArticles(options = {}) {
+    const limit = typeof options === 'number' ? options : (options?.limit || 8);
     try {
       const res = await fetch(`${API_BASE}/articles?sort=views&limit=${limit}`);
       if (res.ok) {
@@ -257,7 +259,8 @@ export const apiService = {
   },
 
   // Get editorial featured stories
-  async getFeaturedArticles({ limit = 6 } = {}) {
+  async getFeaturedArticles(options = {}) {
+    const limit = typeof options === 'number' ? options : (options?.limit || 6);
     try {
       const res = await fetch(`${API_BASE}/articles?isFeatured=true&limit=${limit}`);
       if (res.ok) {

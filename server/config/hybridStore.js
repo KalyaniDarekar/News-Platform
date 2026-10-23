@@ -469,9 +469,11 @@ function seedInitialData(db) {
 export function translateMysqlToSqlite(sql) {
   let translated = sql
     .replace(/\bINSERT\s+IGNORE\s+INTO\b/gi, 'INSERT OR IGNORE INTO')
+    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+MINUTE\s*\)/gi, "datetime('now', '+$1 minutes')")
     .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '+$1 hours')")
     .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '+$1 days')")
     .replace(/DATE_ADD\s*\(\s*(?:CURDATE\(\)|date\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '+$1 days')")
+    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+MINUTE\s*\)/gi, "datetime('now', '-$1 minutes')")
     .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '-$1 hours')")
     .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '-$1 days')")
     .replace(/DATE_SUB\s*\(\s*(?:CURDATE\(\)|date\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '-$1 days')")

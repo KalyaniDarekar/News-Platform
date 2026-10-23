@@ -35,18 +35,8 @@ export async function syncProductionDatabase() {
       await conn.query('ALTER TABLE articles ADD COLUMN expiry_time DATETIME NULL AFTER publication_time');
     }
 
-    // 3. Purge demo data
-    console.log('[Sync] Purging demo data from MySQL...');
-    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
-    await conn.query('DELETE FROM article_tags');
-    await conn.query('DELETE FROM article_multimedia');
-    await conn.query('DELETE FROM article_revisions');
-    await conn.query('DELETE FROM articles');
-    await conn.query('DELETE FROM advertisements');
-    await conn.query('DELETE FROM advertiser_enquiries');
-    await conn.query('DELETE FROM youtube_videos');
-    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
-    console.log('[Sync] ✓ Purged demo data from MySQL');
+    // 3. Schema verified
+    console.log('[Sync] Database schema columns verified.');
 
     // 4. Upsert production users with exact credentials
     const pSuper = await bcrypt.hash('Admin@123', 10);

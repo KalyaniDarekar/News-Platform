@@ -3,7 +3,8 @@
 // Communicates with Express /api/v1 backend with Bearer JWT tokens.
 // ========================================================================
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = RAW_API_BASE.replace(/\/v1\/?$/, '');
 const TOKEN_KEY = 'auth_token';
 
 async function request(endpoint, options = {}) {
@@ -97,7 +98,7 @@ export const adminApi = {
   async publishArticle(id) {
     return request(`/articles/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ status: 'published' })
+      body: JSON.stringify({ status: 'published', expiryTime: null })
     });
   },
 
@@ -111,7 +112,7 @@ export const adminApi = {
   async approveAndPublishArticle(id) {
     return request(`/articles/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ status: 'published' })
+      body: JSON.stringify({ status: 'published', expiryTime: null })
     });
   },
 

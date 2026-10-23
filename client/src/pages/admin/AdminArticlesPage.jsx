@@ -127,7 +127,11 @@ export default function AdminArticlesPage({ defaultStatus }) {
       : 'Publish this article live to the public portal immediately?';
     if (!window.confirm(confirmPrompt)) return;
     try {
-      await adminApi.publishArticle(id);
+      if (isApproval) {
+        await adminApi.approveAndPublishArticle(id);
+      } else {
+        await adminApi.publishArticle(id);
+      }
       setActionFeedback(isApproval ? `Article #${id} approved and published live!` : `Article #${id} published live!`);
       setTimeout(() => setActionFeedback(null), 3000);
       fetchArticles();

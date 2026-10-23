@@ -620,6 +620,39 @@ describe('News Articles & Multilingual Publishing Suite', () => {
     });
     const checkBody = await checkRes.json();
     assert.equal(checkBody.data.status, 'published');
+
+    // Confirm it appears in public articles feed immediately without auth
+    const publicList = await fetch(`${BASE_URL}/articles?limit=20`);
+    const publicBody = await publicList.json();
+    const foundInPublic = publicBody.data.some(a => a.id === staffSubmittedArticleId);
+    assert.ok(foundInPublic, 'Approved article must appear immediately in public feed');
+  });
+
+  test('Workflow - Super Admin can directly create and publish an article visible on the public feed', async () => {
+    const directRes = await fetch(`${BASE_URL}/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        title: 'Super Admin Fast-Track Broadcast ' + Date.now(),
+        shortDescription: 'Super Admin directly published dispatch without prior review.',
+        articleBody: '<p>Direct broadcast content by Super Admin to verify live publishing pipeline.</p>',
+        categoryId: 1,
+        status: 'published'
+      })
+    });
+
+    const directBody = await directRes.json();
+    assert.equal(directRes.status, 201);
+    assert.equal(directBody.data.status, 'published');
+
+    // Verify presence in public feed
+    const publicFeed = await fetch(`${BASE_URL}/articles?limit=20`);
+    const publicJson = await publicFeed.json();
+    const inFeed = publicJson.data.some(a => a.id === directBody.data.id);
+    assert.ok(inFeed, 'Directly created and published article must immediately appear in public feed');
   });
 });
 

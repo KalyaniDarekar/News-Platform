@@ -142,10 +142,10 @@ export const articleService = {
 
     // ---- Visibility rules ----
     if (!currentUser) {
-      // Anonymous public: published only, not yet expired, not embargoed
+      // Anonymous public: published only, not yet expired, not embargoed (with 5-minute buffer for clock differences)
       whereClause +=
         " AND a.status = 'published'" +
-        ' AND (a.publication_time IS NULL OR a.publication_time <= NOW())' +
+        ' AND (a.publication_time IS NULL OR a.publication_time <= DATE_ADD(NOW(), INTERVAL 5 MINUTE))' +
         ' AND (a.expiry_time IS NULL OR a.expiry_time > NOW())';
     } else {
       // Authenticated staff: can filter by any status
@@ -358,7 +358,7 @@ export const articleService = {
 
     const whereParts = [
       "a.status = 'published'",
-      '(a.publication_time IS NULL OR a.publication_time <= NOW())',
+      '(a.publication_time IS NULL OR a.publication_time <= DATE_ADD(NOW(), INTERVAL 5 MINUTE))',
       '(a.expiry_time IS NULL OR a.expiry_time > NOW())'
     ];
     const params = [];
@@ -392,7 +392,7 @@ export const articleService = {
          LEFT JOIN categories c ON a.category_id = c.id
          LEFT JOIN users u ON a.author_id = u.id
          WHERE a.status = 'published'
-           AND (a.publication_time IS NULL OR a.publication_time <= NOW())
+           AND (a.publication_time IS NULL OR a.publication_time <= DATE_ADD(NOW(), INTERVAL 5 MINUTE))
            AND (a.expiry_time IS NULL OR a.expiry_time > NOW())`;
       const backfillParams = [];
       if (excludeIds.length > 0) {
@@ -539,13 +539,19 @@ export const articleService = {
     }
 
     // ---- Validate expiry is in the future ----
-    if (expiryTime) {
-      const expDate = new Date(expiryTime);
+    let safeExpiryTime = expiryTime;
+    if (safeExpiryTime) {
+      const expDate = new Date(safeExpiryTime);
       if (isNaN(expDate.getTime()) || expDate <= new Date()) {
-        const error = new Error('Expiry time must be a valid future date/time (UTC)');
-        error.statusCode = 400;
-        error.code = 'INVALID_EXPIRY';
-        throw error;
+        if (safeStatus === 'published') {
+          // If editor or super_admin directly creates and publishes, do not let an expired timestamp instantly hide the story
+          safeExpiryTime = null;
+        } else {
+          const error = new Error('Expiry time must be a valid future date/time (UTC)');
+          error.statusCode = 400;
+          error.code = 'INVALID_EXPIRY';
+          throw error;
+        }
       }
     }
 
@@ -585,7 +591,7 @@ export const articleService = {
           authorId, categoryId, safeStatus, priority,
           isFeatured ? 1 : 0, isBreaking ? 1 : 0, isSponsored ? 1 : 0, sponsorClient,
           readingTime, language,
-          toMySqlDateTime(scheduledPublicationTime), toMySqlDateTime(publicationTime), toMySqlDateTime(expiryTime),
+          toMySqlDateTime(scheduledPublicationTime), toMySqlDateTime(publicationTime), toMySqlDateTime(safeExpiryTime),
           metaTitle || title,
           metaDescription || shortDescription.slice(0, 300),
           metaKeywords, canonicalUrl, ogImage || featuredImage
@@ -742,12 +748,24 @@ export const articleService = {
 
     // ---- Publication timestamp ----
     let publicationTime = current.publication_time;
-    if (newStatus === 'published' && current.status !== 'published') {
-      publicationTime = new Date(); // first-time publish
+    if (newStatus === 'published' && (!publicationTime || current.status !== 'published')) {
+      publicationTime = new Date(); // first-time publish or ensure published article has a valid timestamp
     }
-    // Republishing an expired article resets expiry if new one not provided
-    if (newStatus === 'published' && current.status === 'expired' && updateData.expiryTime === undefined) {
-      expiryTime = null; // clear old expiry on republish unless a new one is set
+
+    // When an article is being published / approved live:
+    if (newStatus === 'published') {
+      if (updateData.expiryTime === undefined) {
+        // Quick publish/approval: if current expiry has already passed or article was expired/in_review, clear it
+        if (current.expiry_time && new Date(current.expiry_time) <= new Date()) {
+          expiryTime = null;
+        }
+        if (current.status === 'expired') {
+          expiryTime = null;
+        }
+      } else if (expiryTime && new Date(expiryTime) <= new Date()) {
+        // If an explicit expiry date is passed but is in the past, clear it rather than immediately killing the published story
+        expiryTime = null;
+      }
     }
 
     // ---- Slug ----

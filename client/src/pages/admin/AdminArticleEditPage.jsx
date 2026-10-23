@@ -131,7 +131,15 @@ export default function AdminArticleEditPage() {
           setScheduledPublicationTime(formatToLocalInput(a.scheduled_publication_time));
         }
         if (a.expiry_time) {
-          setExpiryTime(formatToLocalInput(a.expiry_time));
+          const parsedExp = parseUtcDate(a.expiry_time);
+          if (parsedExp && parsedExp.getTime() > Date.now()) {
+            setExpiryTime(formatToLocalInput(a.expiry_time));
+          } else if (a.status === 'expired') {
+            setExpiryTime(formatToLocalInput(a.expiry_time));
+          } else {
+            // Expiry date passed while in review or draft; clear it so publishing isn't blocked or immediately retired
+            setExpiryTime('');
+          }
         }
 
         setMetaTitle(a.meta_title || '');
@@ -151,12 +159,25 @@ export default function AdminArticleEditPage() {
     loadArticle();
   }, [id, isEditMode]);
 
-  // Format ISO date to datetime-local input string YYYY-MM-DDTHH:mm
+  // Robust UTC parser for database timestamps (ISO or SQL space-separated format)
+  const parseUtcDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (dateVal instanceof Date) return dateVal;
+    let s = String(dateVal).trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(s)) {
+      s = s.replace(' ', 'T') + 'Z';
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  // Format ISO/SQL date to datetime-local input string YYYY-MM-DDTHH:mm
   const formatToLocalInput = (isoStr) => {
     if (!isoStr) return '';
     try {
-      const d = new Date(isoStr);
-      if (isNaN(d.getTime())) return '';
+      const d = parseUtcDate(isoStr);
+      if (!d) return '';
       const pad = (n) => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch {
@@ -192,8 +213,9 @@ export default function AdminArticleEditPage() {
   // Expiry preset helper
   const setExpiryPreset = (hours) => {
     const d = new Date();
-    d.setHours(d.getHours() + hours);
-    setExpiryTime(formatToLocalInput(d.toISOString()));
+    d.setTime(d.getTime() + hours * 60 * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    setExpiryTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
   };
 
   // Tag helper
@@ -329,7 +351,7 @@ export default function AdminArticleEditPage() {
       sponsorClient: isSponsored ? (sponsorClient.trim() || null) : null,
       language,
       scheduledPublicationTime: targetStatus === 'scheduled' ? toUtcIso(scheduledPublicationTime) : null,
-      expiryTime: expiryTime ? toUtcIso(expiryTime) : null,
+      expiryTime: targetStatus === 'published' ? (expiryTime && new Date(toUtcIso(expiryTime)).getTime() > Date.now() ? toUtcIso(expiryTime) : null) : (expiryTime ? toUtcIso(expiryTime) : null),
       tags,
       metaTitle: metaTitle.trim() || null,
       metaDescription: metaDescription.trim() || null,
