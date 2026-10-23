@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Shield, CheckCircle, Award, ArrowUp } from 'lucide-react';
 import AdBanner from './AdBanner';
@@ -100,7 +100,7 @@ export default function Footer() {
               Standards & Partnerships
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
-              <li><Link to="/advertise" style={{ color: '#60a5fa', fontWeight: 700 }}>★ Direct Advertising & Media Kit</Link></li>
+              {/* <li><Link to="/advertise" style={{ color: '#60a5fa', fontWeight: 700 }}>★ Direct Advertising & Media Kit</Link></li> */}
               <li><Link to="/about" style={{ color: '#9ca3af' }}>About Our Newsroom</Link></li>
               <li><Link to="/contact" style={{ color: '#9ca3af' }}>Contact Bureaus & Tip-offs</Link></li>
               <li><Link to="/policies" style={{ color: '#9ca3af' }}>Corrections & Editorial Code</Link></li>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   Clock, Share2, Check, Volume2, ArrowLeft, ShieldCheck, 
@@ -7,7 +7,14 @@ import {
 } from 'lucide-react';
 import AdBanner from '../../components/common/AdBanner';
 import ArticleCard from '../../components/editorial/ArticleCard';
-import apiService, { formatEditorialDate, formatRelativeTime } from '../../services/api';
+import apiService, { 
+  formatEditorialDate, 
+  formatRelativeTime, 
+  getPublishTimeDetails, 
+  recordArticleRead, 
+  getArticleReadTime, 
+  formatReadTimeAgo 
+} from '../../services/api';
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -24,6 +31,25 @@ export default function ArticleDetailPage() {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [readTimeAgo, setReadTimeAgo] = useState('Just now');
+
+  // Track and live-update how many minutes ago the user read this article
+  useEffect(() => {
+    if (!article) return;
+    const identifier = article.slug || slug || String(article.id);
+    let readTime = getArticleReadTime(identifier);
+    if (!readTime) {
+      readTime = Date.now();
+      recordArticleRead(identifier);
+    }
+    setReadTimeAgo(formatReadTimeAgo(readTime) || 'Just now');
+
+    const timer = setInterval(() => {
+      setReadTimeAgo(formatReadTimeAgo(readTime) || 'Just now');
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, [article, slug]);
 
   useEffect(() => {
     async function loadArticle() {
@@ -274,10 +300,16 @@ export default function ArticleDetailPage() {
   const authorName = article.author_name || (article.author && article.author.name) || 'Vikramaditya Sharma';
   const authorTitle = article.author_designation || (article.author && article.author.title) || 'Senior Editorial Correspondent';
   const authorAvatar = article.author_avatar || (article.author && article.author.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
-  const publishedDate = article.publication_time 
-    ? formatEditorialDate(article.publication_time) 
-    : (article.published_at || article.publishedAt || 'October 2026');
-  const relativeTime = article.publication_time ? formatRelativeTime(article.publication_time) : 'Recent';
+  const pubDetails = getPublishTimeDetails(article.publication_time);
+  const exactPublishedTime = pubDetails.exact || (article.published_at || article.publishedAt || 'October 2026');
+  
+  // Newsroom rule:
+  // Under 1 hour: shows accurate relative time ('Just now', '1 min ago', 'X mins ago') AND exact time
+  // After 1 hour: shows exact time
+  const publishedDisplay = pubDetails.isWithinOneHour 
+    ? `${pubDetails.relative} (${pubDetails.exact})`
+    : exactPublishedTime;
+
   const readingTime = article.reading_time_minutes 
     ? `${article.reading_time_minutes} min read` 
     : (article.readingTime || '5 min read');
@@ -387,15 +419,31 @@ export default function ArticleDetailPage() {
             </div>
           </div>
 
-          {/* Date, Reading Time & Audio Preview */}
+          {/* Date, Reading Time & Live Reader Tracking */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.76rem', color: 'var(--color-ink-500)', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Calendar size={12} />
-                <span>Published: {publishedDate} ({relativeTime})</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <Calendar size={13} style={{ color: 'var(--color-ink-600)' }} />
+                <span>Published: <strong style={{ color: 'var(--color-ink-900)' }}>{publishedDisplay}</strong></span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
-                <Clock size={12} /> {readingTime}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Clock size={12} /> {readingTime}
+                </span>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  backgroundColor: '#f0fdf4',
+                  color: '#15803d',
+                  border: '1px solid #bbf7d0',
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '3px',
+                  fontWeight: 700,
+                  fontSize: '0.72rem'
+                }}>
+                  <Check size={12} style={{ color: '#16a34a' }} /> You read this: {readTimeAgo}
+                </span>
               </div>
             </div>
 
@@ -670,7 +718,7 @@ export default function ArticleDetailPage() {
               <AdBanner slot="sidebarRectangle" />
             </div>
 
-            {/* Direct Advertiser Desk Teaser */}
+            {/* Direct Advertiser Desk Teaser - Commented out
             <div style={{
               backgroundColor: '#fafbfc',
               border: '1px solid var(--color-ink-200)',
@@ -708,6 +756,7 @@ export default function ArticleDetailPage() {
                 Media Kit & Rate Inquiries →
               </Link>
             </div>
+            */}
 
             {/* Editorial Independence Assurance */}
             <div style={{

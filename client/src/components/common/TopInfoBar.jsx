@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, CloudSun, Calendar, ShieldCheck, Globe, BookOpen, X, Download } from 'lucide-react';
 import apiService, { formatEditorialDate } from '../../services/api';
@@ -111,7 +111,7 @@ export default function TopInfoBar() {
               flexWrap: 'wrap',
               width: 'auto'
             }}>
-              {/* Markets Ticker */}
+              {/* Markets Ticker (SENSEX & NIFTY) - Commented out
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -136,10 +136,11 @@ export default function TopInfoBar() {
                   </span>
                 ))}
               </div>
+              */}
 
               {/* Action Links */}
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
-                {/* e-Paper Interactive Modal Trigger */}
+                {/* e-Paper Interactive Modal Trigger - Commented out
                 <button
                   type="button"
                   onClick={() => setIsEpaperOpen(true)}
@@ -159,8 +160,9 @@ export default function TopInfoBar() {
                 >
                   <BookOpen size={12} style={{ color: 'var(--color-breaking)' }} /> e-Paper
                 </button>
+                */}
 
-                {/* Direct Advertise Link */}
+                {/* Direct Advertise Link - Commented out
                 <Link
                   to="/advertise"
                   style={{
@@ -178,6 +180,7 @@ export default function TopInfoBar() {
                 >
                   Advertise
                 </Link>
+                */}
 
                 {/* Newsroom Admin Link */}
                 <Link 
@@ -205,7 +208,7 @@ export default function TopInfoBar() {
         </div>
       </div>
 
-      {/* e-Paper Reader Modal */}
+      {/* e-Paper Reader Modal - Commented out
       {isEpaperOpen && (
         <div style={{
           position: 'fixed',
@@ -316,6 +319,7 @@ export default function TopInfoBar() {
           </div>
         </div>
       )}
+      */}
     </>
   );
 }

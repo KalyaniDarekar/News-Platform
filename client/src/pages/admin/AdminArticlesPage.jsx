@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
 import { useAuth } from '../../context/AuthContext';
+import { formatPublishTime } from '../../services/api';
 
 export default function AdminArticlesPage({ defaultStatus }) {
   const [articles, setArticles] = useState([]);
@@ -442,6 +443,11 @@ export default function AdminArticlesPage({ defaultStatus }) {
                         >
                           {art.title}
                         </Link>
+                        {art.publication_time && art.status === 'published' && (
+                          <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 600, marginTop: '0.15rem' }}>
+                            Published: {formatPublishTime(art.publication_time)}
+                          </div>
+                        )}
                       </td>
 
                       {/* Category */}

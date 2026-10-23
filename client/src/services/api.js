@@ -15,11 +15,30 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 // Timezone configured for newsroom publications (IST: Asia/Kolkata)
 const EDITORIAL_TIMEZONE = 'Asia/Kolkata';
 
+/**
+ * Robust UTC Date parser.
+ * Handles MySQL DATETIME ("YYYY-MM-DD HH:MM:SS"), ISO strings with or without Z,
+ * ensuring timestamps are parsed consistently across all browsers without timezone drift.
+ */
+export const parseAsUtcDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+  let str = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(str)) {
+    str = str.replace(' ', 'T');
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str) && !str.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(str)) {
+    str = `${str}Z`;
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 export const formatEditorialDate = (dateStr, options = {}) => {
   if (!dateStr) return '';
   try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
+    const date = parseAsUtcDate(dateStr);
+    if (!date) return String(dateStr);
 
     const defaultOptions = {
       timeZone: EDITORIAL_TIMEZONE,
@@ -28,31 +47,136 @@ export const formatEditorialDate = (dateStr, options = {}) => {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: true
     };
 
     const formatted = new Intl.DateTimeFormat('en-IN', { ...defaultOptions, ...options }).format(date);
     return `${formatted} IST`;
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 };
 
 export const formatRelativeTime = (dateStr) => {
   if (!dateStr) return '';
   try {
-    const date = new Date(dateStr);
+    const date = parseAsUtcDate(dateStr);
+    if (!date) return String(dateStr);
+
     const now = new Date();
     const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffSec < 60) return 'Just now';
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+    const mins = Math.floor(diffSec / 60);
+    if (mins === 1) return '1 min ago';
+    if (mins < 60) return `${mins} mins ago`;
+
+    const hours = Math.floor(diffSec / 3600);
+    if (hours === 1) return '1 hr ago';
+    if (hours < 24) return `${hours} hrs ago`;
+
+    const days = Math.floor(diffSec / 86400);
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
 
     return formatEditorialDate(dateStr, { hour: undefined, minute: undefined });
   } catch {
-    return dateStr;
+    return String(dateStr);
+  }
+};
+
+/**
+ * Editorial Smart Publish Time:
+ * - If published less than 1 hour ago (< 3600s): Shows accurate relative time ('Just now', '1 min ago', 'X mins ago')
+ * - After 1 hour (>= 3600s): Shows exact formatted time in IST (e.g. '23 Oct 2026, 10:25 PM IST')
+ */
+export const getPublishTimeDetails = (dateStr) => {
+  if (!dateStr) return { display: '', relative: '', exact: '', isWithinOneHour: false };
+  const date = parseAsUtcDate(dateStr);
+  if (!date) return { display: String(dateStr), relative: '', exact: String(dateStr), isWithinOneHour: false };
+
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const exact = formatEditorialDate(date);
+
+  if (diffSec < 3600) {
+    let relative = 'Just now';
+    if (diffSec >= 60) {
+      const mins = Math.floor(diffSec / 60);
+      relative = mins === 1 ? '1 min ago' : `${mins} mins ago`;
+    }
+    return {
+      display: relative,
+      relative,
+      exact,
+      isWithinOneHour: true
+    };
+  }
+
+  return {
+    display: exact,
+    relative: formatRelativeTime(date),
+    exact,
+    isWithinOneHour: false
+  };
+};
+
+export const formatPublishTime = (dateStr) => {
+  return getPublishTimeDetails(dateStr).display;
+};
+
+// ========================================================================
+// Reader History Tracking ("How many min ago we read the article")
+// ========================================================================
+const READ_STORAGE_KEY = 'bc_read_history';
+
+export const recordArticleRead = (identifier) => {
+  if (!identifier) return;
+  try {
+    const existing = JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || '{}');
+    existing[identifier] = Date.now();
+    // Maintain max 150 items
+    const keys = Object.keys(existing);
+    if (keys.length > 150) {
+      const oldest = keys.sort((a, b) => existing[a] - existing[b])[0];
+      delete existing[oldest];
+    }
+    localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(existing));
+  } catch {
+    // LocalStorage quota or access denied
+  }
+};
+
+export const getArticleReadTime = (identifier) => {
+  if (!identifier) return null;
+  try {
+    const existing = JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || '{}');
+    return existing[identifier] || null;
+  } catch {
+    return null;
+  }
+};
+
+export const formatReadTimeAgo = (timestamp) => {
+  if (!timestamp) return null;
+  try {
+    const time = typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime();
+    if (isNaN(time)) return null;
+    const diffSec = Math.floor((Date.now() - time) / 1000);
+
+    if (diffSec < 60) return 'Just now';
+    const mins = Math.floor(diffSec / 60);
+    if (mins === 1) return '1 min ago';
+    if (mins < 60) return `${mins} mins ago`;
+
+    const hours = Math.floor(diffSec / 3600);
+    if (hours === 1) return '1 hr ago';
+    if (hours < 24) return `${hours} hrs ago`;
+
+    const days = Math.floor(diffSec / 86400);
+    return days === 1 ? '1 day ago' : `${days} days ago`;
+  } catch {
+    return null;
   }
 };
 

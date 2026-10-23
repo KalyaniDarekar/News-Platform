@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Bell, Sparkles, Check, Mail, X } from 'lucide-react';
 import apiService from '../../services/api';
@@ -231,9 +231,9 @@ export default function Masthead({ onSearchClick }) {
                     <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Check size={14} color="#15803d" /> Morning Executive Brief delivered at 06:30 IST daily
                     </li>
-                    <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Check size={14} color="#15803d" /> Full digital replica access to 16-page daily print e-Paper
-                    </li>
+                    </li> */}
                   </ul>
 
                   <form onSubmit={handleSubscribeSubmit} style={{ marginTop: '1.5rem' }}>

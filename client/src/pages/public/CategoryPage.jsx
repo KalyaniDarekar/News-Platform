@@ -4,8 +4,7 @@ import { ArrowLeft, RefreshCw, AlertCircle, TrendingUp, Sparkles, Filter, Chevro
 import ArticleCard from '../../components/editorial/ArticleCard';
 import AdBanner from '../../components/common/AdBanner';
 import EmptyState from '../../components/common/EmptyState';
-import SkeletonLoader from '../../components/common/SkeletonLoader';
-import apiService, { formatRelativeTime } from '../../services/api';
+import apiService, { formatPublishTime } from '../../services/api';
 
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -303,7 +302,7 @@ export default function CategoryPage() {
                       {story.title}
                     </Link>
                     <div style={{ fontSize: '0.7rem', color: 'var(--color-ink-500)', marginTop: '0.2rem' }}>
-                      {formatRelativeTime(story.publication_time)}
+                      {formatPublishTime(story.publication_time)}
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Video, Eye, Clock, Share2, RefreshCw, AlertCircle, Calendar, ExternalLink, Bell, Check } from 'lucide-react';
-import apiService, { formatEditorialDate, formatRelativeTime } from '../../services/api';
+import apiService, { formatEditorialDate, formatPublishTime } from '../../services/api';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 function extractYouTubeId(url) {
@@ -239,11 +238,7 @@ export default function VideoNewsPage() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.8rem', color: '#9ca3af', flexWrap: 'wrap' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Calendar size={13} /> {formatEditorialDate(activeVideo?.published_at || activeVideo?.publication_time)}
-                </span>
-                <span>•</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Clock size={13} /> {formatRelativeTime(activeVideo?.published_at || activeVideo?.publication_time)}
+                  <Calendar size={13} /> {formatPublishTime(activeVideo?.published_at || activeVideo?.publication_time)}
                 </span>
               </div>
 
@@ -366,7 +361,7 @@ export default function VideoNewsPage() {
                 </div>
 
                 <div style={{ fontSize: '0.74rem', color: '#9ca3af', display: 'flex', justifyContent: 'space-between', marginTop: 'auto' }}>
-                  <span>{formatRelativeTime(item.published_at || item.publication_time)}</span>
+                  <span>{formatPublishTime(item.published_at || item.publication_time)}</span>
                   <span>Official YouTube Embed</span>
                 </div>
               </div>

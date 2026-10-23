@@ -1,12 +1,11 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Video, TrendingUp, Clock, Eye, AlertCircle, RefreshCw, Flame, Play } from 'lucide-react';
 import HeroPackage from '../../components/editorial/HeroPackage';
 import ArticleCard from '../../components/editorial/ArticleCard';
 import AdBanner from '../../components/common/AdBanner';
 import NewsletterBox from '../../components/editorial/NewsletterBox';
-import SkeletonLoader from '../../components/common/SkeletonLoader';
-import apiService, { formatRelativeTime } from '../../services/api';
+import apiService, { formatPublishTime } from '../../services/api';
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -248,7 +247,7 @@ export default function HomePage() {
                         {story.title}
                       </Link>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.7rem', color: 'var(--color-ink-500)', marginTop: '0.15rem' }}>
-                        <span>{formatRelativeTime(story.publication_time)}</span>
+                        <span>{formatPublishTime(story.publication_time)}</span>
                         <span>•</span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
                           <Eye size={11} /> {story.views ? Number(story.views).toLocaleString() : '1.2k'} reads
@@ -493,7 +492,7 @@ export default function HomePage() {
                     <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
                       <span>By {activeVideo.author_name || 'Chronicle Investigations Desk'}</span>
                       <span>•</span>
-                      <span>{formatRelativeTime(activeVideo.publication_time)}</span>
+                      <span>{formatPublishTime(activeVideo.publication_time)}</span>
                     </div>
                   </div>
 
@@ -548,7 +547,7 @@ export default function HomePage() {
                       {video.title}
                     </h4>
                     <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
-                      {formatRelativeTime(video.publication_time)}
+                      {formatPublishTime(video.publication_time)}
                     </span>
                   </div>
                 ))}

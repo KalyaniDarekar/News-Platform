@@ -110,7 +110,7 @@ export default function App() {
             <Route path="article/:slug" element={<ArticleDetailPage />} />
             <Route path="search" element={<SearchResultsPage />} />
             <Route path="videos" element={<VideoNewsPage />} />
-            <Route path="advertise" element={<AdvertisePage />} />
+            {/* <Route path="advertise" element={<AdvertisePage />} /> */}
             <Route path="about" element={<AboutUsPage />} />
             <Route path="contact" element={<ContactUsPage />} />
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />

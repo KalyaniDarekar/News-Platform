@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock } from 'lucide-react';
-import { formatRelativeTime } from '../../services/api';
+import { formatPublishTime } from '../../services/api';
 
 export default function HeroPackage({ 
   leadStory, 
@@ -37,7 +36,7 @@ export default function HeroPackage({
   const leadAuthorName = lead.author_name || (lead.author && lead.author.name) || 'Staff Reporter';
   const leadAuthorTitle = lead.author_designation || (lead.author && lead.author.title) || 'Editorial Bureau';
   const leadAuthorAvatar = lead.author_avatar || (lead.author && lead.author.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
-  const leadPublishedAt = lead.publication_time ? formatRelativeTime(lead.publication_time) : (lead.published_at || lead.publishedAt || 'Today');
+  const leadPublishedAt = lead.publication_time ? formatPublishTime(lead.publication_time) : (lead.published_at || lead.publishedAt || 'Today');
 
   return (
     <section style={{ paddingTop: '1.5rem', paddingBottom: '2.5rem' }}>
@@ -152,7 +151,7 @@ export default function HeroPackage({
             const sSummary = story.short_description || story.summary;
             const sReading = story.reading_time_minutes ? `${story.reading_time_minutes} min read` : (story.readingTime || '4 min read');
             const sAuthor = story.author_name || (story.author && story.author.name) || 'Chronicle Bureau';
-            const sDate = story.publication_time ? formatRelativeTime(story.publication_time) : (story.published_at || 'Recent');
+            const sDate = story.publication_time ? formatPublishTime(story.publication_time) : (story.published_at || 'Recent');
 
             return (
               <article key={story.id || story.slug} className="editorial-card-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--color-ink-200)' }}>
@@ -215,7 +214,7 @@ export default function HeroPackage({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {wire.map((item) => {
-                const wTime = item.publication_time ? formatRelativeTime(item.publication_time) : (item.time || 'Live');
+                const wTime = item.publication_time ? formatPublishTime(item.publication_time) : (item.time || 'Live');
                 const wCategory = item.category_name || item.category || 'DISPATCH';
                 return (
                   <div key={item.id || item.slug} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingBottom: '0.65rem', borderBottom: '1px dashed var(--color-ink-200)' }}>

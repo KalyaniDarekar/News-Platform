@@ -27,7 +27,8 @@ export const getDbPool = () => {
         queueLimit: 0,
         enableKeepAlive: true,
         keepAliveInitialDelay: 10000,
-        charset: 'utf8mb4'
+        charset: 'utf8mb4',
+        timezone: 'Z'
       };
 
       if (config.db.ssl) {

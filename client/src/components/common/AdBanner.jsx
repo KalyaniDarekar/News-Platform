@@ -104,7 +104,7 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '380px', marginBottom: '0.2rem', fontSize: '0.62rem', color: '#94a3b8' }}>
           <span>ADVERTISEMENT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Link to="/advertise" style={{ color: '#60a5fa', textDecoration: 'none' }}>Advertise With Us</Link>
+            {/* <Link to="/advertise" style={{ color: '#60a5fa', textDecoration: 'none' }}>Advertise With Us</Link> */}
             <button
               type="button"
               onClick={(e) => {

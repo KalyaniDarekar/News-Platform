@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Play } from 'lucide-react';
-import { formatRelativeTime } from '../../services/api';
+import { Clock, Play, Check } from 'lucide-react';
+import { formatPublishTime, getArticleReadTime, formatReadTimeAgo } from '../../services/api';
 
 export default function ArticleCard({ 
   article, 
@@ -14,8 +14,10 @@ export default function ArticleCard({
   const categorySlug = article.category_slug || article.categorySlug || 'national';
   const authorName = article.author_name || (article.author && article.author.name) || 'Chronicle Bureau';
   const publishedAt = article.publication_time 
-    ? formatRelativeTime(article.publication_time) 
+    ? formatPublishTime(article.publication_time) 
     : (article.published_at || article.publishedAt || 'Recent');
+  const readTimestamp = getArticleReadTime(article.slug || article.id);
+  const readTimeAgo = readTimestamp ? formatReadTimeAgo(readTimestamp) : null;
   const readingTime = article.reading_time_minutes 
     ? `${article.reading_time_minutes} min read` 
     : (article.readingTime || '4 min read');
@@ -69,10 +71,16 @@ export default function ArticleCard({
             </p>
           )}
 
-          <div className="byline-text" style={{ marginTop: '0.35rem' }}>
+          <div className="byline-text" style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{authorName}</strong></span>
             <span>•</span>
             <span>{publishedAt}</span>
+            {readTimeAgo && (
+              <>
+                <span>•</span>
+                <span style={{ color: '#047857', fontWeight: 700 }}>Read: {readTimeAgo}</span>
+              </>
+            )}
           </div>
         </div>
       </article>
@@ -178,10 +186,16 @@ export default function ArticleCard({
         </p>
       )}
 
-      <div className="byline-text" style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+      <div className="byline-text" style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
         <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{authorName}</strong></span>
         <span>•</span>
         <span>{publishedAt}</span>
+        {readTimeAgo && (
+          <>
+            <span>•</span>
+            <span style={{ color: '#047857', fontWeight: 700 }}>Read: {readTimeAgo}</span>
+          </>
+        )}
       </div>
     </article>
   );
