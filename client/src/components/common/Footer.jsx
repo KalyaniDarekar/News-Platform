@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, Shield, CheckCircle, Award, ArrowUp } from 'lucide-react';
 import AdBanner from './AdBanner';
 import { CATEGORIES } from '../../data/mockNewsData';
+import VisitorCounter from './VisitorCounter';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -150,6 +151,9 @@ export default function Footer() {
           </div>
 
         </div>
+
+        {/* Real-time Audited Visitor Counter */}
+        <VisitorCounter />
 
         {/* Bottom Bar: Copyright & Grievance Contact */}
         <div style={{

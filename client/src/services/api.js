@@ -555,6 +555,42 @@ export const apiService = {
     }
   },
 
+  // Public visitor counter: Get current count
+  async getVisitorCount() {
+    try {
+      const res = await fetch(`${API_BASE}/analytics/visitor-count`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && typeof json.count === 'number') {
+          return json.count;
+        }
+      }
+    } catch {
+      // Fallback handled locally
+    }
+    return null;
+  },
+
+  // Public visitor counter: Increment count (increases after baseline 5000)
+  async incrementVisitorCount(currentCount = 0) {
+    try {
+      const res = await fetch(`${API_BASE}/analytics/visitor-count/increment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentCount })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && typeof json.count === 'number') {
+          return json.count;
+        }
+      }
+    } catch {
+      // Fallback handled locally
+    }
+    return null;
+  },
+
   // Get safe public integration settings (GA4, AdSense, YouTube channel)
   async getPublicSettings() {
     try {

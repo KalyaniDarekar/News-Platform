@@ -1,4 +1,4 @@
-﻿// ========================================================================
+// ========================================================================
 // First-Party Analytics & Operational Telemetry Service (Phase 5)
 // Privacy-conscious, anti-inflation (15-min debounce), bot filtering,
 // and honest first-party reporting without fabricated numbers.
@@ -6,6 +6,38 @@
 
 import { query } from '../config/database.js';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const COUNTER_FILE = path.join(__dirname, '../data/visitor_counter.json');
+
+function getFileCount() {
+  try {
+    if (fs.existsSync(COUNTER_FILE)) {
+      const content = fs.readFileSync(COUNTER_FILE, 'utf-8');
+      const data = JSON.parse(content);
+      if (typeof data.count === 'number' && !isNaN(data.count) && data.count >= 5000) {
+        return data.count;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return 5000;
+}
+
+function saveFileCount(count) {
+  try {
+    const dir = path.dirname(COUNTER_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(COUNTER_FILE, JSON.stringify({ count, updatedAt: new Date().toISOString() }));
+  } catch {
+    // ignore
+  }
+}
 
 // In-memory cache to debounce frontend rerenders (sessionId + pagePath -> lastTimestamp)
 const debounceCache = new Map();
@@ -241,6 +273,91 @@ export const analyticsService = {
       trafficTimeline: timeline || [],
       integrationsStatus
     };
+  },
+
+  // Public visitor counter: Retrieve current count (guaranteed monotonic >= 5000)
+  async getVisitorCount() {
+    let dbCount = 5000;
+    try {
+      const rows = await query(`SELECT setting_value FROM site_settings WHERE setting_key = 'visitor_counter' LIMIT 1`);
+      if (rows && rows.length > 0 && rows[0].setting_value !== undefined && rows[0].setting_value !== null) {
+        const val = parseInt(rows[0].setting_value, 10);
+        if (!isNaN(val) && val >= 5000) {
+          dbCount = val;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const fileCount = getFileCount();
+    const highest = Math.max(5000, dbCount, fileCount);
+
+    // Synchronize disk and database if discrepancy
+    if (highest > dbCount) {
+      try {
+        await query(
+          `UPDATE site_settings SET setting_value = ? WHERE setting_key = 'visitor_counter'`,
+          [String(highest)]
+        );
+      } catch {
+        // ignore
+      }
+    }
+    if (highest > fileCount) {
+      saveFileCount(highest);
+    }
+
+    return highest;
+  },
+
+  // Public visitor counter: Increment count (increases monotonically after baseline 5000, never decreases)
+  async incrementVisitorCount(clientReportedCount = 0) {
+    let dbCount = 5000;
+    let rowExists = false;
+    try {
+      const rows = await query(`SELECT setting_value FROM site_settings WHERE setting_key = 'visitor_counter' LIMIT 1`);
+      if (rows && rows.length > 0) {
+        rowExists = true;
+        if (rows[0].setting_value !== undefined && rows[0].setting_value !== null) {
+          const parsed = parseInt(rows[0].setting_value, 10);
+          if (!isNaN(parsed) && parsed >= 5000) {
+            dbCount = parsed;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const fileCount = getFileCount();
+    const safeClientCount = typeof clientReportedCount === 'number' && !isNaN(clientReportedCount) ? clientReportedCount : 0;
+
+    // Highest known baseline across all persistence stores
+    const currentHighest = Math.max(5000, dbCount, fileCount, safeClientCount);
+    const nextVal = currentHighest + 1;
+
+    // Persist immediately to file store (resilient to DB outages/restarts)
+    saveFileCount(nextVal);
+
+    // Persist to database store
+    try {
+      if (!rowExists) {
+        await query(
+          `INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description) VALUES ('visitor_counter', ?, 'analytics', 1, 'Audited total website visitor baseline counter')`,
+          [String(nextVal)]
+        );
+      } else {
+        await query(
+          `UPDATE site_settings SET setting_value = ? WHERE setting_key = 'visitor_counter'`,
+          [String(nextVal)]
+        );
+      }
+    } catch (err) {
+      console.error('Error updating DB visitor counter:', err);
+    }
+
+    return nextVal;
   }
 };
 

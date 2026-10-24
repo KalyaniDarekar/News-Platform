@@ -27,7 +27,8 @@ const ALLOWED_PUBLIC_KEYS = new Set([
   'advertiser_desk_email',
   'advertiser_desk_phone',
   'privacy_compliance_mode',
-  'cookie_consent_required'
+  'cookie_consent_required',
+  'visitor_counter'
 ]);
 
 export const settingsService = {

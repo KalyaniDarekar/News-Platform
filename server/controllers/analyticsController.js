@@ -59,6 +59,33 @@ export const analyticsController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  // GET /api/v1/analytics/visitor-count (Public)
+  async getVisitorCount(req, res, next) {
+    try {
+      const count = await analyticsService.getVisitorCount();
+      res.json({
+        success: true,
+        count
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // POST /api/v1/analytics/visitor-count/increment (Public)
+  async incrementVisitorCount(req, res, next) {
+    try {
+      const clientCount = req.body?.currentCount ? parseInt(req.body.currentCount, 10) : 0;
+      const count = await analyticsService.incrementVisitorCount(clientCount);
+      res.json({
+        success: true,
+        count
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 };
 

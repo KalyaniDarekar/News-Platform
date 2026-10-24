@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, CloudSun, Calendar, ShieldCheck, Globe, BookOpen, X, Download } from 'lucide-react';
+import { TrendingUp, TrendingDown, CloudSun, Calendar, ShieldCheck, Globe, BookOpen, X, Download, MapPin } from 'lucide-react';
 import apiService, { formatEditorialDate } from '../../services/api';
+import locationService from '../../services/locationService';
 
 export default function TopInfoBar() {
-  const [edition, setEdition] = useState('India (New Delhi)');
+  const [edition, setEdition] = useState('Detecting Location...');
   const [currentDate, setCurrentDate] = useState('');
   const [isEpaperOpen, setIsEpaperOpen] = useState(false);
   const [marketData, setMarketData] = useState([]);
@@ -23,7 +24,33 @@ export default function TopInfoBar() {
     setCurrentDate(formatted);
 
     setMarketData(apiService.getMarketData());
-    setWeatherData(apiService.getWeatherData());
+
+    // 1. Instantly use cached location/weather if available to prevent any layout delay
+    const cached = locationService.getCachedLocationAndWeather();
+    if (cached) {
+      setWeatherData(cached);
+      if (cached.city) {
+        setEdition(`${cached.city} (${cached.region || cached.country || 'Local'})`);
+      }
+    } else {
+      setWeatherData(apiService.getWeatherData());
+      setEdition('India (National)');
+    }
+
+    // 2. Fetch live real-time location and weather for current user
+    let isMounted = true;
+    locationService.getUserLocationAndWeather().then(liveData => {
+      if (isMounted && liveData && liveData.city) {
+        setWeatherData(liveData);
+        setEdition(`${liveData.city} (${liveData.region || liveData.country || 'Local'})`);
+      }
+    }).catch(() => {
+      // Fallback already active
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -51,16 +78,17 @@ export default function TopInfoBar() {
                 <span>{currentDate || 'Saturday, October 17, 2026'}</span>
               </span>
 
-              {/* Edition Switcher */}
+              {/* Live Location / Edition Switcher */}
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.25rem',
+                gap: '0.3rem',
                 backgroundColor: 'rgba(0,0,0,0.03)',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '3px'
+                padding: '0.15rem 0.5rem',
+                borderRadius: '3px',
+                border: '1px solid rgba(0,0,0,0.06)'
               }}>
-                <Globe size={12} style={{ color: 'var(--color-ink-500)', flexShrink: 0 }} />
+                <MapPin size={12} style={{ color: weatherData?.isLive ? '#10b981' : 'var(--color-ink-500)', flexShrink: 0 }} />
                 <select
                   value={edition}
                   onChange={(e) => setEdition(e.target.value)}
@@ -76,18 +104,28 @@ export default function TopInfoBar() {
                   }}
                   aria-label="Editorial edition selector"
                 >
-                  <option value="India (New Delhi)">India (New Delhi)</option>
+                  <option value={edition}>{edition} {weatherData?.isLive ? '(Your Location)' : ''}</option>
+                  <option value="India (National)">India (National)</option>
+                  <option value="New Delhi Bureau">New Delhi Bureau</option>
+                  <option value="Mumbai Capital">Mumbai Capital</option>
+                  <option value="Bengaluru & South">Bengaluru & South</option>
                   <option value="Global Edition">International (Global)</option>
-                  <option value="Bengaluru Tech">Bengaluru & South</option>
-                  <option value="Mumbai Financial">Mumbai Capital</option>
                 </select>
               </div>
 
-              {/* Weather & Air Quality */}
+              {/* Weather & Air Quality for Current Location */}
               {weatherData && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', whiteSpace: 'nowrap' }}>
+                <div 
+                  title={weatherData.condition ? `Real-time weather: ${weatherData.condition} in ${weatherData.city}` : undefined}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', whiteSpace: 'nowrap' }}
+                >
                   <CloudSun size={13} style={{ color: '#d97706', flexShrink: 0 }} />
-                  <span>{weatherData.city} {weatherData.temp}</span>
+                  <span style={{ fontWeight: 600 }}>{weatherData.city} {weatherData.temp}</span>
+                  {weatherData.condition && (
+                    <span style={{ fontSize: '0.68rem', color: 'var(--color-ink-500)' }}>
+                      • {weatherData.condition}
+                    </span>
+                  )}
                   <span style={{ 
                     fontSize: '0.65rem', 
                     backgroundColor: '#fef3c7', 
