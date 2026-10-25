@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    JANTA JOURNAL — EDITORIAL DESIGN SYSTEM & FOUNDATION TOKENS
    Inspired by premier international & national news publications of record.
    ========================================================================== */
@@ -767,9 +767,36 @@ img, video, iframe, embed, object {
   max-width: 100%;
   height: auto;
 }
-
 iframe {
   max-width: 100%;
 }
+
+/* Animations & Weather Hub Styles */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.15); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.weather-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+.weather-modal-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.weather-modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
 
 
