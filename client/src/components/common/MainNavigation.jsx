@@ -48,7 +48,7 @@ export default function MainNavigation({ onSearchClick }) {
     <nav style={{ backgroundColor: 'var(--color-paper)', borderBottom: '1px solid var(--color-ink-200)', position: 'sticky', top: 0, zIndex: 90 }} aria-label="Main Editorial Navigation">
       <div className="container-editorial">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          
+
           {/* Mobile Hamburger Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button
@@ -80,7 +80,7 @@ export default function MainNavigation({ onSearchClick }) {
             padding: '0.5rem 0',
             scrollbarWidth: 'none'
           }} className="desktop-nav-scroll">
-            
+
             <NavLink
               to="/"
               end
@@ -172,11 +172,11 @@ export default function MainNavigation({ onSearchClick }) {
           whiteSpace: 'nowrap',
           scrollbarWidth: 'none'
         }}>
-          <span style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '0.25rem', 
-            fontWeight: 800, 
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            fontWeight: 800,
             color: 'var(--color-breaking)',
             letterSpacing: '0.06em',
             textTransform: 'uppercase'
@@ -212,7 +212,7 @@ export default function MainNavigation({ onSearchClick }) {
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: 0,
@@ -225,7 +225,7 @@ export default function MainNavigation({ onSearchClick }) {
           }}
           onClick={() => setMobileMenuOpen(false)}
         >
-          <div 
+          <div
             style={{
               width: '85%',
               maxWidth: '340px',
@@ -249,8 +249,8 @@ export default function MainNavigation({ onSearchClick }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 onClick={() => setMobileMenuOpen(false)}
                 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-breaking)', padding: '0.35rem 0' }}
               >
@@ -303,7 +303,7 @@ export default function MainNavigation({ onSearchClick }) {
               <Link to="/about" onClick={() => setMobileMenuOpen(false)}>About Our Newsroom</Link>
               <Link to="/contact" onClick={() => setMobileMenuOpen(false)}>Contact Bureaus</Link>
               <Link to="/policies" onClick={() => setMobileMenuOpen(false)}>Editorial & Correction Policies</Link>
-              <Link to="/admin" onClick={() => setMobileMenuOpen(false)} style={{ color: '#1e40af', fontWeight: 700 }}>Staff CMS Login</Link>
+              <Link to="/admin/login" onClick={() => setMobileMenuOpen(false)} style={{ color: '#1e40af', fontWeight: 700 }}>Staff CMS Login</Link>
             </div>
           </div>
         </div>
