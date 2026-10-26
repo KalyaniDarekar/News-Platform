@@ -7,7 +7,7 @@ export default function Masthead({ onSearchClick }) {
   const [siteSettings, setSiteSettings] = useState({
     site_name: 'JANTA JOURNAL',
     site_tagline: 'Journal of Strategic Affairs, Economy, Science & Public Conscience',
-    site_motto: 'Veritas et Libertas • Est. 1928'
+    site_motto: 'Pune, India • Est. 2026'
   });
   const [isSubscribeOpen, setIsSubscribeOpen] = useState(false);
   const [subEmail, setSubEmail] = useState('');
@@ -46,15 +46,15 @@ export default function Masthead({ onSearchClick }) {
     <>
       <header style={{ backgroundColor: 'var(--color-paper)', borderBottom: '1px solid var(--color-ink-200)' }}>
         <div className="container-editorial" style={{ paddingTop: '1.25rem', paddingBottom: '1rem' }}>
-          
+
           <div className="masthead-layout">
-            
+
             {/* Left Masthead Pillar: Motto & Heritage Badge */}
             <div className="masthead-pillar-left">
-              <span style={{ 
-                fontSize: '0.74rem', 
-                fontFamily: 'var(--font-serif)', 
-                fontStyle: 'italic', 
+              <span style={{
+                fontSize: '0.74rem',
+                fontFamily: 'var(--font-serif)',
+                fontStyle: 'italic',
                 color: 'var(--color-ink-500)',
                 letterSpacing: '0.02em'
               }}>
@@ -62,7 +62,7 @@ export default function Masthead({ onSearchClick }) {
               </span>
               <span className="hidden-tablet" style={{ color: 'var(--color-ink-300)' }}>•</span>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-ink-700)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                National Daily of Record
+                National Daily Records
               </span>
             </div>
 
@@ -70,10 +70,10 @@ export default function Masthead({ onSearchClick }) {
             <div className="masthead-center-brand">
               <Link to="/" style={{ textDecoration: 'none' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
-                  <span style={{ 
-                    fontFamily: 'var(--font-masthead)', 
-                    fontSize: 'clamp(1.75rem, 5.5vw, 3.25rem)', 
-                    fontWeight: 900, 
+                  <span style={{
+                    fontFamily: 'var(--font-masthead)',
+                    fontSize: 'clamp(1.75rem, 5.5vw, 3.25rem)',
+                    fontWeight: 900,
                     letterSpacing: '0.04em',
                     color: 'var(--color-ink-950)',
                     lineHeight: 1
@@ -82,13 +82,13 @@ export default function Masthead({ onSearchClick }) {
                   </span>
                 </div>
               </Link>
-              <div style={{ 
-                fontSize: 'clamp(0.68rem, 1.8vw, 0.74rem)', 
-                letterSpacing: '0.1em', 
-                textTransform: 'uppercase', 
-                fontWeight: 700, 
+              <div style={{
+                fontSize: 'clamp(0.68rem, 1.8vw, 0.74rem)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
                 color: 'var(--color-ink-600)',
-                marginTop: '0.35rem' 
+                marginTop: '0.35rem'
               }}>
                 {siteSettings.site_tagline}
               </div>
@@ -96,7 +96,7 @@ export default function Masthead({ onSearchClick }) {
 
             {/* Right: Search, Subscribe & Member Access */}
             <div className="masthead-actions-right">
-              <button 
+              <button
                 type="button"
                 onClick={onSearchClick}
                 style={{
@@ -118,7 +118,7 @@ export default function Masthead({ onSearchClick }) {
                 <span>Search</span>
               </button>
 
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsSubscribeOpen(true)}
                 style={{

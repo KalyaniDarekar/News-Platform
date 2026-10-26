@@ -1,4 +1,4 @@
-﻿// ========================================================================
+// ========================================================================
 // Direct Advertiser Business & Sponsorship Enquiries Service (Phase 5)
 // Captures leads, logs audit trails, and manages pipeline lifecycle in MySQL/Store
 // ========================================================================
@@ -23,6 +23,10 @@ export const advertiserEnquiryService = {
     } = data;
 
     const placementsJson = JSON.stringify(preferredPlacements || []);
+    const cleanFlightStartDate = flightStartDate && String(flightStartDate).trim() !== '' ? flightStartDate : null;
+    const cleanPhone = phone && String(phone).trim() !== '' ? String(phone).trim() : null;
+    const cleanWebsite = website && String(website).trim() !== '' ? String(website).trim() : null;
+    const cleanObjectives = campaignObjectives && String(campaignObjectives).trim() !== '' ? String(campaignObjectives).trim() : null;
 
     const result = await query(
       `INSERT INTO advertiser_enquiries (
@@ -34,12 +38,12 @@ export const advertiserEnquiryService = {
         companyName,
         contactName,
         email.toLowerCase().trim(),
-        phone,
-        website,
+        cleanPhone,
+        cleanWebsite,
         budgetRange,
         placementsJson,
-        flightStartDate,
-        campaignObjectives,
+        cleanFlightStartDate,
+        cleanObjectives,
         message
       ]
     );

@@ -8,9 +8,19 @@ import {
 import adminApi from '../../services/adminApi';
 import { getMediaUrl } from '../../services/api';
 
+const DEFAULT_AD_PLACEMENTS = [
+  { id: 1, placement_code: 'header_leaderboard', name: 'Header Super Leaderboard', dimensions: '970x90' },
+  { id: 2, placement_code: 'homepage_hero_adjacent', name: 'Homepage Hero-Adjacent Half-Page / Display', dimensions: '300x600' },
+  { id: 3, placement_code: 'article_inline', name: 'In-Article Inline Native Leaderboard', dimensions: '728x90' },
+  { id: 4, placement_code: 'article_sidebar_top', name: 'Article Sidebar Top Medium Rectangle', dimensions: '300x250' },
+  { id: 5, placement_code: 'category_page_banner', name: 'Category Page Header Billboard', dimensions: '728x90' },
+  { id: 6, placement_code: 'footer_banner', name: 'Global Footer Super Leaderboard', dimensions: '970x90' },
+  { id: 7, placement_code: 'mobile_anchor_banner', name: 'Responsive Mobile Sticky Anchor Banner', dimensions: '320x50' }
+];
+
 export default function AdminAdsPage() {
   const [campaigns, setCampaigns] = useState([]);
-  const [placements, setPlacements] = useState([]);
+  const [placements, setPlacements] = useState(DEFAULT_AD_PLACEMENTS);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'placements'
 
@@ -19,6 +29,8 @@ export default function AdminAdsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   const [previewAd, setPreviewAd] = useState(null);
+
+  const availablePlacements = placements && placements.length > 0 ? placements : DEFAULT_AD_PLACEMENTS;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -40,14 +52,31 @@ export default function AdminAdsPage() {
   const fetchCampaignsAndPlacements = async () => {
     setLoading(true);
     try {
-      const [cRes, pRes] = await Promise.all([
+      const [cRes, pRes] = await Promise.allSettled([
         adminApi.getAdCampaigns(),
         adminApi.getAdPlacements()
       ]);
-      setCampaigns(cRes.data || []);
-      setPlacements(pRes.data || []);
-      if (pRes.data && pRes.data.length > 0 && !formData.placementId) {
-        setFormData(prev => ({ ...prev, placementId: pRes.data[0].id }));
+
+      if (cRes.status === 'fulfilled' && cRes.value) {
+        const cData = cRes.value.data;
+        const list = Array.isArray(cData) ? cData : (cData?.campaigns || cData?.data || []);
+        setCampaigns(list);
+      } else if (cRes.status === 'rejected') {
+        console.warn('Could not fetch ad campaigns:', cRes.reason);
+      }
+
+      if (pRes.status === 'fulfilled' && pRes.value) {
+        const pData = pRes.value.data;
+        const list = Array.isArray(pData) ? pData : (pData?.placements || pData?.data || []);
+        if (list.length > 0) {
+          setPlacements(list);
+        }
+      } else if (pRes.status === 'rejected') {
+        console.warn('Could not fetch ad placements, using default placement catalog:', pRes.reason);
+      }
+
+      if (availablePlacements.length > 0 && !formData.placementId) {
+        setFormData(prev => ({ ...prev, placementId: availablePlacements[0].id }));
       }
     } catch (err) {
       console.error('Failed to load campaigns or placements:', err);
@@ -64,10 +93,11 @@ export default function AdminAdsPage() {
     setIsEditing(false);
     setCurrentId(null);
     setFormError('');
+    const defaultId = availablePlacements[0]?.id || 1;
     setFormData({
       title: '',
       clientName: '',
-      placementId: placements.length > 0 ? placements[0].id : 1,
+      placementId: defaultId,
       adType: 'image',
       bannerImageUrl: '',
       adCode: '',
@@ -87,7 +117,7 @@ export default function AdminAdsPage() {
     setFormData({
       title: camp.title || '',
       clientName: camp.client_name || '',
-      placementId: camp.placement_id || (placements[0]?.id || 1),
+      placementId: camp.placement_id || (availablePlacements[0]?.id || 1),
       adType: camp.ad_type || 'image',
       bannerImageUrl: camp.banner_image_url || '',
       adCode: camp.ad_code || '',
@@ -222,7 +252,7 @@ export default function AdminAdsPage() {
             {activeCount} <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#64748b' }}>/ {campaigns.length} total</span>
           </div>
           <div style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 600, marginTop: '0.25rem' }}>
-            {placements.length} configured placement slots
+            {availablePlacements.length} configured placement slots
           </div>
         </div>
 
@@ -288,7 +318,7 @@ export default function AdminAdsPage() {
             cursor: 'pointer'
           }}
         >
-          Inventory Placement Slots ({placements.length})
+          Inventory Placement Slots ({availablePlacements.length})
         </button>
       </div>
 
@@ -457,7 +487,7 @@ export default function AdminAdsPage() {
       {/* Tab 2: Inventory Placement Slots */}
       {activeTab === 'placements' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-          {placements.map((p) => {
+          {availablePlacements.map((p) => {
             const activeCampaign = campaigns.find(c => c.placement_id === p.id && c.is_active);
             return (
               <div 
@@ -599,12 +629,21 @@ export default function AdminAdsPage() {
                     Inventory Placement Slot *
                   </label>
                   <select
-                    value={formData.placementId}
+                    value={formData.placementId || (availablePlacements[0]?.id || 1)}
                     onChange={(e) => setFormData({ ...formData, placementId: parseInt(e.target.value, 10) })}
-                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: '4px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.84rem',
+                      backgroundColor: '#ffffff',
+                      color: '#0f172a',
+                      cursor: 'pointer'
+                    }}
                   >
-                    {placements.map(p => (
-                      <option key={p.id} value={p.id}>
+                    {availablePlacements.map(p => (
+                      <option key={p.id} value={p.id} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
                         {p.name} ({p.dimensions})
                       </option>
                     ))}

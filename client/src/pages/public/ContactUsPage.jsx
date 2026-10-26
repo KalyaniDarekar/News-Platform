@@ -12,11 +12,11 @@ export default function ContactUsPage() {
 
   return (
     <div className="container-narrow" style={{ paddingTop: '2.5rem', paddingBottom: '4rem' }}>
-      
+
       <header style={{ borderBottom: '2px solid var(--color-ink-950)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
         <span className="kicker kicker-neutral">Newsroom Desks & Inquiries</span>
         <h1 style={{ fontFamily: 'var(--font-masthead)', fontSize: 'clamp(2.2rem, 4vw, 3rem)', fontWeight: 900, color: 'var(--color-ink-950)' }}>
-          Contact The Chronicle
+          Contact The Janta Journal
         </h1>
         <p style={{ fontSize: '1rem', color: 'var(--color-ink-600)', marginTop: '0.45rem' }}>
           Connect with our editors, submit secure confidential investigative tips, or reach our commercial advertising desk.

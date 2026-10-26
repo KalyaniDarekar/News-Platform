@@ -40,7 +40,7 @@ import AdminScheduledPage from './pages/admin/AdminScheduledPage';
 import AdminAdsPage from './pages/admin/AdminAdsPage';
 import AdminEnquiriesPage from './pages/admin/AdminEnquiriesPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+// import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 // Protected Route Guard for Admin Panel
 function ProtectedRoute({ children }) {
@@ -65,7 +65,7 @@ function ProtectedRoute({ children }) {
 // Public Website Shell Layout
 function PublicLayout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  
+
   // Privacy-conscious, debounced first-party page view telemetry
   usePageTracking();
 
@@ -75,7 +75,7 @@ function PublicLayout() {
       <Masthead onSearchClick={() => setIsSearchOpen(true)} />
       <MainNavigation onSearchClick={() => setIsSearchOpen(true)} />
       <BreakingTicker />
-      
+
       <main style={{ flex: 1 }}>
         <Outlet />
       </main>
@@ -88,9 +88,9 @@ function PublicLayout() {
       {/* DPDP Act 2023 & GDPR Consent Controller */}
       <ConsentBanner />
 
-      <SearchModal 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
       />
     </div>
   );
@@ -102,7 +102,7 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
-          
+
           {/* ================= PUBLIC WEBSITE ROUTES ================= */}
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<HomePage />} />
@@ -121,9 +121,9 @@ export default function App() {
 
           {/* ================= ADMIN CMS ROUTES ================= */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          
-          <Route 
-            path="/admin" 
+
+          <Route
+            path="/admin"
             element={
               <ProtectedRoute>
                 <AdminLayout />
@@ -141,7 +141,7 @@ export default function App() {
             <Route path="ads" element={<AdminAdsPage />} />
             <Route path="enquiries" element={<AdminEnquiriesPage />} />
             <Route path="analytics" element={<AdminAnalyticsPage />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
+            {/* <Route path="settings" element={<AdminSettingsPage />} /> */}
           </Route>
 
           {/* Catch-all fallback */}

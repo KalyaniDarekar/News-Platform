@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, FileText, PlusCircle, FolderTree, Image, 
-  CalendarClock, Megaphone, BarChart3, Settings, LogOut, 
+import {
+  LayoutDashboard, FileText, PlusCircle, FolderTree, Image,
+  CalendarClock, Megaphone, BarChart3, Settings, LogOut,
   ExternalLink, Bell, Search, Shield, ChevronRight, Menu, X, Sparkles, Briefcase, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +11,7 @@ import adminApi from '../../services/adminApi';
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inReviewCount, setInReviewCount] = useState(0);
+  const [newEnquiriesCount, setNewEnquiriesCount] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -19,8 +20,13 @@ export default function AdminLayout() {
     const fetchCounts = async () => {
       try {
         const res = await adminApi.getQuickCounts();
-        if (mounted && res?.data?.in_review !== undefined) {
-          setInReviewCount(Number(res.data.in_review));
+        if (mounted && res?.data) {
+          if (res.data.in_review !== undefined) {
+            setInReviewCount(Number(res.data.in_review));
+          }
+          if (res.data.new_enquiries !== undefined) {
+            setNewEnquiriesCount(Number(res.data.new_enquiries));
+          }
         }
       } catch {
         // silent fallback
@@ -37,25 +43,30 @@ export default function AdminLayout() {
   const navItems = [
     { label: 'Dashboard Overview', path: '/admin', icon: LayoutDashboard, end: true },
     { label: 'News Management', path: '/admin/articles', icon: FileText },
-    { 
-      label: 'Review & Approvals', 
-      path: '/admin/review', 
-      icon: ShieldAlert, 
-      badge: inReviewCount > 0 ? inReviewCount : null 
+    {
+      label: 'Review & Approvals',
+      path: '/admin/review',
+      icon: ShieldAlert,
+      badge: inReviewCount > 0 ? inReviewCount : null
     },
     { label: 'Create New Article', path: '/admin/articles/new', icon: PlusCircle },
     { label: 'Categories Desk', path: '/admin/categories', icon: FolderTree },
     { label: 'Media Library', path: '/admin/media', icon: Image },
     { label: 'Scheduled & Expiry', path: '/admin/scheduled', icon: CalendarClock },
     { label: 'Ad Monetization', path: '/admin/ads', icon: Megaphone },
-    { label: 'Ad Enquiries & Leads', path: '/admin/enquiries', icon: Briefcase },
+    {
+      label: 'Ad Enquiries & Leads',
+      path: '/admin/enquiries',
+      icon: Briefcase,
+      badge: newEnquiriesCount > 0 ? newEnquiriesCount : null
+    },
     { label: 'Editorial Analytics', path: '/admin/analytics', icon: BarChart3 },
-    { label: 'Platform Settings', path: '/admin/settings', icon: Settings },
+    // { label: 'Platform Settings', path: '/admin/settings', icon: Settings },
   ];
 
   return (
     <div className="admin-theme" style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      
+
       {/* Admin Sidebar Navigation */}
       <aside style={{
         width: '260px',
@@ -70,7 +81,7 @@ export default function AdminLayout() {
         zIndex: 50,
         flexShrink: 0
       }} className="hidden-mobile-admin">
-        
+
         {/* Brand Header */}
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -177,12 +188,12 @@ export default function AdminLayout() {
               </div>
             </div>
 
-            <button 
+            <button
               onClick={() => {
                 logout();
                 navigate('/admin/login');
               }}
-              title="Sign Out" 
+              title="Sign Out"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
             >
               <LogOut size={16} />
@@ -194,7 +205,7 @@ export default function AdminLayout() {
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        
+
         {/* Admin Top Header */}
         <header style={{
           height: '60px',
@@ -208,7 +219,7 @@ export default function AdminLayout() {
           top: 0,
           zIndex: 40
         }}>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {/* Mobile / Tablet Drawer Toggle Button */}
             <button
@@ -418,12 +429,12 @@ export default function AdminLayout() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => {
                     logout();
                     navigate('/admin/login');
                   }}
-                  title="Sign Out" 
+                  title="Sign Out"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0.35rem' }}
                 >
                   <LogOut size={16} />

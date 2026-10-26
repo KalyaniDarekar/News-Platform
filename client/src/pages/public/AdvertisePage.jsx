@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   Building2, Mail, Phone, MapPin, Download, CheckCircle, 
   Send, Sparkles, Layout, Smartphone, Video, Compass, 
@@ -56,7 +56,15 @@ export default function AdvertisePage() {
         throw new Error('Please fill in all required fields (Company, Contact Name, Email, and Message).');
       }
 
-      const res = await apiService.submitAdvertiserEnquiry(formData);
+      const payload = {
+        ...formData,
+        flightStartDate: formData.flightStartDate && formData.flightStartDate.trim() !== '' ? formData.flightStartDate : null,
+        phone: formData.phone && formData.phone.trim() !== '' ? formData.phone.trim() : null,
+        website: formData.website && formData.website.trim() !== '' ? formData.website.trim() : null,
+        campaignObjectives: formData.campaignObjectives && formData.campaignObjectives.trim() !== '' ? formData.campaignObjectives.trim() : null
+      };
+
+      const res = await apiService.submitAdvertiserEnquiry(payload);
       setSuccessResult(res.data || res);
       setFormData({
         companyName: '',

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { 
   FileText, Clock, AlertTriangle, Users, TrendingUp, 
   PlusCircle, CheckCircle2, ChevronRight, Eye, ShieldAlert, Sparkles,
-  RefreshCw, Calendar, ArrowRight, Activity, ExternalLink
+  RefreshCw, Calendar, ArrowRight, Activity, ExternalLink, Briefcase,
+  Building2, Mail, Phone
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
 import { useAuth } from '../../context/AuthContext';
@@ -53,10 +54,14 @@ export default function AdminDashboardPage() {
   const upcomingScheduled = stats?.upcoming_scheduled || [];
   const recentActivity = stats?.recent_activity || [];
   const topArticles = stats?.top_articles || [];
+  const newEnquiries = stats?.new_enquiries_count ?? counts.new_enquiries ?? 0;
+  const totalEnquiries = stats?.total_enquiries_count ?? counts.total_enquiries ?? 0;
+  const recentEnquiries = stats?.recent_enquiries || [];
 
   const metrics = [
     { title: 'Live Published Articles', value: counts.published, sub: `${publishedToday} published today`, icon: FileText, color: '#16a34a', bg: '#f0fdf4', link: '/admin/articles?status=published' },
     { title: 'In Review Queue', value: counts.in_review, sub: 'Needs editorial approval', icon: Clock, color: '#ca8a04', bg: '#fefce8', link: '/admin/review' },
+    { title: 'New Commercial Leads', value: newEnquiries, sub: `${totalEnquiries} total sponsor leads`, icon: Briefcase, color: '#0284c7', bg: '#f0f9ff', link: '/admin/enquiries' },
     { title: 'Drafts in Progress', value: counts.draft, sub: 'Saved by reporters', icon: FileText, color: '#475569', bg: '#f8fafc', link: '/admin/articles?status=draft' },
     { title: 'Scheduled Embargoes', value: counts.scheduled, sub: 'Auto-publish on schedule', icon: Calendar, color: '#7e22ce', bg: '#faf5ff', link: '/admin/scheduled' },
     { title: 'Expiring Within 24h', value: expiringSoon, sub: `${counts.expired} already expired`, icon: AlertTriangle, color: '#ea580c', bg: '#fff7ed', link: '/admin/scheduled' },
@@ -150,6 +155,41 @@ export default function AdminDashboardPage() {
             style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ca8a04', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
           >
             Open Review & Approval Desk <ArrowRight size={13} />
+          </Link>
+        </div>
+      )}
+
+      {/* New Advertiser Enquiries Alert Strip */}
+      {newEnquiries > 0 && (
+        <div style={{
+          backgroundColor: '#f0f9ff',
+          border: '1px solid #bae6fd',
+          padding: '0.85rem 1.25rem',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ backgroundColor: '#0284c7', color: '#fff', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Briefcase size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0369a1' }}>
+                New Campaign Lead Alert: {newEnquiries} new advertiser enquir{newEnquiries > 1 ? 'ies' : 'y'} received
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#0284c7' }}>
+                Direct brand sponsors have submitted campaign flight proposals awaiting commercial response.
+              </div>
+            </div>
+          </div>
+          <Link
+            to="/admin/enquiries"
+            style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+          >
+            Review Advertiser Leads <ArrowRight size={13} />
           </Link>
         </div>
       )}
@@ -404,6 +444,94 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
+      </div>
+
+      {/* Direct Advertiser Enquiries Section */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Briefcase size={16} color="#0284c7" />
+            <h2 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+              Direct Advertiser & Campaign Enquiries ({totalEnquiries})
+            </h2>
+            {newEnquiries > 0 && (
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '0.12rem 0.5rem', borderRadius: '999px' }}>
+                {newEnquiries} New
+              </span>
+            )}
+          </div>
+          <Link to="/admin/enquiries" style={{ fontSize: '0.74rem', color: '#2563eb', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            Manage All Leads (CRM) <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Company / Sponsor</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Contact</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Budget Tier</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Status</th>
+                <th style={{ padding: '0.5rem 0.75rem' }}>Date Received</th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentEnquiries.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                    No commercial campaign enquiries registered yet. Submissions from public sponsor enquiry form will appear here.
+                  </td>
+                </tr>
+              ) : (
+                recentEnquiries.map((enq) => {
+                  const statusColors = {
+                    new: { bg: '#eff6ff', color: '#1d4ed8' },
+                    contacted: { bg: '#fefce8', color: '#854d0e' },
+                    proposal_sent: { bg: '#f3e8ff', color: '#6b21a8' },
+                    closed_won: { bg: '#f0fdf4', color: '#15803d' },
+                    closed_lost: { bg: '#f1f5f9', color: '#475569' }
+                  };
+                  const sc = statusColors[enq.status] || statusColors.new;
+
+                  return (
+                    <tr key={enq.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '0.65rem 0.75rem' }}>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{enq.company_name}</div>
+                        {enq.preferred_placements && enq.preferred_placements.length > 0 && (
+                          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.1rem' }}>
+                            {enq.preferred_placements.length} placement{enq.preferred_placements.length > 1 ? 's' : ''} requested
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem' }}>
+                        <div style={{ color: '#334155', fontWeight: 600 }}>{enq.contact_name}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{enq.email}</div>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', color: '#475569', fontSize: '0.76rem' }}>
+                        {enq.budget_range ? enq.budget_range.split(':')[0] : 'Standard Flight'}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem' }}>
+                        <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '3px', backgroundColor: sc.bg, color: sc.color, fontWeight: 700, textTransform: 'uppercase' }}>
+                          {enq.status.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', color: '#64748b', fontSize: '0.74rem' }}>
+                        {new Date(enq.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>
+                        <Link to="/admin/enquiries" style={{ color: '#2563eb', fontWeight: 700, fontSize: '0.75rem', textDecoration: 'none' }}>
+                          Review Lead &rarr;
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Top Read Articles Table */}

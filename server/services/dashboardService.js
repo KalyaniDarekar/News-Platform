@@ -28,7 +28,9 @@ export const dashboardService = {
         scheduledArticles,
         recentActivity,
         topArticles,
-        inReviewArticlesRow
+        inReviewArticlesRow,
+        enquiryCountsRow,
+        recentEnquiriesRow
       ] = await Promise.all([
 
         // 1. Count per status
@@ -135,7 +137,25 @@ export const dashboardService = {
           WHERE a.status = 'in_review'
           ORDER BY a.updated_at DESC, a.created_at DESC
           LIMIT 10
-        `)
+        `),
+
+        // 10. Advertiser enquiries counts
+        query(`
+          SELECT
+            COALESCE(SUM(status = 'new'), 0) AS new_enquiries,
+            COUNT(*) AS total_enquiries
+          FROM advertiser_enquiries
+        `).catch(() => [{ new_enquiries: 0, total_enquiries: 0 }]),
+
+        // 11. Recent advertiser enquiries
+        query(`
+          SELECT
+            id, company_name, contact_name, email, phone,
+            budget_range, preferred_placements, status, created_at
+          FROM advertiser_enquiries
+          ORDER BY created_at DESC
+          LIMIT 6
+        `).catch(() => [])
       ]);
 
       const sc = statusCounts[0];
@@ -143,15 +163,28 @@ export const dashboardService = {
       const totalViews = Number(totalViewsRow[0]?.total_views || 0);
       const publishedToday = Number(todayPublishedRow[0]?.count || 0);
       const inReviewArticles = inReviewArticlesRow || [];
+      const newEnquiries = Number(enquiryCountsRow?.[0]?.new_enquiries || 0);
+      const totalEnquiries = Number(enquiryCountsRow?.[0]?.total_enquiries || 0);
+      const recentEnquiries = (recentEnquiriesRow || []).map(r => {
+        let placements = [];
+        try {
+          placements = typeof r.preferred_placements === 'string' ? JSON.parse(r.preferred_placements) : (r.preferred_placements || []);
+        } catch {
+          placements = [];
+        }
+        return { ...r, preferred_placements: placements };
+      });
 
       const counts = {
-        published:      Number(sc.published),
-        draft:          Number(sc.draft),
-        scheduled:      Number(sc.scheduled),
-        in_review:      Number(sc.in_review),
-        expired:        Number(sc.expired),
-        archived:       Number(sc.archived),
-        total:          Number(sc.total),
+        published:        Number(sc.published),
+        draft:            Number(sc.draft),
+        scheduled:        Number(sc.scheduled),
+        in_review:        Number(sc.in_review),
+        expired:          Number(sc.expired),
+        archived:         Number(sc.archived),
+        total:            Number(sc.total),
+        new_enquiries:    newEnquiries,
+        total_enquiries:  totalEnquiries,
         expiringSoon,
         publishedToday
       };
@@ -159,21 +192,24 @@ export const dashboardService = {
       return {
         // Dual property keys (both camelCase and snake_case) for seamless UI rendering
         counts,
-        expiring_soon_24h:    expiringSoon,
+        new_enquiries_count:   newEnquiries,
+        total_enquiries_count: totalEnquiries,
+        recent_enquiries:      recentEnquiries,
+        expiring_soon_24h:     expiringSoon,
         expiringSoon,
-        total_views:          totalViews,
+        total_views:           totalViews,
         totalViews,
-        published_today:      publishedToday,
+        published_today:       publishedToday,
         publishedToday,
-        expiring_next_7_days: expiringArticles,
+        expiring_next_7_days:  expiringArticles,
         expiringArticles,
-        upcoming_scheduled:   scheduledArticles,
+        upcoming_scheduled:    scheduledArticles,
         scheduledArticles,
-        in_review_articles:   inReviewArticles,
+        in_review_articles:    inReviewArticles,
         inReviewArticles,
-        recent_activity:      recentActivity,
+        recent_activity:       recentActivity,
         recentActivity,
-        top_articles:         topArticles,
+        top_articles:          topArticles,
         topArticles
       };
     } catch (err) {
@@ -217,34 +253,48 @@ export const dashboardService = {
   // -----------------------------------------------------------------------
   async getQuickCounts() {
     try {
-      const [row] = await query(`
-        SELECT
-          COALESCE(SUM(status = 'published' AND (expiry_time IS NULL OR expiry_time > NOW())), 0) AS published,
-          COALESCE(SUM(status = 'draft'),     0) AS draft,
-          COALESCE(SUM(status = 'scheduled'), 0) AS scheduled,
-          COALESCE(SUM(status = 'in_review'), 0) AS in_review,
-          COALESCE(SUM(status = 'expired'),   0) AS expired,
-          COALESCE(SUM(status = 'archived'),  0) AS archived,
-          COUNT(*)                                AS total,
-          COALESCE(SUM(
-            status = 'published'
-            AND expiry_time IS NOT NULL
-            AND expiry_time > NOW()
-            AND expiry_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR)
-          ), 0) AS expiring_soon,
-          COALESCE(SUM(view_count), 0) AS total_views
-        FROM articles
-      `);
+      const [articleRows, enquiryRows] = await Promise.all([
+        query(`
+          SELECT
+            COALESCE(SUM(status = 'published' AND (expiry_time IS NULL OR expiry_time > NOW())), 0) AS published,
+            COALESCE(SUM(status = 'draft'),     0) AS draft,
+            COALESCE(SUM(status = 'scheduled'), 0) AS scheduled,
+            COALESCE(SUM(status = 'in_review'), 0) AS in_review,
+            COALESCE(SUM(status = 'expired'),   0) AS expired,
+            COALESCE(SUM(status = 'archived'),  0) AS archived,
+            COUNT(*)                                AS total,
+            COALESCE(SUM(
+              status = 'published'
+              AND expiry_time IS NOT NULL
+              AND expiry_time > NOW()
+              AND expiry_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR)
+            ), 0) AS expiring_soon,
+            COALESCE(SUM(view_count), 0) AS total_views
+          FROM articles
+        `),
+        query(`
+          SELECT
+            COALESCE(SUM(status = 'new'), 0) AS new_enquiries,
+            COUNT(*) AS total_enquiries
+          FROM advertiser_enquiries
+        `).catch(() => [{ new_enquiries: 0, total_enquiries: 0 }])
+      ]);
+
+      const row = articleRows[0] || {};
+      const eqRow = enquiryRows?.[0] || {};
+
       return {
-        published:    Number(row.published),
-        draft:        Number(row.draft),
-        scheduled:    Number(row.scheduled),
-        in_review:    Number(row.in_review),
-        expired:      Number(row.expired),
-        archived:     Number(row.archived || 0),
-        total:        Number(row.total || 0),
-        expiringSoon: Number(row.expiring_soon),
-        totalViews:   Number(row.total_views)
+        published:        Number(row.published || 0),
+        draft:            Number(row.draft || 0),
+        scheduled:        Number(row.scheduled || 0),
+        in_review:        Number(row.in_review || 0),
+        expired:          Number(row.expired || 0),
+        archived:         Number(row.archived || 0),
+        total:            Number(row.total || 0),
+        new_enquiries:    Number(eqRow.new_enquiries || 0),
+        total_enquiries:  Number(eqRow.total_enquiries || 0),
+        expiringSoon:     Number(row.expiring_soon || 0),
+        totalViews:       Number(row.total_views || 0)
       };
     } catch (err) {
       console.error('[Dashboard Quick Counts Error]', err);

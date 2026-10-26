@@ -7,7 +7,7 @@ import adminApi from '../../services/adminApi';
 import apiService from '../../services/api';
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState('revenue');
+  const [activeTab, setActiveTab] = useState('identity');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -208,7 +208,7 @@ export default function AdminSettingsPage() {
       {/* Main Settings Form Container */}
       <form onSubmit={handleSave} style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
 
-        {/* ================= TAB 1: REVENUE & ADSENSE ================= */}
+        {/* ================= TAB 1: REVENUE & ADSENSE 
         {activeTab === 'revenue' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
@@ -297,9 +297,9 @@ export default function AdminSettingsPage() {
               </span>
             </div>
           </div>
-        )}
+        )}================= */}
 
-        {/* ================= TAB 2: ANALYTICS & SEARCH CONSOLE ================= */}
+        {/* ================= TAB 2: ANALYTICS & SEARCH CONSOLE 
         {activeTab === 'analytics' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
@@ -352,7 +352,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
           </div>
-        )}
+        )}================= */}
 
         {/* ================= TAB 3: YOUTUBE INTEGRATION ================= */}
         {activeTab === 'youtube' && (
