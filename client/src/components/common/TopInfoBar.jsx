@@ -62,7 +62,7 @@ export default function TopInfoBar() {
             gap: '0.65rem',
             padding: '0.2rem 0'
           }}>
-            
+
             {/* Left Block: Date & Clean Temperature + AQI Block */}
             <div style={{
               display: 'flex',
@@ -101,13 +101,13 @@ export default function TopInfoBar() {
                   <span style={{ fontWeight: 600, color: 'var(--color-ink-800)' }}>
                     {weatherData.city} {weatherData.temp}
                   </span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    backgroundColor: weatherData.aqiBg || '#fef3c7', 
-                    color: weatherData.aqiColor || '#92400e', 
-                    padding: '0.1rem 0.35rem', 
-                    borderRadius: '2px', 
-                    fontWeight: 700 
+                  <span style={{
+                    fontSize: '0.65rem',
+                    backgroundColor: weatherData.aqiBg || '#fef3c7',
+                    color: weatherData.aqiColor || '#92400e',
+                    padding: '0.1rem 0.35rem',
+                    borderRadius: '2px',
+                    fontWeight: 700
                   }}>
                     AQI {weatherData.aqi}
                   </span>
@@ -115,7 +115,7 @@ export default function TopInfoBar() {
               )}
             </div>
 
-            {/* Right Block: Action Links */}
+            {/* Right Block: Action Links 
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -123,7 +123,6 @@ export default function TopInfoBar() {
               gap: '0.75rem',
               flexWrap: 'wrap'
             }}>
-              {/* Direct Link to Newsroom Admin CMS */}
               <Link 
                 to="/admin" 
                 style={{ 
@@ -143,6 +142,7 @@ export default function TopInfoBar() {
                 <ShieldCheck size={12} /> Newsroom CMS
               </Link>
             </div>
+            */}
 
           </div>
         </div>
