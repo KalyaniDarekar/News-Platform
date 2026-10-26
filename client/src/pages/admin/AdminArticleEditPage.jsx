@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
 import { useAuth } from '../../context/AuthContext';
+import { getMediaUrl, handleImageError } from '../../services/api';
 
 export default function AdminArticleEditPage() {
   const { id } = useParams();
@@ -825,8 +826,9 @@ export default function AdminArticleEditPage() {
           {featuredImage && (
             <div style={{ marginBottom: '1.5rem' }}>
               <img
-                src={featuredImage}
+                src={getMediaUrl(featuredImage)}
                 alt={altText || title}
+                onError={handleImageError}
                 style={{ width: '100%', maxHeight: '440px', objectFit: 'cover', borderRadius: '4px' }}
               />
               {imageCaption && (
@@ -999,6 +1001,7 @@ export default function AdminArticleEditPage() {
                 <button type="button" onClick={() => insertFormatting('\n- ', '')} title="Bullet list" style={toolbarBtnStyle}>• List</button>
                 <button type="button" onClick={() => insertFormatting('\n1. ', '')} title="Numbered list" style={toolbarBtnStyle}>1. List</button>
                 <button type="button" onClick={() => insertFormatting('[', '](https://)')} title="Insert Link" style={toolbarBtnStyle}>Link</button>
+                <button type="button" onClick={() => insertFormatting('![Photo description](', ')')} title="Insert Photo/Graphic" style={toolbarBtnStyle}><ImageIcon size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} /> Photo</button>
               </div>
 
               <textarea
@@ -1227,8 +1230,9 @@ export default function AdminArticleEditPage() {
               {featuredImage && (
                 <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
                   <img
-                    src={featuredImage}
+                    src={getMediaUrl(featuredImage)}
                     alt={altText || 'Featured preview'}
+                    onError={handleImageError}
                     style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e2e8f0' }}
                   />
                   <button

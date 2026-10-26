@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UploadCloud, Image as ImageIcon, Copy, Check, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
 import adminApi from '../../services/adminApi';
+import { getMediaUrl } from '../../services/api';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://news-platform-2goj.onrender.com';
 
@@ -65,7 +66,7 @@ export default function AdminMediaPage() {
   };
 
   const handleCopy = (id, url) => {
-    const fullUrl = url.startsWith('http') ? url : `${BACKEND_URL}${url}`;
+    const fullUrl = getMediaUrl(url);
     navigator.clipboard.writeText(fullUrl);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -196,7 +197,7 @@ export default function AdminMediaPage() {
             gap: '1.25rem'
           }}>
             {mediaItems.map((item) => {
-              const fullUrl = item.file_url?.startsWith('http') ? item.file_url : `${BACKEND_URL}${item.file_url}`;
+              const fullUrl = getMediaUrl(item.file_url);
               const sizeKb = item.file_size_bytes ? `${Math.round(item.file_size_bytes / 1024)} KB` : 'N/A';
 
               return (

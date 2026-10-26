@@ -20,6 +20,17 @@ function getStoredCount() {
   return DEFAULT_BASELINE;
 }
 
+function persistStoredCount(val) {
+  try {
+    const current = getStoredCount();
+    const highest = Math.max(current, typeof val === 'number' && !isNaN(val) ? val : DEFAULT_BASELINE, DEFAULT_BASELINE);
+    localStorage.setItem(STORAGE_KEY, String(highest));
+    return highest;
+  } catch {
+    return val;
+  }
+}
+
 export function useVisitorCounter() {
   const [count, setCount] = useState(getStoredCount);
   const [isBumping, setIsBumping] = useState(false);
@@ -31,8 +42,34 @@ export function useVisitorCounter() {
   const previousLocationRef = useRef(location.pathname);
   const initialMountDoneRef = useRef(false);
 
+  // Safely update count monotonically (never decreases)
+  const updateCountSafely = useCallback((newVal) => {
+    if (typeof newVal !== 'number' || isNaN(newVal)) return;
+    setCount(prev => {
+      const highest = Math.max(prev, newVal, DEFAULT_BASELINE);
+      persistStoredCount(highest);
+      return highest;
+    });
+  }, []);
+
+  // Sync latest authoritative count from server
+  const syncWithServer = useCallback(async () => {
+    try {
+      if (apiService && typeof apiService.getVisitorCount === 'function') {
+        const serverCount = await apiService.getVisitorCount();
+        if (typeof serverCount === 'number' && serverCount >= DEFAULT_BASELINE) {
+          updateCountSafely(serverCount);
+          return serverCount;
+        }
+      }
+    } catch {
+      // Keep optimistic local count
+    }
+    return getStoredCount();
+  }, [updateCountSafely]);
+
   // Core increment logic with local persistence & backend synchronization
-  const triggerIncrement = useCallback(() => {
+  const triggerIncrement = useCallback((knownBaseline = 0) => {
     const now = Date.now();
     // Throttle to prevent immediate duplicate execution (e.g. simultaneous focus + visibilitychange)
     if (now - lastTriggerTimeRef.current < 800) {
@@ -40,16 +77,12 @@ export function useVisitorCounter() {
     }
     lastTriggerTimeRef.current = now;
 
-    // Calculate next value starting from baseline 5000
-    const current = Math.max(DEFAULT_BASELINE, getStoredCount());
+    // Calculate next value continuing monotonically from the highest known count
+    const stored = getStoredCount();
+    const current = Math.max(DEFAULT_BASELINE, stored, knownBaseline);
     const nextVal = current + 1;
 
-    try {
-      localStorage.setItem(STORAGE_KEY, String(nextVal));
-    } catch {
-      // ignore
-    }
-
+    persistStoredCount(nextVal);
     setCount(prev => Math.max(prev, nextVal, DEFAULT_BASELINE));
     setIsBumping(true);
     setTimeout(() => setIsBumping(false), 500);
@@ -61,29 +94,26 @@ export function useVisitorCounter() {
     if (apiService && typeof apiService.incrementVisitorCount === 'function') {
       apiService.incrementVisitorCount(nextVal).then(serverCount => {
         if (typeof serverCount === 'number' && serverCount >= DEFAULT_BASELINE) {
-          setCount(prev => {
-            const authoritative = Math.max(prev, serverCount, nextVal);
-            try {
-              localStorage.setItem(STORAGE_KEY, String(authoritative));
-            } catch {
-              // ignore
-            }
-            return authoritative;
-          });
+          updateCountSafely(serverCount);
         }
       }).catch(() => {
         // Keep optimistic local count
       });
     }
-  }, []);
+  }, [updateCountSafely]);
 
-  // 1. Initial Visit & Page Refresh trigger
+  // 1. Initial Visit & Page Refresh trigger:
+  // First query the server for latest persisted count, then record visit increment
   useEffect(() => {
     if (!initialMountDoneRef.current) {
       initialMountDoneRef.current = true;
-      triggerIncrement();
+      syncWithServer().then(latestServerCount => {
+        triggerIncrement(latestServerCount);
+      }).catch(() => {
+        triggerIncrement();
+      });
     }
-  }, [triggerIncrement]);
+  }, [syncWithServer, triggerIncrement]);
 
   // 2. Browser Tab Switch trigger (switching tab and coming back)
   useEffect(() => {

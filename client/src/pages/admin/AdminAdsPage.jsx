@@ -6,6 +6,7 @@ import {
   Code, Clock, Layers
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
+import { getMediaUrl } from '../../services/api';
 
 export default function AdminAdsPage() {
   const [campaigns, setCampaigns] = useState([]);
@@ -642,7 +643,7 @@ export default function AdminAdsPage() {
                     />
                     {formData.bannerImageUrl && (
                       <div style={{ marginTop: '0.5rem', maxHeight: '120px', overflow: 'hidden', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                        <img src={formData.bannerImageUrl} alt="Creative Preview" style={{ width: '100%', height: 'auto', display: 'block' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <img src={getMediaUrl(formData.bannerImageUrl)} alt="Creative Preview" style={{ width: '100%', height: 'auto', display: 'block' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                       </div>
                     )}
                   </div>
@@ -825,7 +826,7 @@ export default function AdminAdsPage() {
             <div style={{ padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '160px' }}>
               {previewAd.ad_type === 'image' && previewAd.banner_image_url ? (
                 <div style={{ width: '100%', textAlign: 'center' }}>
-                  <img src={previewAd.banner_image_url} alt={previewAd.title} style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '2px', border: '1px solid #cbd5e1' }} />
+                  <img src={getMediaUrl(previewAd.banner_image_url)} alt={previewAd.title} style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '2px', border: '1px solid #cbd5e1' }} />
                   <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#475569' }}>
                     Destination: <a href={previewAd.target_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>{previewAd.target_url}</a>
                   </div>

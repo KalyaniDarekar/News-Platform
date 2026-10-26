@@ -6,7 +6,7 @@ import ArticleCard from '../../components/editorial/ArticleCard';
 import AdBanner from '../../components/common/AdBanner';
 import NewsletterBox from '../../components/editorial/NewsletterBox';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
-import apiService, { formatPublishTime } from '../../services/api';
+import apiService, { formatPublishTime, getMediaUrl, handleImageError, DEFAULT_NEWS_IMAGE } from '../../services/api';
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -346,8 +346,9 @@ export default function HomePage() {
             }} className="sponsored-grid">
               <div className="editorial-img-wrap" style={{ aspectRatio: '16/10', borderRadius: '2px', overflow: 'hidden' }}>
                 <img 
-                  src={partnerStory.featured_image || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80'} 
+                  src={getMediaUrl(partnerStory.featured_image) || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80'} 
                   alt={partnerStory.alt_text || partnerStory.title} 
+                  onError={handleImageError}
                   loading="lazy" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
@@ -454,8 +455,9 @@ export default function HomePage() {
                     ) : (
                       <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                         <img
-                          src={activeVideo.featured_image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80'}
+                          src={getMediaUrl(activeVideo.featured_image) || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80'}
                           alt={activeVideo.alt_text || activeVideo.title}
+                          onError={handleImageError}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                         <div style={{
@@ -523,8 +525,9 @@ export default function HomePage() {
                   >
                     <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '2px', overflow: 'hidden' }}>
                       <img
-                        src={video.featured_image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80'}
+                        src={getMediaUrl(video.featured_image) || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80'}
                         alt={video.alt_text || video.title}
+                        onError={handleImageError}
                         loading="lazy"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />

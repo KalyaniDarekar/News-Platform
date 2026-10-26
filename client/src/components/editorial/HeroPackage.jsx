@@ -1,7 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { formatPublishTime } from '../../services/api';
+import { 
+  formatPublishTime, 
+  getMediaUrl, 
+  handleImageError, 
+  DEFAULT_NEWS_IMAGE, 
+  DEFAULT_AVATAR_IMAGE 
+} from '../../services/api';
 
 export default function HeroPackage({ 
   leadStory, 
@@ -30,13 +36,13 @@ export default function HeroPackage({
   const leadTitle = lead.title;
   const leadSlug = lead.slug;
   const leadSummary = lead.short_description || lead.summary;
-  const leadImage = lead.featured_image || lead.image;
+  const leadImage = getMediaUrl(lead.featured_image || lead.image);
   const leadAlt = lead.alt_text || lead.title;
   const leadKicker = lead.kicker || lead.category_name || 'LEAD INVESTIGATION';
   const leadReadingTime = lead.reading_time_minutes ? `${lead.reading_time_minutes} min read` : (lead.readingTime || '5 min read');
   const leadAuthorName = lead.author_name || (lead.author && lead.author.name) || 'Staff Reporter';
   const leadAuthorTitle = lead.author_designation || (lead.author && lead.author.title) || 'Editorial Bureau';
-  const leadAuthorAvatar = lead.author_avatar || (lead.author && lead.author.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+  const leadAuthorAvatar = getMediaUrl(lead.author_avatar || (lead.author && lead.author.avatar), DEFAULT_AVATAR_IMAGE);
   const leadPublishedAt = lead.publication_time ? formatPublishTime(lead.publication_time) : (lead.published_at || lead.publishedAt || 'Today');
 
   return (
@@ -72,6 +78,7 @@ export default function HeroPackage({
                 <img 
                   src={leadImage} 
                   alt={leadAlt}
+                  onError={handleImageError}
                   loading="eager"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
@@ -110,6 +117,7 @@ export default function HeroPackage({
               <img
                 src={leadAuthorAvatar}
                 alt={leadAuthorName}
+                onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
                 style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }}
               />
               <div>
@@ -147,7 +155,7 @@ export default function HeroPackage({
             const sTitle = story.title;
             const sSlug = story.slug;
             const sKicker = story.kicker || story.category_name || 'FEATURE';
-            const sImage = story.featured_image || story.image;
+            const sImage = getMediaUrl(story.featured_image || story.image);
             const sAlt = story.alt_text || story.title;
             const sSummary = story.short_description || story.summary;
             const sReading = story.reading_time_minutes ? `${story.reading_time_minutes} min read` : (story.readingTime || '4 min read');
@@ -164,7 +172,7 @@ export default function HeroPackage({
                 {sImage && (
                   <Link to={`/article/${sSlug}`}>
                     <div className="editorial-img-wrap" style={{ aspectRatio: '16/10', borderRadius: '2px', marginBottom: '0.45rem', overflow: 'hidden' }}>
-                      <img src={sImage} alt={sAlt} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={sImage} alt={sAlt} onError={handleImageError} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   </Link>
                 )}
@@ -256,7 +264,7 @@ export default function HeroPackage({
               {opList.map((op) => {
                 const authorName = op.author_name || (op.author && op.author.name) || 'Editorial Board';
                 const authorDesig = op.author_designation || (op.author && op.author.designation) || (op.author && op.author.title) || 'Guest Columnist';
-                const authorAvatar = op.author_avatar || (op.author && op.author.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+                const authorAvatar = getMediaUrl(op.author_avatar || (op.author && op.author.avatar), DEFAULT_AVATAR_IMAGE);
                 const excerpt = op.short_description || op.excerpt || op.summary;
 
                 return (
@@ -265,6 +273,7 @@ export default function HeroPackage({
                       <img
                         src={authorAvatar}
                         alt={authorName}
+                        onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
                         style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                       />
                       <div>

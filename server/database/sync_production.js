@@ -35,7 +35,26 @@ export async function syncProductionDatabase() {
       await conn.query('ALTER TABLE articles ADD COLUMN expiry_time DATETIME NULL AFTER publication_time');
     }
 
-    // 3. Schema verified
+    // 3. Check & add file_data column to media_assets table for persistence across restarts
+    const [mediaCols] = await conn.query('SHOW COLUMNS FROM media_assets');
+    const mediaColNames = mediaCols.map(c => c.Field);
+    if (!mediaColNames.includes('file_data')) {
+      console.log('[Sync] Adding file_data column to media_assets table...');
+      await conn.query('ALTER TABLE media_assets ADD COLUMN file_data LONGBLOB NULL');
+      console.log('[Sync] ✓ Added file_data column to media_assets table');
+    }
+
+    // 4. Ensure visitor_counter setting exists in site_settings
+    const [settingRows] = await conn.query('SELECT setting_value FROM site_settings WHERE setting_key = "visitor_counter" LIMIT 1');
+    if (!settingRows || settingRows.length === 0) {
+      console.log('[Sync] Seeding baseline visitor_counter in site_settings...');
+      await conn.query(
+        'INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description) VALUES ("visitor_counter", "5000", "analytics", 1, "Audited total website visitor baseline counter")'
+      );
+      console.log('[Sync] ✓ Seeded visitor_counter in site_settings');
+    }
+
+    // Schema verified
     console.log('[Sync] Database schema columns verified.');
 
     // 4. Upsert production users with exact credentials

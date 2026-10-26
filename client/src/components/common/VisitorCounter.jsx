@@ -11,7 +11,7 @@ export default function VisitorCounter() {
   const digits = formattedString.split('');
 
   return (
-    <div 
+    <div
       className="visitor-counter-container"
       style={{
         marginTop: '2rem',
@@ -31,7 +31,7 @@ export default function VisitorCounter() {
     >
       {/* Left Column: Label, Live Indicator & Audited Explanation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: '1 1 300px' }}>
-        <div 
+        <div
           style={{
             position: 'relative',
             width: '42px',
@@ -48,7 +48,7 @@ export default function VisitorCounter() {
         >
           <Activity size={22} style={{ animation: isBumping ? 'spin 0.5s linear' : 'none' }} />
           {/* Pulsing Live Dot */}
-          <span 
+          <span
             style={{
               position: 'absolute',
               top: '-3px',
@@ -64,7 +64,7 @@ export default function VisitorCounter() {
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span 
+            <span
               style={{
                 fontSize: '0.68rem',
                 fontWeight: 800,
@@ -79,12 +79,9 @@ export default function VisitorCounter() {
             >
               Live Traffic Counter
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
-              Baseline 5,000+
-            </span>
           </div>
 
-          <h4 
+          <h4
             style={{
               margin: '0.25rem 0 0',
               fontFamily: 'var(--font-masthead, Cinzel, serif)',
@@ -97,13 +94,13 @@ export default function VisitorCounter() {
             Total Website Visitors
           </h4>
           <p style={{ margin: '0.15rem 0 0', fontSize: '0.74rem', color: '#9ca3af', lineHeight: 1.4 }}>
-            Real-time reader telemetry • Automatically updates on page visits, refreshes, tab switching &amp; returning to home
+            Real-time reader telemetry
           </p>
         </div>
       </div>
 
       {/* Right Column: Digital Odometer / Digit Cards Display */}
-      <div 
+      <div
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -111,7 +108,7 @@ export default function VisitorCounter() {
           gap: '0.35rem'
         }}
       >
-        <div 
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -125,7 +122,7 @@ export default function VisitorCounter() {
           }}
         >
           <Users size={16} style={{ color: '#9ca3af', marginRight: '0.25rem' }} />
-          
+
           {digits.map((char, index) => {
             const isComma = char === ',';
             return (

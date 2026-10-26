@@ -5,7 +5,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://news-platform-2goj.onrender.com/api';
+const isLocalhost = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === '::1'
+);
+
+const API_BASE = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5000/api' : 'https://news-platform-2goj.onrender.com/api');
 const TOKEN_KEY = 'auth_token';
 const BC_TOKEN_KEY = 'bc_auth_token';
 const USER_KEY = 'auth_user';

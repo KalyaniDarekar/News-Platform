@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Video, Eye, Clock, Share2, RefreshCw, AlertCircle, Calendar, ExternalLink, Bell, Check } from 'lucide-react';
-import apiService, { formatEditorialDate, formatPublishTime } from '../../services/api';
+import apiService, { formatEditorialDate, formatPublishTime, getMediaUrl, handleImageError, DEFAULT_NEWS_IMAGE } from '../../services/api';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 function extractYouTubeId(url) {
@@ -203,8 +203,9 @@ export default function VideoNewsPage() {
               ) : (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   <img
-                    src={activeVideo?.thumbnail_url || activeVideo?.featured_image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80'}
+                    src={getMediaUrl(activeVideo?.thumbnail_url || activeVideo?.featured_image) || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80'}
                     alt={activeVideo?.title}
+                    onError={handleImageError}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   <div style={{
@@ -307,7 +308,8 @@ export default function VideoNewsPage() {
         }}>
           {videos.map((item) => {
             const isCurrent = activeVideo && (activeVideo.id === item.id || activeVideo.youtube_id === item.youtube_id);
-            const thumb = item.thumbnail_url || item.featured_image || (item.youtube_id ? `https://img.youtube.com/vi/${item.youtube_id}/hqdefault.jpg` : 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80');
+            const rawThumb = item.thumbnail_url || item.featured_image || (item.youtube_id ? `https://img.youtube.com/vi/${item.youtube_id}/hqdefault.jpg` : DEFAULT_NEWS_IMAGE);
+            const thumb = getMediaUrl(rawThumb);
 
             return (
               <div 
@@ -329,6 +331,7 @@ export default function VideoNewsPage() {
                   <img 
                     src={thumb} 
                     alt={item.title} 
+                    onError={handleImageError}
                     loading="lazy"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />

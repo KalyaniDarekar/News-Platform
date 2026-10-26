@@ -13,7 +13,12 @@ import apiService, {
   getPublishTimeDetails, 
   recordArticleRead, 
   getArticleReadTime, 
-  formatReadTimeAgo 
+  formatReadTimeAgo,
+  getMediaUrl,
+  handleImageError,
+  DEFAULT_NEWS_IMAGE,
+  DEFAULT_AVATAR_IMAGE,
+  formatArticleContent
 } from '../../services/api';
 
 function extractYouTubeId(url) {
@@ -299,7 +304,7 @@ export default function ArticleDetailPage() {
   const categorySlug = article.category_slug || article.categorySlug || 'national';
   const authorName = article.author_name || (article.author && article.author.name) || 'Vikramaditya Sharma';
   const authorTitle = article.author_designation || (article.author && article.author.title) || 'Senior Editorial Correspondent';
-  const authorAvatar = article.author_avatar || (article.author && article.author.avatar) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+  const authorAvatar = getMediaUrl(article.author_avatar || (article.author && article.author.avatar), DEFAULT_AVATAR_IMAGE);
   const pubDetails = getPublishTimeDetails(article.publication_time);
   const exactPublishedTime = pubDetails.exact || (article.published_at || article.publishedAt || 'October 2026');
   
@@ -313,7 +318,7 @@ export default function ArticleDetailPage() {
   const readingTime = article.reading_time_minutes 
     ? `${article.reading_time_minutes} min read` 
     : (article.readingTime || '5 min read');
-  const imageUrl = article.featured_image || article.image;
+  const imageUrl = getMediaUrl(article.featured_image || article.image);
   const imageAlt = article.alt_text || article.title;
   const imageCaption = article.image_caption || article.imageCaption || 'Photograph: Bureau Archives / JANTA JOURNAL';
   const youtubeId = extractYouTubeId(article.youtube_url);
@@ -551,6 +556,7 @@ export default function ArticleDetailPage() {
               <img 
                 src={imageUrl} 
                 alt={imageAlt}
+                onError={handleImageError}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>
@@ -632,7 +638,7 @@ export default function ArticleDetailPage() {
                 wordBreak: 'break-word'
               }}
               dangerouslySetInnerHTML={{ 
-                __html: article.article_body || article.content || `<p>${article.short_description || article.summary || ''}</p><p>Investigation continues with regional correspondent dispatches from the field.</p>` 
+                __html: formatArticleContent(article.article_body || article.content || `<p>${article.short_description || article.summary || ''}</p><p>Investigation continues with regional correspondent dispatches from the field.</p>`) 
               }}
             />
 
@@ -695,6 +701,7 @@ export default function ArticleDetailPage() {
               <img
                 src={authorAvatar}
                 alt={authorName}
+                onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
                 style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
               <div>

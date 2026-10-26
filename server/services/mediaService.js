@@ -21,7 +21,7 @@ export const mediaService = {
     const total = countRows[0].total;
 
     const assets = await query(
-      `SELECT m.*, u.full_name as uploader_name
+      `SELECT m.id, m.filename, m.original_name, m.file_path, m.file_url, m.mime_type, m.file_size_bytes, m.width, m.height, m.alt_text, m.caption, m.uploaded_by, m.created_at, u.full_name as uploader_name
        FROM media_assets m
        LEFT JOIN users u ON m.uploaded_by = u.id
        ${whereClause}
@@ -52,14 +52,15 @@ export const mediaService = {
       width = null,
       height = null,
       altText = null,
-      caption = null
+      caption = null,
+      fileData = null
     } = data;
 
     const result = await query(
       `INSERT INTO media_assets (
-         filename, original_name, file_path, file_url, mime_type, file_size_bytes, width, height, alt_text, caption, uploaded_by
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [filename, originalName, filePath, fileUrl, mimeType, fileSizeBytes, width, height, altText, caption, userId]
+         filename, original_name, file_path, file_url, mime_type, file_size_bytes, width, height, alt_text, caption, uploaded_by, file_data
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [filename, originalName, filePath, fileUrl, mimeType, fileSizeBytes, width, height, altText, caption, userId, fileData]
     );
 
     const newId = result.insertId;

@@ -6,19 +6,23 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { checkDbConnection } from './config/database.js';
+import { checkDbConnection, query } from './config/database.js';
 import apiRouter from './routes/api.js';
 import { apiRateLimiter } from './middleware/rateLimitMiddleware.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 import seoService from './services/seoService.js';
 import { syncProductionDatabase } from './database/sync_production.js';
-
-dotenv.config();
+import analyticsService from './services/analyticsService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
+
 const app = express();
+const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'https://news-platform-chi-lovat.vercel.app';
 
 // Security & Utility Middleware
@@ -44,8 +48,51 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
-// Static uploads directory (for media library)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static uploads directory & database-backed fallback (for media library persistence)
+const uploadDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, 'uploads');
+
+app.use('/uploads', async (req, res, next) => {
+  // Normalize request path
+  const normalizedPath = req.path.replace(/^\/+/, '');
+  const reqFilePath = path.join(uploadDir, normalizedPath);
+
+  // 1. If file exists on local disk, serve it immediately with cache header
+  if (fs.existsSync(reqFilePath) && fs.statSync(reqFilePath).isFile()) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    return res.sendFile(reqFilePath);
+  }
+
+  // 2. If missing from disk (e.g. Render container restart), fetch from MySQL media_assets!
+  try {
+    const filename = path.basename(req.path);
+    const cleanUrl = `/uploads/${normalizedPath.replace(/\\/g, '/')}`;
+    const rows = await query(
+      'SELECT file_data, mime_type FROM media_assets WHERE filename = ? OR file_url = ? LIMIT 1',
+      [filename, cleanUrl]
+    );
+
+    if (rows && rows.length > 0 && rows[0].file_data) {
+      // Re-cache to local disk for fast subsequent reads
+      try {
+        fs.mkdirSync(path.dirname(reqFilePath), { recursive: true });
+        fs.writeFileSync(reqFilePath, rows[0].file_data);
+      } catch (cacheErr) {
+        console.warn('[Upload Cache Warning] Could not cache to local disk:', cacheErr.message);
+      }
+
+      res.setHeader('Content-Type', rows[0].mime_type || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.send(rows[0].file_data);
+    }
+  } catch (err) {
+    console.error('[Upload Fetch Error]', err.message);
+  }
+
+  // 3. File not found anywhere: send clean 404, prevent fallback SPA HTML / 200 JSON
+  res.status(404).setHeader('Content-Type', 'text/plain').send('Media asset not found');
+});
 
 // Healthcheck & System Status Endpoint
 app.get('/api/health', async (req, res) => {
@@ -61,8 +108,13 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Auto-sync database schema & production accounts on startup
-syncProductionDatabase().catch(err => {
+syncProductionDatabase().then(() => {
+  analyticsService.initVisitorCounter().catch(err => {
+    console.warn('[Visitor Counter Init Notice]', err.message);
+  });
+}).catch(err => {
   console.warn('[DB Sync Notice]', err.message);
+  analyticsService.initVisitorCounter().catch(() => {});
 });
 
 // Apply rate limiter to all API endpoints
@@ -162,7 +214,7 @@ app.get('/article/:slug', async (req, res, next) => {
   }
 });
 app.get('*', (req, res, next) => {
-  if (req.url.startsWith('/api')) return next();
+  if (req.url.startsWith('/api') || req.url.startsWith('/uploads')) return next();
   const indexFile = path.join(clientDistPath, 'index.html');
   res.sendFile(indexFile, (err) => {
     if (err) {

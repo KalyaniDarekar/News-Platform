@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS `media_assets` (
   `alt_text` VARCHAR(255) NULL,
   `caption` VARCHAR(255) NULL,
   `uploaded_by` INT UNSIGNED NULL,
+  `file_data` LONGBLOB NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_media_mime` (`mime_type`),
   CONSTRAINT `fk_media_uploader` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL

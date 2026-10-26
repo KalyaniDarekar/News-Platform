@@ -150,6 +150,7 @@ export function getHybridDb() {
         alt_text TEXT,
         caption TEXT,
         uploaded_by INTEGER,
+        file_data BLOB,
         created_at TEXT DEFAULT (datetime('now'))
       );
 
@@ -273,6 +274,7 @@ export function getHybridDb() {
     try { sqliteDb.exec(`ALTER TABLE article_multimedia ADD COLUMN duration_seconds INTEGER`); } catch (_) {}
     try { sqliteDb.exec(`ALTER TABLE article_multimedia ADD COLUMN thumbnail_url TEXT`); } catch (_) {}
     try { sqliteDb.exec(`ALTER TABLE article_multimedia ADD COLUMN transcript TEXT`); } catch (_) {}
+    try { sqliteDb.exec(`ALTER TABLE media_assets ADD COLUMN file_data BLOB`); } catch (_) {}
 
     seedInitialData(sqliteDb);
   } catch (err) {
@@ -425,7 +427,16 @@ function seedInitialData(db) {
     insertSetting.run('advertiser_desk_phone', '+91 (11) 4890-2800', 'monetization', 1, 'Commercial desk direct hotline');
     insertSetting.run('privacy_compliance_mode', 'dpdp_act_india', 'compliance', 1, 'Privacy compliance mode: dpdp_act_india or gdpr');
     insertSetting.run('cookie_consent_required', '1', 'compliance', 1, 'Show consent banner on visitor initial arrival');
+    insertSetting.run('visitor_counter', '5000', 'analytics', 1, 'Audited total website visitor baseline counter');
   }
+
+  // Ensure visitor_counter exists in hybrid site_settings even if previously seeded
+  try {
+    const existingVc = db.prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'visitor_counter'").get();
+    if (!existingVc) {
+      db.prepare("INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description) VALUES ('visitor_counter', '5000', 'analytics', 1, 'Audited total website visitor baseline counter')").run();
+    }
+  } catch (_) {}
 
   // Purge lingering demo seed data to keep production store completely clean
   try {

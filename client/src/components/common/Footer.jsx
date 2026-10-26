@@ -155,24 +155,61 @@ export default function Footer() {
         {/* Real-time Audited Visitor Counter */}
         <VisitorCounter />
 
-        {/* Bottom Bar: Copyright & Grievance Contact */}
+        {/* Bottom Bar: Copyright, Grievance Contact & Development Attribution */}
         <div style={{
           marginTop: '2.5rem',
           paddingTop: '1.5rem',
           borderTop: '1px solid #1f2937',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
+          flexDirection: 'column',
+          gap: '0.85rem',
           fontSize: '0.74rem',
           color: '#6b7280'
         }}>
-          <div>
-            © 2026 JANTA JOURNAL Media Network Pvt. Ltd. All rights reserved.
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              © 2026 JANTA JOURNAL Media Network Pvt. Ltd. All rights reserved.
+            </div>
+            <div>
+              Grievance Officer: <strong style={{ color: '#d1d5db' }}>grievance@jantajournal.com</strong> • New Delhi, India
+            </div>
           </div>
-          <div>
-            Grievance Officer: <strong style={{ color: '#d1d5db' }}>grievance@jantajournal.com</strong> • New Delhi, India
+
+          <div style={{
+            paddingTop: '0.65rem',
+            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+            textAlign: 'center',
+            fontSize: '0.75rem',
+            color: '#9ca3af'
+          }}>
+            Designed and Developed by the{' '}
+            <a
+              href="https://dypcoeiincubationcentre.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#10b981',
+                textDecoration: 'none',
+                fontWeight: 600,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.textDecoration = 'underline';
+                e.currentTarget.style.color = '#34d399';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.textDecoration = 'none';
+                e.currentTarget.style.color = '#10b981';
+              }}
+            >
+              DYPCOEI Incubation Centre
+            </a>
           </div>
         </div>
 

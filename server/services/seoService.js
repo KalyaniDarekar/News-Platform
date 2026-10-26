@@ -154,8 +154,9 @@ export const seoService = {
       }
       xml += `      <description>${escapeXml(art.short_description)}</description>\n`;
       if (art.featured_image) {
-        xml += `      <enclosure url="${escapeXml(art.featured_image)}" type="image/jpeg" />\n`;
-        xml += `      <media:content url="${escapeXml(art.featured_image)}" medium="image" />\n`;
+        const fullImg = art.featured_image.startsWith('http') ? art.featured_image : `${cleanBase}${art.featured_image.startsWith('/') ? '' : '/'}${art.featured_image}`;
+        xml += `      <enclosure url="${escapeXml(fullImg)}" type="image/jpeg" />\n`;
+        xml += `      <media:content url="${escapeXml(fullImg)}" medium="image" />\n`;
       }
       xml += `    </item>\n`;
     }
@@ -194,7 +195,8 @@ Sitemap: ${cleanBase}/sitemap.xml
       const title = article.meta_title || `${article.title} — JANTA JOURNAL`;
       const description = article.meta_description || article.short_description || '';
       const canonical = article.canonical_url || `${cleanBase}/article/${article.slug}`;
-      const ogImage = article.og_image || article.featured_image || `${cleanBase}/og-default.jpg`;
+      const rawImg = article.og_image || article.featured_image;
+      const ogImage = rawImg ? (rawImg.startsWith('http') ? rawImg : `${cleanBase}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`) : `${cleanBase}/og-default.jpg`;
       const publishedTime = article.publication_time ? new Date(article.publication_time).toISOString() : new Date().toISOString();
       const modifiedTime = article.updated_at ? new Date(article.updated_at).toISOString() : publishedTime;
       const authorName = article.author_name || 'Chronicle Bureau';

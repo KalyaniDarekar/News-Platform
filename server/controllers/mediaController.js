@@ -4,6 +4,7 @@
 // ========================================================================
 
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import mediaService from '../services/mediaService.js';
 
@@ -63,6 +64,16 @@ export const mediaController = {
       const altText = req.body?.altText || req.body?.alt_text || null;
       const caption = req.body?.caption || null;
 
+      // Read file buffer for cloud database persistence across ephemeral container restarts
+      let fileData = null;
+      try {
+        if (file.path && fs.existsSync(file.path)) {
+          fileData = fs.readFileSync(file.path);
+        }
+      } catch (readErr) {
+        console.warn('[Media Controller] Could not read file buffer for DB backup:', readErr.message);
+      }
+
       const result = await mediaService.registerMediaAsset(
         {
           filename:      file.filename,
@@ -74,7 +85,8 @@ export const mediaController = {
           width:         null,  // populated if sharp is available (optional)
           height:        null,
           altText,
-          caption
+          caption,
+          fileData
         },
         req.user.id,
         ipAddress

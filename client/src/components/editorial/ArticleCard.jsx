@@ -1,7 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Play, Check } from 'lucide-react';
-import { formatPublishTime, getArticleReadTime, formatReadTimeAgo } from '../../services/api';
+import { 
+  formatPublishTime, 
+  getArticleReadTime, 
+  formatReadTimeAgo, 
+  getMediaUrl, 
+  handleImageError, 
+  DEFAULT_NEWS_IMAGE 
+} from '../../services/api';
 
 export default function ArticleCard({ 
   article, 
@@ -21,7 +28,7 @@ export default function ArticleCard({
   const readingTime = article.reading_time_minutes 
     ? `${article.reading_time_minutes} min read` 
     : (article.readingTime || '4 min read');
-  const imageUrl = article.featured_image || article.image || article.thumbnail;
+  const imageUrl = getMediaUrl(article.featured_image || article.image || article.thumbnail);
   const altText = article.alt_text || article.altText || article.title;
   const summary = article.short_description || article.summary || article.excerpt;
 
@@ -41,6 +48,7 @@ export default function ArticleCard({
               <img 
                 src={imageUrl} 
                 alt={altText} 
+                onError={handleImageError}
                 loading="lazy" 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -95,6 +103,7 @@ export default function ArticleCard({
             <img 
               src={imageUrl} 
               alt={altText} 
+              onError={handleImageError}
               loading="lazy" 
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
@@ -158,6 +167,7 @@ export default function ArticleCard({
             <img 
               src={imageUrl} 
               alt={altText} 
+              onError={handleImageError}
               loading="lazy" 
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />

@@ -9,8 +9,29 @@ import {
   WEATHER_DATA,
   AD_BANNERS
 } from '../data/mockNewsData';
+import {
+  getMediaUrl,
+  handleImageError,
+  DEFAULT_NEWS_IMAGE,
+  DEFAULT_AVATAR_IMAGE,
+  formatArticleContent
+} from '../utils/media';
 
-const RAW_API_BASE = import.meta.env.VITE_API_URL || 'https://news-platform-2goj.onrender.com/api';
+export {
+  getMediaUrl,
+  handleImageError,
+  DEFAULT_NEWS_IMAGE,
+  DEFAULT_AVATAR_IMAGE,
+  formatArticleContent
+};
+
+const isLocalhost = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === '::1'
+);
+
+const RAW_API_BASE = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5000/api' : 'https://news-platform-2goj.onrender.com/api');
 const API_BASE = RAW_API_BASE.endsWith('/v1') ? RAW_API_BASE : `${RAW_API_BASE.replace(/\/+$/, '')}/v1`;
 
 // Timezone configured for newsroom publications (IST: Asia/Kolkata)
@@ -426,7 +447,7 @@ export const apiService = {
             title: json.data.title,
             sponsor: json.data.client_name,
             adType: json.data.ad_type || 'image',
-            imageUrl: json.data.banner_image_url,
+            imageUrl: getMediaUrl(json.data.banner_image_url),
             adCode: json.data.ad_code,
             targetUrl: json.data.target_url,
             placementCode: json.data.placement_code,
