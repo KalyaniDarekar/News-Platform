@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings, DollarSign, BarChart3, Video, ShieldCheck, 
+import {
+  Settings, DollarSign, BarChart3, Video, ShieldCheck,
   Save, Check, AlertCircle, RefreshCw, ExternalLink, Info, Lock
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
@@ -18,7 +18,7 @@ export default function AdminSettingsPage() {
     // Revenue & Monetization
     adsense_publisher_id: '',
     adsense_auto_ads_enabled: 'false',
-    advertising_contact_email: 'advertising@bharatchronicle.com',
+    advertising_contact_email: 'advertising@jantajournal.in',
     advertising_phone: '+91 (011) 4567-8900',
     media_kit_url: '/media-kit-2026.pdf',
 
@@ -96,16 +96,17 @@ export default function AdminSettingsPage() {
   };
 
   const tabs = [
-    { id: 'revenue', label: 'Ad Monetization & Direct Sales', icon: DollarSign },
-    { id: 'analytics', label: 'GA4 & Search Console', icon: BarChart3 },
+    // { id: 'revenue', label: 'Ad Monetization & Direct Sales', icon: DollarSign },
+    // { id: 'analytics', label: 'GA4 & Search Console', icon: BarChart3 },
+    { id: 'identity', label: 'Masthead & Legal Identity', icon: Settings },
     { id: 'youtube', label: 'YouTube News Broadcast', icon: Video },
     { id: 'privacy', label: 'DPDP Privacy & Compliance', icon: ShieldCheck },
-    { id: 'identity', label: 'Masthead & Legal Identity', icon: Settings },
+
   ];
 
   return (
     <div style={{ maxWidth: '960px', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      
+
       {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -206,7 +207,7 @@ export default function AdminSettingsPage() {
 
       {/* Main Settings Form Container */}
       <form onSubmit={handleSave} style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #e2e8f0', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
-        
+
         {/* ================= TAB 1: REVENUE & ADSENSE ================= */}
         {activeTab === 'revenue' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
