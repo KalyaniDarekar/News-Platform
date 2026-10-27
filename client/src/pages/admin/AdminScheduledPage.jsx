@@ -18,7 +18,7 @@ const isLocalhost = typeof window !== 'undefined' && (
   window.location.hostname === '::1'
 );
 
-const API_BASE = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5000/api' : 'https://news-platform-2goj.onrender.com/api');
+const API_BASE = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:5000/api' : 'https://api.jantajournal.in/api');
 
 export default function AdminScheduledPage() {
   const { user } = useAuth();

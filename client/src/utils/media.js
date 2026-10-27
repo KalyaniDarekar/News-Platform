@@ -20,7 +20,7 @@ export const getBackendBaseUrl = () => {
   if (import.meta.env.DEV) {
     return '';
   }
-  return 'https://news-platform-2goj.onrender.com';
+  return 'https://api.jantajournal.in';
 };
 
 /**

@@ -9,7 +9,7 @@ import { UploadCloud, Image as ImageIcon, Copy, Check, Trash2, RefreshCw, AlertC
 import adminApi from '../../services/adminApi';
 import { getMediaUrl } from '../../services/api';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://news-platform-2goj.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://api.jantajournal.in';
 
 export default function AdminMediaPage() {
   const [copiedId, setCopiedId] = useState(null);
