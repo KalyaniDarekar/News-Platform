@@ -2,10 +2,11 @@
   "name": "janta-journal-api",
   "version": "1.0.0",
   "description": "Production-ready backend API for Janta Journal News Platform (cPanel/Node.js/MySQL)",
-  "main": "server.js",
+  "main": "app.cjs",
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "cpanel:start": "node app.cjs",
     "dev": "node --watch-path=config --watch-path=controllers --watch-path=middleware --watch-path=routes --watch-path=services --watch-path=validators --watch-path=database --watch-path=server.js server.js",
     "db:migrate": "node database/migrate.js",
     "cron:process": "node cron/expiry-processor.js",

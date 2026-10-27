@@ -138,6 +138,8 @@ export default function AdminArticlesPage({ defaultStatus }) {
       fetchArticles();
     } catch (err) {
       console.error('Publish failed:', err);
+      setActionFeedback(`Error: ${err.message || 'Publishing failed'}`);
+      setTimeout(() => setActionFeedback(null), 5000);
     }
   };
 
@@ -151,6 +153,8 @@ export default function AdminArticlesPage({ defaultStatus }) {
       handleTabClick('in_review');
     } catch (err) {
       console.error('Submission failed:', err);
+      setActionFeedback(`Error: ${err.message || 'Submission failed'}`);
+      setTimeout(() => setActionFeedback(null), 5000);
     }
   };
 
@@ -164,6 +168,8 @@ export default function AdminArticlesPage({ defaultStatus }) {
       fetchArticles();
     } catch (err) {
       console.error('Action failed:', err);
+      setActionFeedback(`Error: ${err.message || 'Failed to return to draft'}`);
+      setTimeout(() => setActionFeedback(null), 5000);
     }
   };
 
@@ -177,6 +183,8 @@ export default function AdminArticlesPage({ defaultStatus }) {
       fetchArticles();
     } catch (err) {
       console.error('Unpublish failed:', err);
+      setActionFeedback(`Error: ${err.message || 'Failed to revert to draft'}`);
+      setTimeout(() => setActionFeedback(null), 5000);
     }
   };
 
@@ -190,6 +198,8 @@ export default function AdminArticlesPage({ defaultStatus }) {
       fetchArticles();
     } catch (err) {
       console.error('Archive failed:', err);
+      setActionFeedback(`Error: ${err.message || 'Failed to archive'}`);
+      setTimeout(() => setActionFeedback(null), 5000);
     }
   };
 

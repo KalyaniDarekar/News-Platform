@@ -35,8 +35,8 @@ export const seoService = {
       `SELECT a.slug, a.title, a.language, a.publication_time, a.updated_at
        FROM articles a
        WHERE a.status = 'published'
-         AND (a.publication_time IS NULL OR a.publication_time <= NOW())
-         AND (a.expiry_time IS NULL OR a.expiry_time > NOW())
+         AND (a.publication_time IS NULL OR a.publication_time <= UTC_TIMESTAMP())
+         AND (a.expiry_time IS NULL OR a.expiry_time > UTC_TIMESTAMP())
        ORDER BY a.publication_time DESC
        LIMIT 5000`
     );
@@ -123,8 +123,8 @@ export const seoService = {
        LEFT JOIN categories c ON a.category_id = c.id
        LEFT JOIN users u ON a.author_id = u.id
        WHERE a.status = 'published'
-         AND (a.publication_time IS NULL OR a.publication_time <= NOW())
-         AND (a.expiry_time IS NULL OR a.expiry_time > NOW())
+         AND (a.publication_time IS NULL OR a.publication_time <= UTC_TIMESTAMP())
+         AND (a.expiry_time IS NULL OR a.expiry_time > UTC_TIMESTAMP())
        ORDER BY a.publication_time DESC
        LIMIT 30`
     );

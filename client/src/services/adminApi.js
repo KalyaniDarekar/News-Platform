@@ -41,10 +41,18 @@ async function request(endpoint, options = {}) {
     }
   }
 
-  const data = await response.json();
+  let data;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    const cleanSnippet = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
+    throw new Error(`Server returned HTTP ${response.status}: ${cleanSnippet || response.statusText}`);
+  }
 
   if (!response.ok || !data.success) {
-    const errorMsg = data.error?.message || `Request failed with status ${response.status}`;
+    const errorMsg = data.error?.message || data.message || `Request failed with status ${response.status}`;
     const err = new Error(errorMsg);
     err.status = response.status;
     err.details = data.error?.details;

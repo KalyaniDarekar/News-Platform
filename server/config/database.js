@@ -36,6 +36,13 @@ export const getDbPool = () => {
       }
 
       pool = mysql.createPool(poolOptions);
+
+      // Force UTC session timezone for all connections to match server UTC timestamping
+      pool.on('connection', (connection) => {
+        connection.query("SET time_zone = '+00:00'", (err) => {
+          if (err) console.warn('Could not set UTC timezone on connection:', err.message);
+        });
+      });
     } catch (err) {
       useFallback = true;
     }

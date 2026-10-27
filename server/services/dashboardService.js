@@ -36,7 +36,7 @@ export const dashboardService = {
         // 1. Count per status
         query(`
           SELECT
-            COALESCE(SUM(status = 'published' AND (expiry_time IS NULL OR expiry_time > NOW())), 0) AS published,
+            COALESCE(SUM(status = 'published' AND (expiry_time IS NULL OR expiry_time > UTC_TIMESTAMP())), 0) AS published,
             COALESCE(SUM(status = 'draft'),     0) AS draft,
             COALESCE(SUM(status = 'scheduled'), 0) AS scheduled,
             COALESCE(SUM(status = 'in_review'), 0) AS in_review,
@@ -52,8 +52,8 @@ export const dashboardService = {
           FROM articles
           WHERE status = 'published'
             AND expiry_time IS NOT NULL
-            AND expiry_time > NOW()
-            AND expiry_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR)
+            AND expiry_time > UTC_TIMESTAMP()
+            AND expiry_time <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
         `),
 
         // 3. Cumulative view count
@@ -73,8 +73,8 @@ export const dashboardService = {
           FROM articles
           WHERE status = 'published'
             AND expiry_time IS NOT NULL
-            AND expiry_time > NOW()
-            AND expiry_time <= DATE_ADD(NOW(), INTERVAL 7 DAY)
+            AND expiry_time > UTC_TIMESTAMP()
+            AND expiry_time <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY)
           ORDER BY expiry_time ASC
           LIMIT 10
         `),
@@ -91,7 +91,7 @@ export const dashboardService = {
           LEFT JOIN users u ON a.author_id = u.id
           WHERE a.status = 'scheduled'
             AND a.scheduled_publication_time IS NOT NULL
-            AND a.scheduled_publication_time > NOW()
+            AND a.scheduled_publication_time > UTC_TIMESTAMP()
           ORDER BY a.scheduled_publication_time ASC
           LIMIT 10
         `),
@@ -120,7 +120,7 @@ export const dashboardService = {
           LEFT JOIN categories c ON a.category_id = c.id
           LEFT JOIN users u ON a.author_id = u.id
           WHERE a.status = 'published'
-            AND (a.expiry_time IS NULL OR a.expiry_time > NOW())
+            AND (a.expiry_time IS NULL OR a.expiry_time > UTC_TIMESTAMP())
           ORDER BY a.view_count DESC
           LIMIT 5
         `),
@@ -256,7 +256,7 @@ export const dashboardService = {
       const [articleRows, enquiryRows] = await Promise.all([
         query(`
           SELECT
-            COALESCE(SUM(status = 'published' AND (expiry_time IS NULL OR expiry_time > NOW())), 0) AS published,
+            COALESCE(SUM(status = 'published' AND (expiry_time IS NULL OR expiry_time > UTC_TIMESTAMP())), 0) AS published,
             COALESCE(SUM(status = 'draft'),     0) AS draft,
             COALESCE(SUM(status = 'scheduled'), 0) AS scheduled,
             COALESCE(SUM(status = 'in_review'), 0) AS in_review,
@@ -266,8 +266,8 @@ export const dashboardService = {
             COALESCE(SUM(
               status = 'published'
               AND expiry_time IS NOT NULL
-              AND expiry_time > NOW()
-              AND expiry_time <= DATE_ADD(NOW(), INTERVAL 24 HOUR)
+              AND expiry_time > UTC_TIMESTAMP()
+              AND expiry_time <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR)
             ), 0) AS expiring_soon,
             COALESCE(SUM(view_count), 0) AS total_views
           FROM articles

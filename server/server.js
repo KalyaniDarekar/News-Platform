@@ -17,13 +17,21 @@ import analyticsService from './services/analyticsService.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Process-level crash prevention for cPanel Phusion Passenger stability
+process.on('uncaughtException', (err) => {
+  console.error('[cPanel Process Warning] Uncaught Exception:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[cPanel Process Warning] Unhandled Promise Rejection:', reason);
+});
+
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'https://news-platform-chi-lovat.vercel.app';
+const CLIENT_URL = process.env.CLIENT_URL || 'https://jantajournal.in';
 
 // Security & Utility Middleware
 app.use(helmet({
@@ -31,10 +39,11 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin, any localhost, or Vercel origins
+    // Allow requests with no origin (curl/mobile/cPanel healthcheck), localhost, jantajournal.in, or Vercel
     if (
       !origin ||
       /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      origin.includes('jantajournal.in') ||
       (CLIENT_URL && origin === CLIENT_URL) ||
       origin.endsWith('.vercel.app')
     ) {
@@ -52,6 +61,14 @@ app.use(morgan('dev'));
 const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(__dirname, 'uploads');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (mkdirErr) {
+  console.warn('[Upload Directory Warning] Could not ensure upload dir:', mkdirErr.message);
+}
 
 app.use('/uploads', async (req, res, next) => {
   // Normalize request path
@@ -92,6 +109,32 @@ app.use('/uploads', async (req, res, next) => {
 
   // 3. File not found anywhere: send clean 404, prevent fallback SPA HTML / 200 JSON
   res.status(404).setHeader('Content-Type', 'text/plain').send('Media asset not found');
+});
+
+// Root status endpoints (for instant browser checks on cPanel server URL)
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    platform: 'JANTA JOURNAL API Service',
+    version: '2.0.0',
+    environment: process.env.NODE_ENV || 'production',
+    message: 'Backend server is running properly on cPanel.',
+    endpoints: {
+      health: '/api/health',
+      articles: '/api/articles',
+      categories: '/api/categories'
+    },
+    serverTime: new Date().toISOString()
+  });
+});
+
+app.get('/api', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'JANTA JOURNAL REST API',
+    version: '2.0.0',
+    health: '/api/health'
+  });
 });
 
 // Healthcheck & System Status Endpoint

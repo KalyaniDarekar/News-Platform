@@ -12,7 +12,7 @@ export default function Footer() {
 
   return (
     <footer style={{ backgroundColor: '#0a0e17', color: '#f3f4f6', borderTop: '4px solid #111827', marginTop: '4rem' }}>
-      
+
       {/* Top Footer Banner */}
       <div style={{ borderBottom: '1px solid #1f2937', padding: '1.25rem 0' }}>
         <div className="container-editorial" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -25,7 +25,7 @@ export default function Footer() {
             </p>
           </div>
 
-          <button 
+          <button
             onClick={scrollToTop}
             style={{
               display: 'inline-flex',
@@ -57,7 +57,7 @@ export default function Footer() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
           gap: '2rem'
         }}>
-          
+
           {/* Column 1: News Desks */}
           <div>
             <h4 style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#ffffff', marginBottom: '1rem', borderBottom: '1px solid #374151', paddingBottom: '0.4rem' }}>
@@ -155,62 +155,37 @@ export default function Footer() {
         {/* Real-time Audited Visitor Counter */}
         <VisitorCounter />
 
-        {/* Bottom Bar: Copyright, Grievance Contact & Development Attribution */}
+        {/* Bottom Bar: Development Attribution */}
         <div style={{
-          marginTop: '2.5rem',
-          paddingTop: '1.5rem',
-          borderTop: '1px solid #1f2937',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.85rem',
-          fontSize: '0.74rem',
-          color: '#6b7280'
+          marginTop: '2rem',
+          paddingTop: '1.25rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          textAlign: 'center',
+          fontSize: '0.75rem',
+          color: '#9ca3af'
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div>
-              © 2026 JANTA JOURNAL Media Network Pvt. Ltd. All rights reserved.
-            </div>
-            <div>
-              Grievance Officer: <strong style={{ color: '#d1d5db' }}>grievance@jantajournal.com</strong> • New Delhi, India
-            </div>
-          </div>
-
-          <div style={{
-            paddingTop: '0.65rem',
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            textAlign: 'center',
-            fontSize: '0.75rem',
-            color: '#9ca3af'
-          }}>
-            Designed and Developed by the{' '}
-            <a
-              href="https://dypcoeiincubationcentre.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: '#10b981',
-                textDecoration: 'none',
-                fontWeight: 600,
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.textDecoration = 'underline';
-                e.currentTarget.style.color = '#34d399';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.textDecoration = 'none';
-                e.currentTarget.style.color = '#10b981';
-              }}
-            >
-              DYPCOEI Incubation Centre
-            </a>
-          </div>
+          Designed and Developed by the{' '}
+          <a
+            href="https://dypcoeiincubationcentre.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#10b981',
+              textDecoration: 'none',
+              fontWeight: 600,
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.textDecoration = 'underline';
+              e.currentTarget.style.color = '#34d399';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.textDecoration = 'none';
+              e.currentTarget.style.color = '#10b981';
+            }}
+          >
+            DYPCOEI Incubation Centre
+          </a>
         </div>
 
       </div>

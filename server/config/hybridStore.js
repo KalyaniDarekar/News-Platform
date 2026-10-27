@@ -4,7 +4,6 @@
 // Pre-seeded with Phase 1 to Phase 5 newsroom tables, users, and commercial data
 // ========================================================================
 
-import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -12,10 +11,32 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Gracefully load native node:sqlite (supported in Node 22.5.0+) without crashing on Node 18/20 LTS
+let DatabaseSync = null;
+try {
+  const sqliteModule = await import('node:sqlite');
+  DatabaseSync = sqliteModule.DatabaseSync || sqliteModule.default?.DatabaseSync || null;
+} catch (_) {
+  // Gracefully ignored on Node 18/20 LTS (standard cPanel hosting environments)
+}
+
 let sqliteDb = null;
 
 export function getHybridDb() {
   if (sqliteDb) return sqliteDb;
+
+  if (!DatabaseSync) {
+    console.warn('[HybridStore Notice] Native node:sqlite is not supported on this Node version (< 22.5.0). Running in resilient memory-stub mode. Ensure MySQL credentials are configured in .env.');
+    sqliteDb = {
+      exec: () => {},
+      prepare: () => ({
+        run: () => ({ lastInsertRowid: 1, changes: 1 }),
+        all: () => [],
+        get: () => ({ count: 0 })
+      })
+    };
+    return sqliteDb;
+  }
 
   // Store in memory with optional local persistence in data directory
   const dataDir = path.join(__dirname, '../data');
@@ -480,15 +501,16 @@ function seedInitialData(db) {
 export function translateMysqlToSqlite(sql) {
   let translated = sql
     .replace(/\bINSERT\s+IGNORE\s+INTO\b/gi, 'INSERT OR IGNORE INTO')
-    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+MINUTE\s*\)/gi, "datetime('now', '+$1 minutes')")
-    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '+$1 hours')")
-    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '+$1 days')")
+    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|UTC_TIMESTAMP\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+MINUTE\s*\)/gi, "datetime('now', '+$1 minutes')")
+    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|UTC_TIMESTAMP\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '+$1 hours')")
+    .replace(/DATE_ADD\s*\(\s*(?:NOW\(\)|UTC_TIMESTAMP\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '+$1 days')")
     .replace(/DATE_ADD\s*\(\s*(?:CURDATE\(\)|date\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '+$1 days')")
-    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+MINUTE\s*\)/gi, "datetime('now', '-$1 minutes')")
-    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '-$1 hours')")
-    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '-$1 days')")
+    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|UTC_TIMESTAMP\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+MINUTE\s*\)/gi, "datetime('now', '-$1 minutes')")
+    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|UTC_TIMESTAMP\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+HOUR\s*\)/gi, "datetime('now', '-$1 hours')")
+    .replace(/DATE_SUB\s*\(\s*(?:NOW\(\)|UTC_TIMESTAMP\(\)|datetime\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "datetime('now', '-$1 days')")
     .replace(/DATE_SUB\s*\(\s*(?:CURDATE\(\)|date\('now'\))\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "date('now', '-$1 days')")
     .replace(/\bNOW\(\)/gi, "datetime('now')")
+    .replace(/\bUTC_TIMESTAMP\(\)/gi, "datetime('now')")
     .replace(/\bCURDATE\(\)/gi, "date('now')")
     .replace(/\bRAND\(\)/gi, "random()")
     .replace(/DATE\s*\(([^)]+)\)\s*=\s*CURDATE\(\)/gi, "date($1) = date('now')")

@@ -288,47 +288,41 @@ export default function AdminArticleEditPage() {
 
     // Client-side validation
     if (!title || title.trim().length < 5) {
-      setErrorMsg('Headline must be at least 5 characters long.');
+      setErrorMsg('Story Headline (Title) must be at least 5 characters long.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!shortDescription || shortDescription.trim().length < 10) {
-      setErrorMsg('Short description must be at least 10 characters long.');
+      setErrorMsg('Short description (summary) must be at least 10 characters long.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!articleBody || articleBody.trim().length < 20) {
-      setErrorMsg('Article body must be at least 20 characters long.');
+      setErrorMsg('Article body content must be at least 20 characters long.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!categoryId) {
-      setErrorMsg('Please select a primary editorial category.');
+      setErrorMsg('Please select a primary editorial category desk.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (targetStatus === 'scheduled' && !scheduledPublicationTime) {
       setErrorMsg('Please select a scheduled publication date and time.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     // Role-based status guard
     if (isReporter && (targetStatus === 'published' || targetStatus === 'scheduled')) {
-      setErrorMsg('Staff reporters do not have permission to directly publish or schedule news. Please save as draft or submit for editorial review.');
+      setErrorMsg('Staff reporters do not have permission to directly publish news. Please save as draft or click "Submit for Review".');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    // Confirmation dialogs
-    if (targetStatus === 'published') {
-      const confirmMsg = status === 'in_review'
-        ? 'Approve and publish this story live to the public portal immediately?'
-        : 'Are you sure you want to publish this story live to the public portal immediately?';
-      if (!window.confirm(confirmMsg)) return;
-    }
-    if (targetStatus === 'in_review' && status !== 'in_review') {
-      if (!window.confirm('Submit this story to Editors and Super Admins for review and publishing approval?')) return;
-    }
-    if (targetStatus === 'draft' && status === 'published' && !window.confirm('Revert this article to draft? It will be removed from public view.')) {
-      return;
-    }
-    if (targetStatus === 'draft' && status === 'in_review' && canPublish && !window.confirm('Return this story to draft mode and request revisions from the reporter?')) {
-      return;
+    // Reverting confirmation
+    if (targetStatus === 'draft' && status === 'published') {
+      if (!window.confirm('Revert this article to draft? It will be removed from public view.')) return;
     }
 
     setSaving(true);
@@ -373,6 +367,9 @@ export default function AdminArticleEditPage() {
         } else {
           setSuccessToast(`Story #${id} updated successfully (${targetStatus.toUpperCase()})!`);
         }
+        setTimeout(() => {
+          navigate('/admin/articles');
+        }, 1200);
       } else {
         const res = await adminApi.createArticle(payload);
         if (targetStatus === 'in_review') {
@@ -381,7 +378,7 @@ export default function AdminArticleEditPage() {
             navigate('/admin/review');
           }, 1200);
         } else {
-          setSuccessToast(`Article created and saved as ${targetStatus.toUpperCase()}!`);
+          setSuccessToast(`Article created and published successfully!`);
           setTimeout(() => {
             navigate('/admin/articles');
           }, 1200);
@@ -389,6 +386,9 @@ export default function AdminArticleEditPage() {
       }
     } catch (err) {
       console.error('Save failed:', err);
+      const errMsg = err.message || 'Failed to save or publish article. Please check your network and try again.';
+      setErrorMsg(errMsg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
     }
@@ -396,12 +396,11 @@ export default function AdminArticleEditPage() {
 
   // Helper for human expiry display
   const renderExpiryHuman = () => {
-    if (!expiryTime) return 'No expiration set — article stays published indefinitely.';
+    if (!expiryTime) return '✓ Permanent Story — Stays visible on website indefinitely.';
     const d = new Date(expiryTime);
     if (isNaN(d.getTime())) return 'Invalid date';
     const ist = d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
-    const utc = d.toUTCString();
-    return `Expires: ${ist} (IST) / ${utc} (UTC)`;
+    return `⚠️ Story will automatically retire from website on ${ist} (IST)`;
   };
 
   if (loading) {
@@ -635,6 +634,38 @@ export default function AdminArticleEditPage() {
         <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', padding: '0.75rem 1rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
           <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
           <span>{successToast}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1.5px solid #ef4444',
+          color: '#991b1b',
+          padding: '0.9rem 1.25rem',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '0.75rem',
+          fontSize: '0.85rem',
+          boxShadow: '0 4px 10px rgba(239, 68, 68, 0.12)'
+        }}>
+          <AlertCircle size={20} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: '0.2rem' }}>
+              Publishing Notice: Action Required
+            </div>
+            <div style={{ color: '#b91c1c', fontSize: '0.84rem', lineHeight: 1.45 }}>
+              {errorMsg}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMsg(null)}
+            style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', padding: '0.2rem' }}
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
@@ -1100,77 +1131,78 @@ export default function AdminArticleEditPage() {
           {/* ---- RIGHT COLUMN: METADATA, SCHEDULING, EXPIRY & ASSETS ---- */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
-            {/* 1. Expiration & Lifecycle Desk */}
-            <div style={{
-              backgroundColor: '#ffffff',
-              padding: '1.25rem',
-              borderRadius: '6px',
-              border: '2px solid #fdba74',
-              backgroundColor: '#fffaf5'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem', color: '#c2410c' }}>
-                <Clock size={16} />
-                <h3 style={{ fontSize: '0.85rem', fontWeight: 800 }}>
-                  Publication Expiry Controls
-                </h3>
-              </div>
-
-              <p style={{ fontSize: '0.74rem', color: '#7c2d12', marginBottom: '0.85rem', lineHeight: 1.35 }}>
-                When an article reaches its expiry date, it automatically retires from all public feeds, searches, and RSS while remaining archived for reporting.
-              </p>
-
-              {/* Quick Preset Buttons */}
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: '#9a3412', marginBottom: '0.35rem' }}>
-                Quick Presets:
+            {/* 1. Category & Taxonomy */}
+            <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                Editorial Category Desk *
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.35rem', marginBottom: '0.75rem' }}>
-                <button type="button" onClick={() => setExpiryPreset(1)} style={presetBtnStyle}>+1 Hour</button>
-                <button type="button" onClick={() => setExpiryPreset(6)} style={presetBtnStyle}>+6 Hours</button>
-                <button type="button" onClick={() => setExpiryPreset(12)} style={presetBtnStyle}>+12 Hours</button>
-                <button type="button" onClick={() => setExpiryPreset(24)} style={presetBtnStyle}>+24 Hours</button>
-                <button type="button" onClick={() => setExpiryPreset(72)} style={presetBtnStyle}>+3 Days</button>
-                <button type="button" onClick={() => setExpiryPreset(168)} style={presetBtnStyle}>+7 Days</button>
-              </div>
+              
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                style={{ width: '100%', padding: '0.55rem', fontSize: '0.85rem', border: '1px solid #cbd5e1', borderRadius: '4px', marginBottom: '0.85rem' }}
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.slug})
+                  </option>
+                ))}
+              </select>
 
-              {/* Custom Date Input */}
-              <div style={{ marginBottom: '0.65rem' }}>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#431407', marginBottom: '0.25rem' }}>
-                  Custom Expiry Date & Time:
-                </label>
+              {/* Tags Section */}
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                Editorial Tags
+              </label>
+              <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.5rem' }}>
                 <input
-                  type="datetime-local"
-                  value={expiryTime}
-                  onChange={(e) => setExpiryTime(e.target.value)}
-                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.82rem', border: '1px solid #fdba74', borderRadius: '4px', backgroundColor: '#ffffff' }}
+                  type="text"
+                  placeholder="Add tag and press Enter..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag(tagInput);
+                    }
+                  }}
+                  style={{ flex: 1, padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
                 />
-              </div>
-
-              {/* Clear button */}
-              {expiryTime && (
                 <button
                   type="button"
-                  onClick={() => setExpiryTime('')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    fontSize: '0.72rem',
-                    color: '#c2410c',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    marginBottom: '0.5rem',
-                    fontWeight: 700
-                  }}
+                  onClick={() => handleAddTag(tagInput)}
+                  style={{ padding: '0.4rem 0.75rem', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 700 }}
                 >
-                  <X size={12} /> Clear Expiration (Keep Published Indefinitely)
+                  Add
                 </button>
-              )}
+              </div>
 
-              {/* Current status info */}
-              <div style={{ backgroundColor: '#ffedd5', padding: '0.5rem 0.65rem', borderRadius: '4px', fontSize: '0.72rem', color: '#9a3412', fontWeight: 600 }}>
-                {renderExpiryHuman()}
+              {/* Tag Chips */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {tags.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      padding: '0.2rem 0.45rem',
+                      borderRadius: '3px',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      fontSize: '0.72rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    #{t}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(t)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#1d4ed8', display: 'flex' }}
+                    >
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -1276,82 +1308,7 @@ export default function AdminArticleEditPage() {
 
             </div>
 
-            {/* 3. Category & Taxonomy */}
-            <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-                Editorial Category Desk *
-              </label>
-              
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                style={{ width: '100%', padding: '0.55rem', fontSize: '0.85rem', border: '1px solid #cbd5e1', borderRadius: '4px', marginBottom: '0.85rem' }}
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.slug})
-                  </option>
-                ))}
-              </select>
-
-              {/* Tags Section */}
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                Editorial Tags
-              </label>
-              <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.5rem' }}>
-                <input
-                  type="text"
-                  placeholder="Add tag and press Enter..."
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddTag(tagInput);
-                    }
-                  }}
-                  style={{ flex: 1, padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleAddTag(tagInput)}
-                  style={{ padding: '0.4rem 0.75rem', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 700 }}
-                >
-                  Add
-                </button>
-              </div>
-
-              {/* Tag Chips */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                {tags.map((t) => (
-                  <span
-                    key={t}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      padding: '0.2rem 0.45rem',
-                      borderRadius: '3px',
-                      backgroundColor: '#eff6ff',
-                      color: '#1d4ed8',
-                      fontSize: '0.72rem',
-                      fontWeight: 600
-                    }}
-                  >
-                    #{t}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(t)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#1d4ed8', display: 'flex' }}
-                    >
-                      <X size={11} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Editorial Toggles & Priority */}
+            {/* 3. Front-Page Editorial Flags */}
             <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
                 Front-Page Editorial Flags
@@ -1444,10 +1401,190 @@ export default function AdminArticleEditPage() {
               </div>
             </div>
 
+            {/* 4. Publication Expiry Controls (Optional Lifecycle Schedule) */}
+            <div style={{
+              backgroundColor: expiryTime ? '#fffaf5' : '#ffffff',
+              padding: '1.25rem',
+              borderRadius: '6px',
+              border: expiryTime ? '2px solid #fdba74' : '1px solid #e2e8f0',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: expiryTime ? '#c2410c' : '#0f172a' }}>
+                  <Clock size={16} />
+                  <h3 style={{ fontSize: '0.85rem', fontWeight: 800 }}>
+                    Auto-Expiry Schedule (Optional)
+                  </h3>
+                </div>
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '999px',
+                  backgroundColor: expiryTime ? '#ffedd5' : '#dcfce7',
+                  color: expiryTime ? '#c2410c' : '#15803d'
+                }}>
+                  {expiryTime ? 'Expiring Story' : 'Permanent Story'}
+                </span>
+              </div>
+
+              <p style={{ fontSize: '0.74rem', color: '#64748b', marginBottom: '0.85rem', lineHeight: 1.35 }}>
+                {expiryTime
+                  ? '⚠️ When this story reaches its expiry time, it will automatically retire from the website, search, and RSS.'
+                  : '✓ Standard news stories remain published indefinitely. Only set an expiry date for temporary flash alerts or ephemeral notices.'}
+              </p>
+
+              {/* Quick Preset Buttons */}
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '0.35rem' }}>
+                Quick Presets (or leave empty for permanent):
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                <button type="button" onClick={() => setExpiryPreset(1)} style={presetBtnStyle}>+1 Hour</button>
+                <button type="button" onClick={() => setExpiryPreset(6)} style={presetBtnStyle}>+6 Hours</button>
+                <button type="button" onClick={() => setExpiryPreset(12)} style={presetBtnStyle}>+12 Hours</button>
+                <button type="button" onClick={() => setExpiryPreset(24)} style={presetBtnStyle}>+24 Hours</button>
+                <button type="button" onClick={() => setExpiryPreset(72)} style={presetBtnStyle}>+3 Days</button>
+                <button type="button" onClick={() => setExpiryPreset(168)} style={presetBtnStyle}>+7 Days</button>
+              </div>
+
+              {/* Custom Date Input */}
+              <div style={{ marginBottom: '0.65rem' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#431407', marginBottom: '0.25rem' }}>
+                  Custom Expiry Date & Time:
+                </label>
+                <input
+                  type="datetime-local"
+                  value={expiryTime}
+                  onChange={(e) => setExpiryTime(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem 0.65rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#ffffff' }}
+                />
+              </div>
+
+              {/* Clear button */}
+              {expiryTime && (
+                <button
+                  type="button"
+                  onClick={() => setExpiryTime('')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.72rem',
+                    color: '#c2410c',
+                    backgroundColor: '#ffedd5',
+                    border: '1px solid #fdba74',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    padding: '0.35rem 0.6rem',
+                    marginBottom: '0.5rem',
+                    fontWeight: 700
+                  }}
+                >
+                  <X size={12} /> Clear Expiration (Keep Published Indefinitely)
+                </button>
+              )}
+
+              {/* Current status info */}
+              <div style={{
+                backgroundColor: expiryTime ? '#ffedd5' : '#f0fdf4',
+                padding: '0.5rem 0.65rem',
+                borderRadius: '4px',
+                fontSize: '0.72rem',
+                color: expiryTime ? '#9a3412' : '#166534',
+                fontWeight: 600,
+                border: expiryTime ? '1px solid #fed7aa' : '1px solid #bbf7d0'
+              }}>
+                {renderExpiryHuman()}
+              </div>
+            </div>
           </div>
 
         </div>
       )}
+
+      {/* ================= BOTTOM ACTION BAR ================= */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        backgroundColor: '#ffffff',
+        padding: '1.25rem 1.5rem',
+        borderRadius: '6px',
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        marginTop: '0.5rem'
+      }}>
+        <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+          Word count: <strong>{wordCount} words</strong> • Estimated reading: <strong>{estimatedReadingTime} min</strong>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => handleSave('draft')}
+            style={{
+              padding: '0.6rem 1.15rem',
+              backgroundColor: '#f1f5f9',
+              color: '#334155',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              border: '1px solid #cbd5e1',
+              cursor: saving ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Save Draft
+          </button>
+
+          {isReporter ? (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => handleSave('in_review')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.6rem 1.35rem',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                borderRadius: '4px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <Send size={15} /> {saving ? 'Submitting...' : 'Submit for Review'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => handleSave('published')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.6rem 1.5rem',
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                borderRadius: '4px',
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)'
+              }}
+            >
+              <CheckCircle2 size={16} /> {saving ? 'Publishing...' : 'Publish Immediately'}
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* ================= MODAL: SCHEDULE PUBLICATION ================= */}
       {showScheduleModal && (

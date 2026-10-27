@@ -145,8 +145,8 @@ export const articleService = {
       // Anonymous public: published only, not yet expired, not embargoed (with 5-minute buffer for clock differences)
       whereClause +=
         " AND a.status = 'published'" +
-        ' AND (a.publication_time IS NULL OR a.publication_time <= DATE_ADD(NOW(), INTERVAL 5 MINUTE))' +
-        ' AND (a.expiry_time IS NULL OR a.expiry_time > NOW())';
+        ' AND (a.publication_time IS NULL OR a.publication_time <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE))' +
+        ' AND (a.expiry_time IS NULL OR a.expiry_time > UTC_TIMESTAMP())';
     } else {
       // Authenticated staff: can filter by any status
       const validStatuses = ['draft', 'in_review', 'scheduled', 'published', 'expired', 'archived', 'all'];
@@ -358,8 +358,8 @@ export const articleService = {
 
     const whereParts = [
       "a.status = 'published'",
-      '(a.publication_time IS NULL OR a.publication_time <= DATE_ADD(NOW(), INTERVAL 5 MINUTE))',
-      '(a.expiry_time IS NULL OR a.expiry_time > NOW())'
+      '(a.publication_time IS NULL OR a.publication_time <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE))',
+      '(a.expiry_time IS NULL OR a.expiry_time > UTC_TIMESTAMP())'
     ];
     const params = [];
 
@@ -392,8 +392,8 @@ export const articleService = {
          LEFT JOIN categories c ON a.category_id = c.id
          LEFT JOIN users u ON a.author_id = u.id
          WHERE a.status = 'published'
-           AND (a.publication_time IS NULL OR a.publication_time <= DATE_ADD(NOW(), INTERVAL 5 MINUTE))
-           AND (a.expiry_time IS NULL OR a.expiry_time > NOW())`;
+           AND (a.publication_time IS NULL OR a.publication_time <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 MINUTE))
+           AND (a.expiry_time IS NULL OR a.expiry_time > UTC_TIMESTAMP())`;
       const backfillParams = [];
       if (excludeIds.length > 0) {
         backfillSql += ` AND a.id NOT IN (${excludeIds.map(() => '?').join(',')})`;
@@ -989,7 +989,7 @@ export const articleService = {
       `SELECT id, title, slug FROM articles
        WHERE status = 'scheduled'
          AND scheduled_publication_time IS NOT NULL
-         AND scheduled_publication_time <= NOW()`,
+         AND scheduled_publication_time <= UTC_TIMESTAMP()`,
       []
     );
 
@@ -997,7 +997,7 @@ export const articleService = {
     for (const art of toPublish) {
       await query(
         `UPDATE articles
-         SET status = 'published', publication_time = NOW()
+         SET status = 'published', publication_time = UTC_TIMESTAMP()
          WHERE id = ? AND status = 'scheduled'`,   // re-check status for safety
         [art.id]
       );
@@ -1024,7 +1024,7 @@ export const articleService = {
       `SELECT id, title, slug FROM articles
        WHERE status = 'published'
          AND expiry_time IS NOT NULL
-         AND expiry_time <= NOW()`,
+         AND expiry_time <= UTC_TIMESTAMP()`,
       []
     );
 

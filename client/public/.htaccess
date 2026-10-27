@@ -1,8 +1,38 @@
+# Apache / LiteSpeed .htaccess for React Router Single Page Application (SPA)
+# Ensures deep links like /admin, /admin/login, /category/* do not return 404 on refresh
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
+
+  # Crucial: Disable MultiViews so Apache mod_negotiation does not intercept /admin with a 404
+  Options -MultiViews
+
+  # Prevent directory listing
+  Options -Indexes
+
+  # If the requested resource is an existing file or directory, serve it directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Route all other URLs to index.html for client-side React Router
+  RewriteRule ^ index.html [L]
 </IfModule>
+
+# Gzip compression for high-speed delivery
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+# Browser caching for static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+</IfModule>
+

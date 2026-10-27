@@ -8,7 +8,8 @@
     "client:preview": "npm --prefix client run preview",
     "server:dev": "npm --prefix server run dev",
     "server:start": "npm --prefix server run start",
-    "build": "npm --prefix client run build"
+    "build": "npm --prefix client run build",
+    "pack:cpanel": "npm --prefix client run build && node scripts/create-deployment-zips.js"
   },
   "keywords": ["news", "publishing", "media", "journalism", "react", "express", "mysql"],
   "author": "The Bharat Chronicle",
