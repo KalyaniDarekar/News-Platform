@@ -8,6 +8,7 @@ import {
   DEFAULT_NEWS_IMAGE, 
   DEFAULT_AVATAR_IMAGE 
 } from '../../services/api';
+import { isMarathi, getHeadlineClass } from '../../utils/language';
 
 export default function HeroPackage({ 
   leadStory, 
@@ -66,7 +67,7 @@ export default function HeroPackage({
           </div>
 
           <Link to={`/article/${leadSlug}`} style={{ textDecoration: 'none' }}>
-            <h1 className="headline-hero">
+            <h1 className={getHeadlineClass('headline-hero', lead)}>
               {leadTitle}
             </h1>
           </Link>
@@ -178,7 +179,7 @@ export default function HeroPackage({
                 )}
 
                 <Link to={`/article/${sSlug}`} style={{ textDecoration: 'none' }}>
-                  <h3 className="headline-lead" style={{ fontSize: '1.2rem', lineHeight: 1.3 }}>
+                  <h3 className={getHeadlineClass('headline-lead', story)} style={{ fontSize: isMarathi(story) ? '1.05rem' : '1.2rem', lineHeight: 1.35 }}>
                     {sTitle}
                   </h3>
                 </Link>
@@ -287,17 +288,19 @@ export default function HeroPackage({
                     </div>
 
                     <Link to={`/article/${op.slug}`} style={{ textDecoration: 'none' }}>
-                      <h4 style={{ 
-                        fontFamily: 'var(--font-serif)', 
-                        fontStyle: 'italic',
-                        fontSize: '0.98rem', 
-                        fontWeight: 600, 
-                        lineHeight: 1.35, 
-                        color: 'var(--color-ink-950)',
-                        marginTop: '0.2rem'
-                      }}
-                      onMouseEnter={(e) => e.target.style.color = 'var(--color-opinion)'}
-                      onMouseLeave={(e) => e.target.style.color = 'var(--color-ink-950)'}
+                      <h4 
+                        className={getHeadlineClass('headline-compact', op)}
+                        style={{ 
+                          fontFamily: isMarathi(op) ? 'var(--font-marathi)' : 'var(--font-serif)', 
+                          fontStyle: isMarathi(op) ? 'normal' : 'italic',
+                          fontSize: isMarathi(op) ? '0.88rem' : '0.98rem', 
+                          fontWeight: 600, 
+                          lineHeight: 1.4, 
+                          color: 'var(--color-ink-950)',
+                          marginTop: '0.2rem'
+                        }}
+                        onMouseEnter={(e) => e.target.style.color = 'var(--color-opinion)'}
+                        onMouseLeave={(e) => e.target.style.color = 'var(--color-ink-950)'}
                       >
                         "{op.title}"
                       </h4>

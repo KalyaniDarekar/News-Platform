@@ -70,29 +70,21 @@ export default function Masthead({ onSearchClick }) {
             {/* Center: Brand Masthead */}
             <div className="masthead-center-brand">
               <Link to="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img
                     src={logoLight}
-                    alt="JANTA JOURNAL Logo"
+                    alt={siteSettings.site_name || 'JANTA JOURNAL'}
                     style={{
-                      height: 'clamp(40px, 5.5vw, 64px)',
+                      height: 'clamp(52px, 8vw, 84px)',
                       width: 'auto',
+                      maxWidth: '100%',
                       objectFit: 'contain',
                       display: 'block'
                     }}
                   />
-                  <span style={{
-                    fontFamily: 'var(--font-masthead)',
-                    fontSize: 'clamp(1.75rem, 5.5vw, 3.25rem)',
-                    fontWeight: 900,
-                    letterSpacing: '0.04em',
-                    color: 'var(--color-ink-950)',
-                    lineHeight: 1
-                  }}>
-                    {siteSettings.site_name}
-                  </span>
                 </div>
               </Link>
+
               <div style={{
                 fontSize: 'clamp(0.68rem, 1.8vw, 0.74rem)',
                 letterSpacing: '0.1em',

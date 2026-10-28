@@ -7,6 +7,7 @@ import AdBanner from '../../components/common/AdBanner';
 import NewsletterBox from '../../components/editorial/NewsletterBox';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
 import apiService, { formatPublishTime, getMediaUrl, handleImageError, DEFAULT_NEWS_IMAGE } from '../../services/api';
+import { isMarathi } from '../../utils/language';
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -235,10 +236,12 @@ export default function HomePage() {
                       </span>
                       <Link 
                         to={`/article/${story.slug}`}
+                        className={isMarathi(story) ? 'lang-mr' : ''}
                         style={{
-                          fontSize: '0.92rem',
+                          fontFamily: isMarathi(story) ? 'var(--font-marathi)' : 'inherit',
+                          fontSize: isMarathi(story) ? '0.84rem' : '0.92rem',
                           fontWeight: 700,
-                          lineHeight: 1.35,
+                          lineHeight: isMarathi(story) ? 1.45 : 1.35,
                           color: 'var(--color-ink-950)',
                           textDecoration: 'none'
                         }}

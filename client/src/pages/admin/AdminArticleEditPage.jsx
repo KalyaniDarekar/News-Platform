@@ -834,9 +834,24 @@ export default function AdminArticleEditPage() {
             </span>
           </div>
 
-          <h1 style={{ fontFamily: 'var(--font-headline, serif)', fontSize: '2.2rem', fontWeight: 900, lineHeight: 1.25, color: '#0f172a', marginBottom: '1rem' }}>
-            {title || 'Headline will appear here'}
-          </h1>
+          {(() => {
+            const isCurrentMarathi = language === 'mr' || /[\u0900-\u097F]/.test(`${title} ${shortDescription}`);
+            return (
+              <h1 
+                className={isCurrentMarathi ? 'lang-mr' : ''}
+                style={{ 
+                  fontFamily: isCurrentMarathi ? 'var(--font-marathi)' : 'var(--font-serif)', 
+                  fontSize: isCurrentMarathi ? '1.75rem' : '2.2rem', 
+                  fontWeight: 900, 
+                  lineHeight: isCurrentMarathi ? 1.4 : 1.25, 
+                  color: '#0f172a', 
+                  marginBottom: '1rem' 
+                }}
+              >
+                {title || 'Headline will appear here'}
+              </h1>
+            );
+          })()}
 
           <p style={{ fontSize: '1.1rem', color: '#475569', lineHeight: 1.5, marginBottom: '1.5rem', fontStyle: 'italic', borderLeft: '3px solid #2563eb', paddingLeft: '1rem' }}>
             {shortDescription || 'Short description summary...'}

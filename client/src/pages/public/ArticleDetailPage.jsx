@@ -20,6 +20,7 @@ import apiService, {
   DEFAULT_AVATAR_IMAGE,
   formatArticleContent
 } from '../../services/api';
+import { isMarathi } from '../../utils/language';
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -322,6 +323,7 @@ export default function ArticleDetailPage() {
   const imageAlt = article.alt_text || article.title;
   const imageCaption = article.image_caption || article.imageCaption || 'Photograph: Bureau Archives / JANTA JOURNAL';
   const youtubeId = extractYouTubeId(article.youtube_url);
+  const isArticleMarathi = isMarathi(article);
 
   // Parse tags
   let tagsList = [];
@@ -368,25 +370,28 @@ export default function ArticleDetailPage() {
         )}
 
         {/* Headline */}
-        <h1 style={{
-          fontFamily: 'var(--font-serif)',
-          fontSize: 'clamp(2rem, 3.8vw, 3.25rem)',
-          fontWeight: 700,
-          lineHeight: 1.15,
-          color: 'var(--color-ink-950)',
-          marginBottom: '1rem',
-          letterSpacing: '-0.01em'
-        }}>
+        <h1 
+          className={isArticleMarathi ? 'article-headline-marathi' : ''}
+          style={{
+            fontFamily: isArticleMarathi ? 'var(--font-marathi)' : 'var(--font-serif)',
+            fontSize: isArticleMarathi ? 'clamp(1.65rem, 3vw, 2.45rem)' : 'clamp(2rem, 3.8vw, 3.25rem)',
+            fontWeight: 700,
+            lineHeight: isArticleMarathi ? 1.35 : 1.15,
+            color: 'var(--color-ink-950)',
+            marginBottom: '1rem',
+            letterSpacing: isArticleMarathi ? '0' : '-0.01em'
+          }}
+        >
           {article.title}
         </h1>
 
         {/* Lead Excerpt */}
         {(article.short_description || article.summary) && (
           <p style={{
-            fontSize: '1.2rem',
-            lineHeight: 1.5,
+            fontSize: isArticleMarathi ? '1.05rem' : '1.2rem',
+            lineHeight: isArticleMarathi ? 1.7 : 1.5,
             color: 'var(--color-ink-700)',
-            fontFamily: 'var(--font-serif)',
+            fontFamily: isArticleMarathi ? 'var(--font-marathi)' : 'var(--font-serif)',
             marginBottom: '1.5rem',
             borderLeft: '3px solid var(--color-breaking)',
             paddingLeft: '1rem'
@@ -630,10 +635,11 @@ export default function ArticleDetailPage() {
 
             {/* Main Formatted Typography Body */}
             <div 
+              className={isArticleMarathi ? 'article-body-marathi' : ''}
               style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '1.18rem',
-                lineHeight: 1.85,
+                fontFamily: isArticleMarathi ? 'var(--font-marathi)' : 'var(--font-serif)',
+                fontSize: isArticleMarathi ? '1.1rem' : '1.18rem',
+                lineHeight: isArticleMarathi ? 1.95 : 1.85,
                 color: 'var(--color-ink-900)',
                 wordBreak: 'break-word'
               }}

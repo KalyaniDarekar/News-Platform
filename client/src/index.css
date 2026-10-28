@@ -9,6 +9,7 @@
   --font-serif: 'Newsreader', Garamond, 'Times New Roman', serif;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --font-marathi: 'Tiro Devanagari Marathi', serif;
 
   /* Editorial Color Palette */
   --color-ink-950: #080c14;
@@ -268,6 +269,71 @@ button {
 
 .headline-compact:hover {
   color: var(--color-breaking);
+}
+
+/* ==========================================================================
+   Marathi Editorial Typography — Tiro Devanagari Marathi
+   Decreased headline sizes and optimized line-height for Devanagari matras.
+   ========================================================================== */
+.font-marathi,
+.lang-mr,
+[lang="mr"] {
+  font-family: var(--font-marathi) !important;
+}
+
+/* Decreased Headline Sizes for Marathi News */
+.headline-hero.lang-mr,
+.lang-mr .headline-hero,
+.lang-mr.headline-hero {
+  font-family: var(--font-marathi) !important;
+  font-size: clamp(1.6rem, 2.5vw, 2.25rem) !important; /* Decreased from clamp(2rem, 3.2vw, 3rem) */
+  line-height: 1.35 !important;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+}
+
+.headline-lead.lang-mr,
+.lang-mr .headline-lead,
+.lang-mr.headline-lead {
+  font-family: var(--font-marathi) !important;
+  font-size: clamp(1.1rem, 1.45vw, 1.4rem) !important; /* Decreased from clamp(1.35rem, 1.8vw, 1.75rem) */
+  line-height: 1.4 !important;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+}
+
+.headline-card.lang-mr,
+.lang-mr .headline-card,
+.lang-mr.headline-card {
+  font-family: var(--font-marathi) !important;
+  font-size: 0.98rem !important; /* Decreased from 1.15rem */
+  line-height: 1.45 !important;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+}
+
+.headline-compact.lang-mr,
+.lang-mr .headline-compact,
+.lang-mr.headline-compact {
+  font-family: var(--font-marathi) !important;
+  font-size: 0.86rem !important; /* Decreased from 0.98rem */
+  line-height: 1.45 !important;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+}
+
+/* Article Detail Page Marathi Headline & Content */
+.article-headline-marathi {
+  font-family: var(--font-marathi) !important;
+  font-size: clamp(1.65rem, 3vw, 2.45rem) !important; /* Decreased from clamp(2rem, 3.8vw, 3.25rem) */
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+
+.article-body-marathi {
+  font-family: var(--font-marathi) !important;
+  font-size: 1.1rem !important;
+  line-height: 1.95 !important;
 }
 
 /* Byline & Metadata */

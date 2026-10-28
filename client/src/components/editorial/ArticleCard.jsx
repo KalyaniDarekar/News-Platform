@@ -9,6 +9,7 @@ import {
   handleImageError, 
   DEFAULT_NEWS_IMAGE 
 } from '../../services/api';
+import { isMarathi, getHeadlineClass } from '../../utils/language';
 
 export default function ArticleCard({ 
   article, 
@@ -68,7 +69,7 @@ export default function ArticleCard({
           </div>
 
           <Link to={`/article/${article.slug}`} style={{ textDecoration: 'none' }}>
-            <h3 className="headline-card" style={{ fontSize: '1.15rem' }}>
+            <h3 className={getHeadlineClass('headline-card', article)} style={{ fontSize: isMarathi(article) ? '0.98rem' : '1.15rem' }}>
               {article.title}
             </h3>
           </Link>
@@ -139,7 +140,7 @@ export default function ArticleCard({
             {categoryName || 'VIDEO DESK'}
           </span>
           <Link to={article.slug ? `/article/${article.slug}` : `/videos`} style={{ textDecoration: 'none' }}>
-            <h3 className="headline-card" style={{ fontSize: '1.05rem', marginTop: '0.2rem' }}>
+            <h3 className={getHeadlineClass('headline-card', article)} style={{ fontSize: isMarathi(article) ? '0.94rem' : '1.05rem', marginTop: '0.2rem' }}>
               {article.title}
             </h3>
           </Link>
@@ -185,7 +186,7 @@ export default function ArticleCard({
       </div>
 
       <Link to={`/article/${article.slug}`} style={{ textDecoration: 'none' }}>
-        <h3 className="headline-card">
+        <h3 className={getHeadlineClass('headline-card', article)}>
           {article.title}
         </h3>
       </Link>
