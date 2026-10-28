@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Bell, Sparkles, Check, Mail, X } from 'lucide-react';
 import apiService from '../../services/api';
+import logoLight from '../../assets/Janta Journal Logo - 2026 (01).png';
 
 export default function Masthead({ onSearchClick }) {
   const [siteSettings, setSiteSettings] = useState({
@@ -68,8 +69,18 @@ export default function Masthead({ onSearchClick }) {
 
             {/* Center: Brand Masthead */}
             <div className="masthead-center-brand">
-              <Link to="/" style={{ textDecoration: 'none' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}>
+              <Link to="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+                  <img
+                    src={logoLight}
+                    alt="JANTA JOURNAL Logo"
+                    style={{
+                      height: 'clamp(40px, 5.5vw, 64px)',
+                      width: 'auto',
+                      objectFit: 'contain',
+                      display: 'block'
+                    }}
+                  />
                   <span style={{
                     fontFamily: 'var(--font-masthead)',
                     fontSize: 'clamp(1.75rem, 5.5vw, 3.25rem)',

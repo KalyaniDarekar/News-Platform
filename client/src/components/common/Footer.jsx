@@ -4,6 +4,7 @@ import { Mail, Shield, CheckCircle, Award, ArrowUp } from 'lucide-react';
 import AdBanner from './AdBanner';
 import { CATEGORIES } from '../../data/mockNewsData';
 import VisitorCounter from './VisitorCounter';
+import logoDark from '../../assets/Janta Journal Logo - 2026 (02).png';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -17,10 +18,14 @@ export default function Footer() {
       <div style={{ borderBottom: '1px solid #1f2937', padding: '1.25rem 0' }}>
         <div className="container-editorial" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <span style={{ fontFamily: 'var(--font-masthead)', fontSize: '1.4rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.04em' }}>
-              JANTA JOURNAL
-            </span>
-            <p style={{ fontSize: '0.76rem', color: '#9ca3af', marginTop: '0.2rem' }}>
+            <Link to="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
+              <img
+                src={logoDark}
+                alt="JANTA JOURNAL"
+                style={{ height: '46px', width: 'auto', display: 'block', objectFit: 'contain' }}
+              />
+            </Link>
+            <p style={{ fontSize: '0.76rem', color: '#9ca3af', marginTop: '0.35rem' }}>
               Independent National Journal of Record • Committed to Truth, Analytical Rigour and Public Interest
             </p>
           </div>

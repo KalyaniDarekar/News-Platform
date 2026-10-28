@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Flame, Search, ChevronRight } from 'lucide-react';
 import apiService from '../../services/api';
+import logoLight from '../../assets/Janta Journal Logo - 2026 (01).png';
 
 export default function MainNavigation({ onSearchClick }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -240,9 +241,13 @@ export default function MainNavigation({ onSearchClick }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-ink-200)', paddingBottom: '0.75rem' }}>
-              <span style={{ fontFamily: 'var(--font-masthead)', fontWeight: 900, fontSize: '1.1rem', color: 'var(--color-ink-950)' }}>
-                JANTA JOURNAL
-              </span>
+              <Link to="/" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', display: 'inline-block' }}>
+                <img
+                  src={logoLight}
+                  alt="JANTA JOURNAL"
+                  style={{ height: '34px', width: 'auto', display: 'block', objectFit: 'contain' }}
+                />
+              </Link>
               <button type="button" onClick={() => setMobileMenuOpen(false)} style={{ color: 'var(--color-ink-600)' }} aria-label="Close menu">
                 <X size={20} />
               </button>
