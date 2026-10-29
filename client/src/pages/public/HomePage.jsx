@@ -86,9 +86,20 @@ export default function HomePage() {
       // Fast wire updates: recent news items for real-time live feed
       setWireUpdates(articles.slice(0, 10));
 
-      // Opinions
-      const ops = (opinionRes.data && opinionRes.data.length > 0) ? opinionRes.data : nonLead.slice(2, 4);
-      setOpinions(ops.slice(0, 3));
+      // Opinions & Comment: from opinion category/API or editorial commentary
+      const opinionCategoryArticles = articles.filter(a => {
+        const cat = (a.category_name || a.category || '').toLowerCase();
+        const slug = (a.category_slug || '').toLowerCase();
+        const kicker = (a.kicker || '').toLowerCase();
+        return cat.includes('opinion') || cat.includes('comment') || cat.includes('editorial') ||
+               slug.includes('opinion') || kicker.includes('opinion') || kicker.includes('comment');
+      });
+      const ops = (opinionRes.data && opinionRes.data.length > 0) 
+        ? opinionRes.data 
+        : (opinionCategoryArticles.length > 0 
+            ? opinionCategoryArticles 
+            : (nonLead.length >= 2 ? nonLead.slice(2) : articles));
+      setOpinions(ops.slice(0, 6));
 
       // Latest news feed
       setLatestFeed(articles.slice(0, 8));

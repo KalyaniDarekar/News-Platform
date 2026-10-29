@@ -325,6 +325,184 @@ function FastWireAutoScroll({ items = [] }) {
   );
 }
 
+/**
+ * OpinionsAutoScroll: Smooth, slow vertical auto-scroller for Opinions & Comment (Column 3)
+ * Smoothly scrolls upward at ~24px/sec, pauses on hover/focus/touch,
+ * seamless loop with zero sudden jumps, respects prefers-reduced-motion.
+ */
+function OpinionsAutoScroll({ items = [] }) {
+  const containerRef = useRef(null);
+  const firstBlockRef = useRef(null);
+  const scrollPosRef = useRef(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchTimerRef = useRef(null);
+  const animFrameRef = useRef(null);
+
+  useEffect(() => {
+    const prefersReducedMotion = typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion || !items || items.length <= 1) return;
+
+    let lastTime = performance.now();
+    const speed = 24; // 24px per second (consistent with other sections)
+
+    const loop = (currentTime) => {
+      const delta = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+
+      const container = containerRef.current;
+      const firstBlock = firstBlockRef.current;
+
+      if (!isPaused && container && firstBlock) {
+        const firstHeight = firstBlock.offsetHeight;
+        if (container.scrollHeight > container.clientHeight && firstHeight > 0) {
+          scrollPosRef.current += speed * delta;
+          if (scrollPosRef.current >= firstHeight) {
+            scrollPosRef.current -= firstHeight;
+          }
+          container.scrollTop = scrollPosRef.current;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    };
+  }, [isPaused, items]);
+
+  const handleTouchStart = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    setIsPaused(true);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    touchTimerRef.current = setTimeout(() => {
+      if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+      setIsPaused(false);
+    }, 2000);
+  };
+
+  const handleScroll = () => {
+    if (isPaused && containerRef.current) {
+      scrollPosRef.current = containerRef.current.scrollTop;
+    }
+  };
+
+  if (!items || items.length === 0) return null;
+
+  const canLoop = items.length > 1;
+
+  const renderOpinion = (op, idx, isClone = false, prefix = 'p') => {
+    const authorName = op.author_name || (op.author && op.author.name) || 'Editorial Board';
+    const authorDesig = op.author_designation || (op.author && op.author.designation) || (op.author && op.author.title) || 'Guest Columnist';
+    const authorAvatar = getMediaUrl(op.author_avatar || (op.author && op.author.avatar), DEFAULT_AVATAR_IMAGE);
+    const excerpt = op.short_description || op.excerpt || op.summary;
+
+    return (
+      <article 
+        key={`${prefix}-op-${op.id || op.slug || idx}`} 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.35rem', 
+          paddingBottom: '0.85rem', 
+          marginBottom: '0.85rem',
+          borderBottom: '1px solid var(--color-ink-200)' 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <img
+            src={authorAvatar}
+            alt={authorName}
+            onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
+            style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
+              {authorName}
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--color-ink-500)', lineHeight: 1.2 }}>
+              {authorDesig}
+            </div>
+          </div>
+        </div>
+
+        <Link 
+          to={`/article/${op.slug}`} 
+          tabIndex={isClone ? -1 : undefined}
+          style={{ textDecoration: 'none' }}
+        >
+          <h4 
+            className={getHeadlineClass('headline-compact', op)}
+            style={{ 
+              fontFamily: isMarathi(op) ? 'var(--font-marathi)' : 'var(--font-serif)', 
+              fontStyle: isMarathi(op) ? 'normal' : 'italic',
+              fontSize: isMarathi(op) ? '0.88rem' : '0.98rem', 
+              fontWeight: 600, 
+              lineHeight: 1.4, 
+              color: 'var(--color-ink-950)',
+              marginTop: '0.2rem'
+            }}
+            onMouseEnter={(e) => e.target.style.color = 'var(--color-opinion)'}
+            onMouseLeave={(e) => e.target.style.color = 'var(--color-ink-950)'}
+          >
+            "{op.title}"
+          </h4>
+        </Link>
+
+        {excerpt && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--color-ink-600)', lineHeight: 1.45 }}>
+            {excerpt}
+          </p>
+        )}
+      </article>
+    );
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="editorial-auto-scroll"
+      onScroll={handleScroll}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => {
+        if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+        setIsPaused(false);
+      }}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={() => {
+        if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+        setIsPaused(false);
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        maxHeight: '320px',
+        overflowY: 'auto',
+        position: 'relative'
+      }}
+    >
+      <div ref={firstBlockRef}>
+        {items.map((op, idx) => renderOpinion(op, idx, false, 'p'))}
+      </div>
+      {canLoop && (
+        <div aria-hidden="true">
+          {items.map((op, idx) => renderOpinion(op, idx, true, 'c1'))}
+          {items.map((op, idx) => renderOpinion(op, idx, true, 'c2'))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HeroPackage({ 
   leadStory, 
   specialReportStories = [],
@@ -346,47 +524,81 @@ export default function HeroPackage({
   const [isPaused, setIsPaused] = useState(false);
   const [fadeState, setFadeState] = useState(true);
 
+  const timerRef = useRef(null);
+  const isPausedRef = useRef(false);
+  isPausedRef.current = isPaused;
+  const touchTimerRef = useRef(null);
+
+  const advanceSlide = () => {
+    setFadeState(false);
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % slides.length);
+      setFadeState(true);
+    }, 180);
+  };
+
+  const restartTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (slides.length <= 1) return;
+    timerRef.current = setInterval(() => {
+      if (!isPausedRef.current) {
+        advanceSlide();
+      }
+    }, 6000);
+  };
+
   // Automatically switch to the next article every 6 seconds
   useEffect(() => {
-    if (isPaused || slides.length <= 1) return;
-
-    const timer = setInterval(() => {
-      setFadeState(false);
-      setTimeout(() => {
-        setCurrentIndex((prev) => (prev + 1) % slides.length);
-        setFadeState(true);
-      }, 160);
-    }, 6000);
-
-    return () => clearInterval(timer);
-  }, [isPaused, slides.length, currentIndex]);
+    restartTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    };
+  }, [slides.length]);
 
   const changeSlide = (newIndex) => {
     setFadeState(false);
     setTimeout(() => {
       setCurrentIndex(newIndex);
       setFadeState(true);
-    }, 160);
+    }, 180);
+    restartTimer();
   };
 
   const handlePrev = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.blur();
     changeSlide((currentIndex - 1 + slides.length) % slides.length);
   };
 
   const handleNext = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.blur();
     changeSlide((currentIndex + 1) % slides.length);
   };
 
   const handleGoTo = (idx, e) => {
     e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.blur();
     if (idx !== currentIndex) {
       changeSlide(idx);
     }
+  };
+
+  const handleTouchStart = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    setIsPaused(true);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    touchTimerRef.current = setTimeout(() => {
+      setIsPaused(false);
+      restartTimer();
+    }, 2500);
   };
 
   if (slides.length === 0) {
@@ -419,7 +631,14 @@ export default function HeroPackage({
   const leadPublishedAt = current.publication_time ? formatPublishTime(current.publication_time) : (current.published_at || current.publishedAt || 'Today');
 
   const handleCardClick = (e) => {
-    if (e.target.closest('button') || e.target.closest('a')) return;
+    if (
+      e.target.closest('button') || 
+      e.target.closest('a') || 
+      e.target.closest('.slider-nav-controls') || 
+      e.target.closest('.slider-dots-container')
+    ) {
+      return;
+    }
     if (leadSlug) {
       navigate(`/article/${leadSlug}`);
     }
@@ -441,9 +660,12 @@ export default function HeroPackage({
           className="editorial-card-hover special-report-slider"
           onClick={handleCardClick}
           onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          onFocus={() => setIsPaused(true)}
-          onBlur={() => setIsPaused(false)}
+          onMouseLeave={() => {
+            setIsPaused(false);
+            restartTimer();
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           style={{ 
             display: 'flex', 
             flexDirection: 'column', 
@@ -471,7 +693,17 @@ export default function HeroPackage({
               </span>
 
               {slides.length > 1 && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.25rem' }}>
+                <div 
+                  className="slider-nav-controls"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.25rem' }}
+                  onFocusCapture={() => setIsPaused(true)}
+                  onBlurCapture={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      setIsPaused(false);
+                      restartTimer();
+                    }
+                  }}
+                >
                   <button
                     type="button"
                     onClick={handlePrev}
@@ -551,9 +783,9 @@ export default function HeroPackage({
             display: 'flex',
             flexDirection: 'column',
             gap: '0.85rem',
-            opacity: fadeState ? 1 : 0.25,
-            transform: fadeState ? 'translateY(0)' : 'translateY(3px)',
-            transition: 'opacity 160ms ease, transform 160ms ease'
+            opacity: fadeState ? 1 : 0.05,
+            transform: fadeState ? 'translateY(0)' : 'translateY(4px)',
+            transition: 'opacity 180ms ease, transform 180ms ease'
           }}>
             {/* Clickable Large Red Serif Headline */}
             <Link to={`/article/${leadSlug}`} style={{ textDecoration: 'none' }}>
@@ -592,12 +824,21 @@ export default function HeroPackage({
             {/* Slide Indicators (Pills) */}
             {slides.length > 1 && (
               <div 
+                className="slider-dots-container"
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '6px', 
                   marginTop: '0.2rem', 
-                  marginBottom: '0.1rem' 
+                  marginBottom: '0.1rem',
+                  padding: '4px 0'
+                }}
+                onFocusCapture={() => setIsPaused(true)}
+                onBlurCapture={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    setIsPaused(false);
+                    restartTimer();
+                  }
                 }}
               >
                 {slides.map((s, idx) => (
@@ -608,8 +849,8 @@ export default function HeroPackage({
                     aria-label={`Go to special report ${idx + 1}`}
                     title={`Slide ${idx + 1}: ${s.title}`}
                     style={{
-                      width: idx === safeIndex ? 24 : 8,
-                      height: 5,
+                      width: idx === safeIndex ? 26 : 8,
+                      height: 6,
                       borderRadius: 3,
                       backgroundColor: idx === safeIndex ? 'var(--color-breaking)' : 'var(--color-ink-300)',
                       border: 'none',
@@ -723,60 +964,7 @@ export default function HeroPackage({
               </Link>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {opList.map((op) => {
-                const authorName = op.author_name || (op.author && op.author.name) || 'Editorial Board';
-                const authorDesig = op.author_designation || (op.author && op.author.designation) || (op.author && op.author.title) || 'Guest Columnist';
-                const authorAvatar = getMediaUrl(op.author_avatar || (op.author && op.author.avatar), DEFAULT_AVATAR_IMAGE);
-                const excerpt = op.short_description || op.excerpt || op.summary;
-
-                return (
-                  <article key={op.id || op.slug} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--color-ink-200)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                      <img
-                        src={authorAvatar}
-                        alt={authorName}
-                        onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
-                        style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-                          {authorName}
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--color-ink-500)', lineHeight: 1.2 }}>
-                          {authorDesig}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Link to={`/article/${op.slug}`} style={{ textDecoration: 'none' }}>
-                      <h4 
-                        className={getHeadlineClass('headline-compact', op)}
-                        style={{ 
-                          fontFamily: isMarathi(op) ? 'var(--font-marathi)' : 'var(--font-serif)', 
-                          fontStyle: isMarathi(op) ? 'normal' : 'italic',
-                          fontSize: isMarathi(op) ? '0.88rem' : '0.98rem', 
-                          fontWeight: 600, 
-                          lineHeight: 1.4, 
-                          color: 'var(--color-ink-950)',
-                          marginTop: '0.2rem'
-                        }}
-                        onMouseEnter={(e) => e.target.style.color = 'var(--color-opinion)'}
-                        onMouseLeave={(e) => e.target.style.color = 'var(--color-ink-950)'}
-                      >
-                        "{op.title}"
-                      </h4>
-                    </Link>
-
-                    {excerpt && (
-                      <p style={{ fontSize: '0.78rem', color: 'var(--color-ink-600)', lineHeight: 1.45 }}>
-                        {excerpt}
-                      </p>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
+            <OpinionsAutoScroll items={opList} />
           </div>
 
         </div>
