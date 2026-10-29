@@ -864,5 +864,13 @@ iframe {
   border-radius: 3px;
 }
 
+/* Independent Editorial Auto-Scroll Columns (Spotlight & Fast Wire) */
+.editorial-auto-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.editorial-auto-scroll::-webkit-scrollbar {
+  display: none;
+}
 
 

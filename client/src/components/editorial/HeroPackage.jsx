@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
@@ -9,6 +9,321 @@ import {
   DEFAULT_AVATAR_IMAGE 
 } from '../../services/api';
 import { isMarathi, getHeadlineClass } from '../../utils/language';
+
+/**
+ * SpotlightAutoScroll: Smooth, slow vertical auto-scroller for Spotlight Analysis (Column 2)
+ * Smoothly scrolls upward at ~24px/sec, pauses on hover/focus/touch,
+ * seamless loop with zero sudden jumps, respects prefers-reduced-motion.
+ */
+function SpotlightAutoScroll({ items = [] }) {
+  const containerRef = useRef(null);
+  const firstBlockRef = useRef(null);
+  const scrollPosRef = useRef(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchTimerRef = useRef(null);
+  const animFrameRef = useRef(null);
+
+  useEffect(() => {
+    const prefersReducedMotion = typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion || !items || items.length <= 1) return;
+
+    let lastTime = performance.now();
+    const speed = 24; // 24px per second (20-30 px/s range)
+
+    const loop = (currentTime) => {
+      const delta = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+
+      const container = containerRef.current;
+      const firstBlock = firstBlockRef.current;
+
+      if (!isPaused && container && firstBlock) {
+        const firstHeight = firstBlock.offsetHeight;
+        if (container.scrollHeight > container.clientHeight && firstHeight > 0) {
+          scrollPosRef.current += speed * delta;
+          if (scrollPosRef.current >= firstHeight) {
+            scrollPosRef.current -= firstHeight;
+          }
+          container.scrollTop = scrollPosRef.current;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    };
+  }, [isPaused, items]);
+
+  const handleTouchStart = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    setIsPaused(true);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    touchTimerRef.current = setTimeout(() => {
+      if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+      setIsPaused(false);
+    }, 2000);
+  };
+
+  const handleScroll = () => {
+    if (isPaused && containerRef.current) {
+      scrollPosRef.current = containerRef.current.scrollTop;
+    }
+  };
+
+  if (!items || items.length === 0) return null;
+
+  const canLoop = items.length > 1;
+
+  const renderStory = (story, idx, isClone = false, prefix = 'p') => {
+    const sTitle = story.title;
+    const sSlug = story.slug;
+    const sKicker = story.kicker || story.category_name || 'FEATURE';
+    const sImage = getMediaUrl(story.featured_image || story.image);
+    const sAlt = story.alt_text || story.title;
+    const sSummary = story.short_description || story.summary;
+    const sReading = story.reading_time_minutes ? `${story.reading_time_minutes} min read` : (story.readingTime || '4 min read');
+    const sAuthor = story.author_name || (story.author && story.author.name) || 'Chronicle Bureau';
+    const sDate = story.publication_time ? formatPublishTime(story.publication_time) : (story.published_at || 'Recent');
+
+    return (
+      <article 
+        key={`${prefix}-spot-${story.id || story.slug || idx}`} 
+        className="editorial-card-hover" 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.5rem', 
+          paddingBottom: '1.25rem', 
+          marginBottom: '1.25rem',
+          borderBottom: '1px solid var(--color-ink-200)' 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span className="kicker kicker-neutral">{sKicker}</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-ink-500)' }}>{sReading}</span>
+        </div>
+
+        {sImage && (
+          <Link to={`/article/${sSlug}`} tabIndex={isClone ? -1 : undefined}>
+            <div className="editorial-img-wrap" style={{ aspectRatio: '16/10', borderRadius: '2px', marginBottom: '0.45rem', overflow: 'hidden' }}>
+              <img src={sImage} alt={sAlt} onError={handleImageError} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          </Link>
+        )}
+
+        <Link to={`/article/${sSlug}`} style={{ textDecoration: 'none' }} tabIndex={isClone ? -1 : undefined}>
+          <h3 className={getHeadlineClass('headline-lead', story)} style={{ fontSize: isMarathi(story) ? '1.05rem' : '1.2rem', lineHeight: 1.35 }}>
+            {sTitle}
+          </h3>
+        </Link>
+
+        {sSummary && (
+          <p style={{ fontSize: '0.86rem', color: 'var(--color-ink-600)', lineHeight: 1.5, marginTop: '0.2rem' }}>
+            {sSummary}
+          </p>
+        )}
+
+        <div className="byline-text" style={{ marginTop: '0.35rem' }}>
+          <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{sAuthor}</strong></span>
+          <span>•</span>
+          <span>{sDate}</span>
+        </div>
+      </article>
+    );
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="editorial-auto-scroll"
+      onScroll={handleScroll}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => {
+        if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+        setIsPaused(false);
+      }}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={() => {
+        if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+        setIsPaused(false);
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        maxHeight: '660px',
+        overflowY: 'auto',
+        position: 'relative'
+      }}
+    >
+      <div ref={firstBlockRef}>
+        {items.map((story, idx) => renderStory(story, idx, false, 'p'))}
+      </div>
+      {canLoop && (
+        <div aria-hidden="true">
+          {items.map((story, idx) => renderStory(story, idx, true, 'c'))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * FastWireAutoScroll: Smooth, slow vertical auto-scroller for The Fast Wire (Column 3)
+ * Exact same smooth scrolling engine and speed (24px/sec) as Spotlight Analysis.
+ */
+function FastWireAutoScroll({ items = [] }) {
+  const containerRef = useRef(null);
+  const firstBlockRef = useRef(null);
+  const scrollPosRef = useRef(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchTimerRef = useRef(null);
+  const animFrameRef = useRef(null);
+
+  useEffect(() => {
+    const prefersReducedMotion = typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion || !items || items.length <= 1) return;
+
+    let lastTime = performance.now();
+    const speed = 24; // 24px per second (exact same speed as Spotlight Analysis)
+
+    const loop = (currentTime) => {
+      const delta = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+
+      const container = containerRef.current;
+      const firstBlock = firstBlockRef.current;
+
+      if (!isPaused && container && firstBlock) {
+        const firstHeight = firstBlock.offsetHeight;
+        if (container.scrollHeight > container.clientHeight && firstHeight > 0) {
+          scrollPosRef.current += speed * delta;
+          if (scrollPosRef.current >= firstHeight) {
+            scrollPosRef.current -= firstHeight;
+          }
+          container.scrollTop = scrollPosRef.current;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    };
+  }, [isPaused, items]);
+
+  const handleTouchStart = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    setIsPaused(true);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+    touchTimerRef.current = setTimeout(() => {
+      if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+      setIsPaused(false);
+    }, 2000);
+  };
+
+  const handleScroll = () => {
+    if (isPaused && containerRef.current) {
+      scrollPosRef.current = containerRef.current.scrollTop;
+    }
+  };
+
+  if (!items || items.length === 0) return null;
+
+  const canLoop = items.length > 1;
+
+  const renderItem = (item, idx, isClone = false, prefix = 'p') => {
+    const wTime = item.publication_time ? formatPublishTime(item.publication_time) : (item.time || 'Live');
+    const wCategory = item.category_name || item.category || 'DISPATCH';
+
+    return (
+      <div 
+        key={`${prefix}-wire-${item.id || item.slug || idx}`} 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.2rem', 
+          paddingBottom: '0.65rem', 
+          marginBottom: '0.65rem',
+          borderBottom: '1px dashed var(--color-ink-200)' 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-breaking)' }}>
+            {wTime}
+          </span>
+          <span style={{ fontWeight: 700, color: 'var(--color-ink-500)', textTransform: 'uppercase' }}>
+            {wCategory}
+          </span>
+        </div>
+        <Link 
+          to={`/article/${item.slug}`}
+          tabIndex={isClone ? -1 : undefined}
+          style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--color-ink-900)', lineHeight: 1.35, textDecoration: 'none' }}
+          onMouseEnter={(e) => e.target.style.color = 'var(--color-breaking)'}
+          onMouseLeave={(e) => e.target.style.color = 'var(--color-ink-900)'}
+        >
+          {item.title}
+        </Link>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="editorial-auto-scroll"
+      onScroll={handleScroll}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => {
+        if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+        setIsPaused(false);
+      }}
+      onFocusCapture={() => setIsPaused(true)}
+      onBlurCapture={() => {
+        if (containerRef.current) scrollPosRef.current = containerRef.current.scrollTop;
+        setIsPaused(false);
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        maxHeight: '280px',
+        overflowY: 'auto',
+        position: 'relative'
+      }}
+    >
+      <div ref={firstBlockRef}>
+        {items.map((item, idx) => renderItem(item, idx, false, 'p'))}
+      </div>
+      {canLoop && (
+        <div aria-hidden="true">
+          {items.map((item, idx) => renderItem(item, idx, true, 'c1'))}
+          {items.map((item, idx) => renderItem(item, idx, true, 'c2'))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HeroPackage({ 
   leadStory, 
@@ -355,67 +670,21 @@ export default function HeroPackage({
           </div>
         </article>
 
-        {/* ================= COLUMN 2: SECONDARY LEADS (STACKED) ================= */}
+        {/* ================= COLUMN 2: SECONDARY LEADS (SPOTLIGHT ANALYSIS AUTO-SCROLL) ================= */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '1.5rem',
           borderLeft: '1px solid var(--color-ink-200)',
           paddingLeft: '1.5rem'
         }} className="secondary-leads-col">
           
-          <div style={{ borderBottom: '1px solid var(--color-ink-950)', paddingBottom: '0.35rem', marginBottom: '-0.5rem' }}>
+          <div style={{ borderBottom: '1px solid var(--color-ink-950)', paddingBottom: '0.35rem', marginBottom: '0.85rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-ink-900)' }}>
               Spotlight Analysis
             </span>
           </div>
 
-          {secondaries.map((story) => {
-            const sTitle = story.title;
-            const sSlug = story.slug;
-            const sKicker = story.kicker || story.category_name || 'FEATURE';
-            const sImage = getMediaUrl(story.featured_image || story.image);
-            const sAlt = story.alt_text || story.title;
-            const sSummary = story.short_description || story.summary;
-            const sReading = story.reading_time_minutes ? `${story.reading_time_minutes} min read` : (story.readingTime || '4 min read');
-            const sAuthor = story.author_name || (story.author && story.author.name) || 'Chronicle Bureau';
-            const sDate = story.publication_time ? formatPublishTime(story.publication_time) : (story.published_at || 'Recent');
-
-            return (
-              <article key={story.id || story.slug} className="editorial-card-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--color-ink-200)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span className="kicker kicker-neutral">{sKicker}</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--color-ink-500)' }}>{sReading}</span>
-                </div>
-
-                {sImage && (
-                  <Link to={`/article/${sSlug}`}>
-                    <div className="editorial-img-wrap" style={{ aspectRatio: '16/10', borderRadius: '2px', marginBottom: '0.45rem', overflow: 'hidden' }}>
-                      <img src={sImage} alt={sAlt} onError={handleImageError} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  </Link>
-                )}
-
-                <Link to={`/article/${sSlug}`} style={{ textDecoration: 'none' }}>
-                  <h3 className={getHeadlineClass('headline-lead', story)} style={{ fontSize: isMarathi(story) ? '1.05rem' : '1.2rem', lineHeight: 1.35 }}>
-                    {sTitle}
-                  </h3>
-                </Link>
-
-                {sSummary && (
-                  <p style={{ fontSize: '0.86rem', color: 'var(--color-ink-600)', lineHeight: 1.5, marginTop: '0.2rem' }}>
-                    {sSummary}
-                  </p>
-                )}
-
-                <div className="byline-text" style={{ marginTop: '0.35rem' }}>
-                  <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{sAuthor}</strong></span>
-                  <span>•</span>
-                  <span>{sDate}</span>
-                </div>
-              </article>
-            );
-          })}
+          <SpotlightAutoScroll items={secondaries} />
 
         </div>
 
@@ -431,7 +700,7 @@ export default function HeroPackage({
           borderRadius: '2px'
         }} className="wire-opinion-col">
           
-          {/* THE 10-MINUTE WIRE */}
+          {/* THE 10-MINUTE WIRE (AUTO-SCROLL) */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid var(--color-ink-950)', paddingBottom: '0.45rem', marginBottom: '0.85rem' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-ink-950)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -440,32 +709,7 @@ export default function HeroPackage({
               <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', color: 'var(--color-ink-500)' }}>LIVE STREAM</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {wire.map((item) => {
-                const wTime = item.publication_time ? formatPublishTime(item.publication_time) : (item.time || 'Live');
-                const wCategory = item.category_name || item.category || 'DISPATCH';
-                return (
-                  <div key={item.id || item.slug} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingBottom: '0.65rem', borderBottom: '1px dashed var(--color-ink-200)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-breaking)' }}>
-                        {wTime}
-                      </span>
-                      <span style={{ fontWeight: 700, color: 'var(--color-ink-500)', textTransform: 'uppercase' }}>
-                        {wCategory}
-                      </span>
-                    </div>
-                    <Link 
-                      to={`/article/${item.slug}`}
-                      style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--color-ink-900)', lineHeight: 1.35, textDecoration: 'none' }}
-                      onMouseEnter={(e) => e.target.style.color = 'var(--color-breaking)'}
-                      onMouseLeave={(e) => e.target.style.color = 'var(--color-ink-900)'}
-                    >
-                      {item.title}
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
+            <FastWireAutoScroll items={wire} />
           </div>
 
           {/* OPINION & EDITORIAL ESSAYS */}

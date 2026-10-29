@@ -75,14 +75,16 @@ export default function HomePage() {
       setLeadStory(lead);
       setSpecialReports(eligibleSpecial.length > 0 ? eligibleSpecial : (lead ? [lead] : []));
 
-      // Secondary spotlights: stories with is_featured === 1 or next 2 stories (excluding lead)
+      // Secondary spotlights: analysis & featured stories (excluding lead)
       const nonLead = articles.filter(a => a.id !== (lead && lead.id));
       const featured = nonLead.filter(a => a.is_featured === 1 || a.is_featured === true);
-      const secondaries = featured.length >= 2 ? featured.slice(0, 2) : nonLead.slice(0, 2);
+      const secondaries = featured.length >= 4 
+        ? featured 
+        : [...featured, ...nonLead.filter(a => !featured.some(f => f.id === a.id))].slice(0, 8);
       setSecondaryStories(secondaries);
 
-      // Fast wire updates: 5 most recent articles
-      setWireUpdates(articles.slice(0, 5));
+      // Fast wire updates: recent news items for real-time live feed
+      setWireUpdates(articles.slice(0, 10));
 
       // Opinions
       const ops = (opinionRes.data && opinionRes.data.length > 0) ? opinionRes.data : nonLead.slice(2, 4);
