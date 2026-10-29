@@ -144,7 +144,7 @@ export default function AdminSettingsPage() {
           }}
         >
           <RefreshCw size={13} className={checkingDb ? 'animate-spin' : ''} />
-          {dbStatus?.status === 'online' ? 'Backend Online (Port 5000)' : 'Check Backend Health'}
+          {dbStatus?.status === 'online' ? 'Backend Online' : 'Check Backend Health'}
         </button>
       </div>
 

@@ -21,6 +21,7 @@ export default function HomePage() {
 
   // Editorial section datasets
   const [leadStory, setLeadStory] = useState(null);
+  const [specialReports, setSpecialReports] = useState([]);
   const [secondaryStories, setSecondaryStories] = useState([]);
   const [wireUpdates, setWireUpdates] = useState([]);
   const [opinions, setOpinions] = useState([]);
@@ -50,7 +51,7 @@ export default function HomePage() {
         worldRes,
         opinionRes
       ] = await Promise.all([
-        apiService.getArticles({ limit: 15, sort: 'publication_time', order: 'desc' }),
+        apiService.getArticles({ limit: 25, sort: 'publication_time', order: 'desc' }),
         apiService.getTrendingArticles(5),
         apiService.getVideoNews(6),
         apiService.getArticles({ category: 'national', limit: 4 }),
@@ -62,9 +63,17 @@ export default function HomePage() {
 
       const articles = allRes.data || [];
 
-      // Find lead story: article with is_lead === 1, or fallback to first
-      const lead = articles.find(a => a.is_lead === 1 || a.is_lead === true) || articles[0];
+      // Find all eligible existing Special Report news articles
+      const eligibleSpecial = articles.filter(a => {
+        if (!a) return false;
+        const kicker = (a.kicker || '').trim().toUpperCase();
+        return kicker.includes('SPECIAL') || a.is_lead === 1 || a.is_lead === true;
+      });
+
+      // Find lead story: article with is_lead === 1, or first special report, or fallback to first
+      const lead = eligibleSpecial[0] || articles.find(a => a.is_lead === 1 || a.is_lead === true) || articles[0];
       setLeadStory(lead);
+      setSpecialReports(eligibleSpecial.length > 0 ? eligibleSpecial : (lead ? [lead] : []));
 
       // Secondary spotlights: stories with is_featured === 1 or next 2 stories (excluding lead)
       const nonLead = articles.filter(a => a.id !== (lead && lead.id));
@@ -161,6 +170,7 @@ export default function HomePage() {
         ) : (
           <HeroPackage 
             leadStory={leadStory}
+            specialReportStories={specialReports}
             secondaryStories={secondaryStories}
             wireUpdates={wireUpdates}
             opinions={opinions}

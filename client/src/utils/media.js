@@ -16,10 +16,6 @@ export const getBackendBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/api(\/v1)?\/?$/, '').replace(/\/+$/, '');
   }
-  // In development, if Vite proxies /uploads, return empty string so relative URLs hit the proxy
-  if (import.meta.env.DEV) {
-    return '';
-  }
   return 'https://api.jantajournal.in';
 };
 

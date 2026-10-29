@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   formatPublishTime, 
   getMediaUrl, 
@@ -12,16 +12,69 @@ import { isMarathi, getHeadlineClass } from '../../utils/language';
 
 export default function HeroPackage({ 
   leadStory, 
+  specialReportStories = [],
   secondaryStories = [], 
   wireUpdates = [], 
   opinions = [] 
 }) {
-  const lead = leadStory;
+  const navigate = useNavigate();
   const secondaries = secondaryStories || [];
   const wire = wireUpdates || [];
   const opList = opinions || [];
 
-  if (!lead) {
+  // Determine eligible special report slides; fallback to leadStory
+  const slides = (specialReportStories && specialReportStories.length > 0)
+    ? specialReportStories
+    : (leadStory ? [leadStory] : []);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [fadeState, setFadeState] = useState(true);
+
+  // Automatically switch to the next article every 6 seconds
+  useEffect(() => {
+    if (isPaused || slides.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setFadeState(false);
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % slides.length);
+        setFadeState(true);
+      }, 160);
+    }, 6000);
+
+    return () => clearInterval(timer);
+  }, [isPaused, slides.length, currentIndex]);
+
+  const changeSlide = (newIndex) => {
+    setFadeState(false);
+    setTimeout(() => {
+      setCurrentIndex(newIndex);
+      setFadeState(true);
+    }, 160);
+  };
+
+  const handlePrev = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    changeSlide((currentIndex - 1 + slides.length) % slides.length);
+  };
+
+  const handleNext = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    changeSlide((currentIndex + 1) % slides.length);
+  };
+
+  const handleGoTo = (idx, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (idx !== currentIndex) {
+      changeSlide(idx);
+    }
+  };
+
+  if (slides.length === 0) {
     return (
       <div style={{ padding: '3.5rem 1.5rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid var(--color-ink-200)', margin: '1.5rem 0' }}>
         <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-ink-900)', marginBottom: '0.4rem' }}>
@@ -34,17 +87,28 @@ export default function HeroPackage({
     );
   }
 
-  const leadTitle = lead.title;
-  const leadSlug = lead.slug;
-  const leadSummary = lead.short_description || lead.summary;
-  const leadImage = getMediaUrl(lead.featured_image || lead.image);
-  const leadAlt = lead.alt_text || lead.title;
-  const leadKicker = lead.kicker || lead.category_name || 'LEAD INVESTIGATION';
-  const leadReadingTime = lead.reading_time_minutes ? `${lead.reading_time_minutes} min read` : (lead.readingTime || '5 min read');
-  const leadAuthorName = lead.author_name || (lead.author && lead.author.name) || 'Staff Reporter';
-  const leadAuthorTitle = lead.author_designation || (lead.author && lead.author.title) || 'Editorial Bureau';
-  const leadAuthorAvatar = getMediaUrl(lead.author_avatar || (lead.author && lead.author.avatar), DEFAULT_AVATAR_IMAGE);
-  const leadPublishedAt = lead.publication_time ? formatPublishTime(lead.publication_time) : (lead.published_at || lead.publishedAt || 'Today');
+  const safeIndex = currentIndex % slides.length;
+  const current = slides[safeIndex] || slides[0];
+
+  const leadTitle = current.title;
+  const leadSlug = current.slug;
+  const leadSummary = current.short_description || current.summary;
+  const leadImage = getMediaUrl(current.featured_image || current.image);
+  const leadAlt = current.alt_text || current.title;
+  const leadKicker = current.kicker || 'SPECIAL REPORT';
+  const categoryName = current.category_name || (current.category && current.category.name) || current.category;
+  const leadReadingTime = current.reading_time_minutes ? `${current.reading_time_minutes} min read` : (current.readingTime || '5 min read');
+  const leadAuthorName = current.author_name || (current.author && current.author.name) || 'Staff Reporter';
+  const leadAuthorTitle = current.author_designation || (current.author && current.author.title) || 'Editorial Bureau';
+  const leadAuthorAvatar = getMediaUrl(current.author_avatar || (current.author && current.author.avatar), DEFAULT_AVATAR_IMAGE);
+  const leadPublishedAt = current.publication_time ? formatPublishTime(current.publication_time) : (current.published_at || current.publishedAt || 'Today');
+
+  const handleCardClick = (e) => {
+    if (e.target.closest('button') || e.target.closest('a')) return;
+    if (leadSlug) {
+      navigate(`/article/${leadSlug}`);
+    }
+  };
 
   return (
     <section style={{ paddingTop: '1.5rem', paddingBottom: '2.5rem' }}>
@@ -57,82 +121,236 @@ export default function HeroPackage({
         alignItems: 'start'
       }} className="hero-package-grid">
         
-        {/* ================= COLUMN 1: THE LEAD INVESTIGATION ================= */}
-        <article className="editorial-card-hover" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span className="kicker">{leadKicker}</span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-ink-500)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Clock size={12} /> {leadReadingTime}
-            </span>
-          </div>
-
-          <Link to={`/article/${leadSlug}`} style={{ textDecoration: 'none' }}>
-            <h1 className={getHeadlineClass('headline-hero', lead)}>
-              {leadTitle}
-            </h1>
-          </Link>
-
-          {/* Lead Hero Image with Caption */}
-          {leadImage && (
-            <Link to={`/article/${leadSlug}`}>
-              <div className="editorial-img-wrap" style={{ aspectRatio: '16/9', borderRadius: '2px', overflow: 'hidden' }}>
-                <img 
-                  src={leadImage} 
-                  alt={leadAlt}
-                  onError={handleImageError}
-                  loading="eager"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-            </Link>
-          )}
-          <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)', fontStyle: 'italic', marginTop: '-0.35rem' }}>
-            {lead.image_caption || lead.imageCaption || `Photograph: Bureau Archives / JANTA JOURNAL`}
-          </div>
-
-          {/* Excerpt */}
-          {leadSummary && (
-            <p style={{
-              fontSize: '1.05rem',
-              lineHeight: 1.6,
-              color: 'var(--color-ink-700)',
-              fontFamily: 'var(--font-serif)',
-              marginTop: '0.25rem'
-            }}>
-              {leadSummary}
-            </p>
-          )}
-
-          {/* Author Byline */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: '0.75rem',
-            borderTop: '1px solid var(--color-ink-200)',
-            marginTop: '0.5rem',
-            flexWrap: 'wrap',
-            gap: '0.65rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <img
-                src={leadAuthorAvatar}
-                alt={leadAuthorName}
-                onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
-                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }}
-              />
-              <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-                  By {leadAuthorName}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)' }}>
-                  {leadAuthorTitle}
-                </div>
-              </div>
+        {/* ================= COLUMN 1: THE SPECIAL REPORT AUTOMATIC SLIDER ================= */}
+        <article 
+          className="editorial-card-hover special-report-slider"
+          onClick={handleCardClick}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onFocus={() => setIsPaused(true)}
+          onBlur={() => setIsPaused(false)}
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '0.85rem',
+            position: 'relative',
+            cursor: 'pointer'
+          }}
+        >
+          {/* Top Category / Kicker, Reading Time & Slider Navigation Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <span className="kicker" style={{ margin: 0, color: 'var(--color-breaking)' }}>
+                {leadKicker}
+              </span>
+              {categoryName && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)', fontWeight: 600, textTransform: 'uppercase' }}>
+                  • {categoryName}
+                </span>
+              )}
             </div>
 
-            <div style={{ fontSize: '0.74rem', color: 'var(--color-ink-500)', whiteSpace: 'nowrap' }}>
-              {leadPublishedAt}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-ink-500)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Clock size={12} /> {leadReadingTime}
+              </span>
+
+              {slides.length > 1 && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    aria-label="Previous special report"
+                    title="Previous story"
+                    style={{
+                      background: 'none',
+                      border: '1px solid var(--color-ink-300)',
+                      borderRadius: '50%',
+                      width: 24,
+                      height: 24,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--color-ink-700)',
+                      padding: 0,
+                      transition: 'all var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-breaking)';
+                      e.currentTarget.style.color = 'var(--color-breaking)';
+                      e.currentTarget.style.backgroundColor = 'var(--color-breaking-soft)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-ink-300)';
+                      e.currentTarget.style.color = 'var(--color-ink-700)';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+
+                  <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-ink-600)', minWidth: '2.5rem', textAlign: 'center' }}>
+                    {safeIndex + 1} / {slides.length}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    aria-label="Next special report"
+                    title="Next story"
+                    style={{
+                      background: 'none',
+                      border: '1px solid var(--color-ink-300)',
+                      borderRadius: '50%',
+                      width: 24,
+                      height: 24,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--color-ink-700)',
+                      padding: 0,
+                      transition: 'all var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-breaking)';
+                      e.currentTarget.style.color = 'var(--color-breaking)';
+                      e.currentTarget.style.backgroundColor = 'var(--color-breaking-soft)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-ink-300)';
+                      e.currentTarget.style.color = 'var(--color-ink-700)';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Animated Slide Content (Smooth Opacity & Subtle Y-Translation) */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.85rem',
+            opacity: fadeState ? 1 : 0.25,
+            transform: fadeState ? 'translateY(0)' : 'translateY(3px)',
+            transition: 'opacity 160ms ease, transform 160ms ease'
+          }}>
+            {/* Clickable Large Red Serif Headline */}
+            <Link to={`/article/${leadSlug}`} style={{ textDecoration: 'none' }}>
+              <h1 
+                className={getHeadlineClass('headline-hero', current)}
+                style={{
+                  color: 'var(--color-breaking)',
+                  marginBottom: '0.75rem',
+                  transition: 'color var(--transition-fast)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-breaking-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-breaking)'}
+              >
+                {leadTitle}
+              </h1>
+            </Link>
+
+            {/* Featured Image with Caption */}
+            {leadImage && (
+              <Link to={`/article/${leadSlug}`}>
+                <div className="editorial-img-wrap" style={{ aspectRatio: '16/9', borderRadius: '2px', overflow: 'hidden' }}>
+                  <img 
+                    src={leadImage} 
+                    alt={leadAlt}
+                    onError={handleImageError}
+                    loading="eager"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              </Link>
+            )}
+            <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)', fontStyle: 'italic', marginTop: '-0.35rem' }}>
+              {current.image_caption || current.imageCaption || `Photograph: Bureau Archives / JANTA JOURNAL`}
+            </div>
+
+            {/* Slide Indicators (Pills) */}
+            {slides.length > 1 && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  marginTop: '0.2rem', 
+                  marginBottom: '0.1rem' 
+                }}
+              >
+                {slides.map((s, idx) => (
+                  <button
+                    key={s.id || s.slug || idx}
+                    type="button"
+                    onClick={(e) => handleGoTo(idx, e)}
+                    aria-label={`Go to special report ${idx + 1}`}
+                    title={`Slide ${idx + 1}: ${s.title}`}
+                    style={{
+                      width: idx === safeIndex ? 24 : 8,
+                      height: 5,
+                      borderRadius: 3,
+                      backgroundColor: idx === safeIndex ? 'var(--color-breaking)' : 'var(--color-ink-300)',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      transition: 'all 250ms ease'
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Excerpt */}
+            {leadSummary && (
+              <p style={{
+                fontSize: '1.05rem',
+                lineHeight: 1.6,
+                color: 'var(--color-ink-700)',
+                fontFamily: 'var(--font-serif)',
+                marginTop: '0.25rem'
+              }}>
+                {leadSummary}
+              </p>
+            )}
+
+            {/* Author Byline */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: '0.75rem',
+              borderTop: '1px solid var(--color-ink-200)',
+              marginTop: '0.5rem',
+              flexWrap: 'wrap',
+              gap: '0.65rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <img
+                  src={leadAuthorAvatar}
+                  alt={leadAuthorName}
+                  onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
+                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <div>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
+                    By {leadAuthorName}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)' }}>
+                    {leadAuthorTitle}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: 'var(--color-ink-500)', whiteSpace: 'nowrap' }}>
+                {leadPublishedAt}
+              </div>
             </div>
           </div>
         </article>
