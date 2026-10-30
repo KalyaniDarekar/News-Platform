@@ -11,6 +11,7 @@ import Footer from './components/common/Footer';
 import SearchModal from './components/common/SearchModal';
 import ConsentBanner from './components/common/ConsentBanner';
 import AdBanner from './components/common/AdBanner';
+import AdMarquee from './components/common/AdMarquee';
 import ScrollToTop from './components/common/ScrollToTop';
 import usePageTracking from './hooks/usePageTracking';
 
@@ -27,6 +28,7 @@ import PrivacyPolicyPage from './pages/public/PrivacyPolicyPage';
 import TermsPage from './pages/public/TermsPage';
 import EditorialPoliciesPage from './pages/public/EditorialPoliciesPage';
 import NotFoundPage from './pages/public/NotFoundPage';
+import AdvertisementsPage from './pages/public/AdvertisementsPage';
 
 // Admin CMS Components & Pages
 import AdminLayout from './components/admin/AdminLayout';
@@ -72,9 +74,11 @@ function PublicLayout() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopInfoBar />
+      <AdMarquee position="top" />
       <Masthead onSearchClick={() => setIsSearchOpen(true)} />
       <MainNavigation onSearchClick={() => setIsSearchOpen(true)} />
       <BreakingTicker />
+      <AdMarquee position="breaking" />
 
       <main style={{ flex: 1 }}>
         <Outlet />
@@ -110,6 +114,8 @@ export default function App() {
             <Route path="article/:slug" element={<ArticleDetailPage />} />
             <Route path="search" element={<SearchResultsPage />} />
             <Route path="videos" element={<VideoNewsPage />} />
+            <Route path="advertisements" element={<AdvertisementsPage />} />
+            <Route path="ads" element={<AdvertisementsPage />} />
             {/* <Route path="advertise" element={<AdvertisePage />} /> */}
             <Route path="about" element={<AboutUsPage />} />
             <Route path="contact" element={<ContactUsPage />} />

@@ -360,7 +360,7 @@ export default function HomePage() {
                 PARTNER CONTENT • COMMERCIAL SPONSORSHIP
               </span>
               <span style={{ fontSize: '0.72rem', color: '#92400e', fontWeight: 600 }}>
-                Presented by {partnerStory.author_name || 'Enterprise Partners Desk'}
+                {partnerStory.sponsor_client ? `Presented by ${partnerStory.sponsor_client}` : 'Sponsored Feature'}
               </span>
             </div>
 
@@ -519,8 +519,6 @@ export default function HomePage() {
                       {activeVideo.short_description || activeVideo.summary}
                     </p>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
-                      <span>By {activeVideo.author_name || 'Chronicle Investigations Desk'}</span>
-                      <span>•</span>
                       <span>{formatPublishTime(activeVideo.publication_time)}</span>
                     </div>
                   </div>

@@ -458,6 +458,69 @@ export const apiService = {
     return null;
   },
 
+  // Get all active commercial ads for the public directory / showcase page
+  async getPublicAdDirectory() {
+    try {
+      const res = await fetch(`${API_BASE}/ads/directory`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return json.data.map(item => ({
+            id: item.id,
+            placementId: item.placement_id,
+            title: item.title,
+            sponsor: item.client_name,
+            clientName: item.client_name,
+            adType: item.ad_type || 'image',
+            imageUrl: item.banner_image_url ? getMediaUrl(item.banner_image_url) : null,
+            bannerImageUrl: item.banner_image_url ? getMediaUrl(item.banner_image_url) : null,
+            adCode: item.ad_code,
+            targetUrl: item.target_url,
+            placementCode: item.placement_code,
+            placementName: item.placement_name,
+            dimensions: item.dimensions,
+            articleId: item.article_id,
+            articleSlug: item.article_slug,
+            articleSummary: item.article_summary,
+            startDate: item.start_date,
+            endDate: item.end_date,
+            priority: item.priority
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('[API Warning] getPublicAdDirectory failed:', err.message);
+    }
+    return [];
+  },
+
+  // Get active single-line marquee ads for top or breaking section
+  async getMarqueeAds(slot = 'top') {
+    try {
+      const res = await fetch(`${API_BASE}/ads/marquee/${slot}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          return json.data.map(item => ({
+            id: item.id,
+            title: item.title,
+            sponsor: item.client_name,
+            adType: item.ad_type || 'image',
+            imageUrl: item.banner_image_url ? getMediaUrl(item.banner_image_url) : null,
+            adCode: item.ad_code,
+            targetUrl: item.target_url,
+            placementCode: item.placement_code,
+            dimensions: item.dimensions
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn(`[API Warning] getMarqueeAds("${slot}") failed:`, err.message);
+    }
+
+    return [];
+  },
+
   // Record advertisement impression telemetry
   async recordAdImpression(adId, placementCode = '', pagePath = '') {
     if (!adId) return;

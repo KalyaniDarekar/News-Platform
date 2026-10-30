@@ -3,26 +3,47 @@ import {
   Megaphone, PlusCircle, ToggleLeft, ToggleRight, ExternalLink, 
   TrendingUp, Eye, MousePointer, Calendar, Sparkles, AlertCircle, 
   ShieldAlert, Edit3, Trash2, CheckCircle, RefreshCw, X, Image as ImageIcon,
-  Code, Clock, Layers
+  Code, Clock, Layers, Database, Check
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
 import { getMediaUrl } from '../../services/api';
 
 const DEFAULT_AD_PLACEMENTS = [
+
   { id: 1, placement_code: 'header_leaderboard', name: 'Header Super Leaderboard', dimensions: '970x90' },
-  { id: 2, placement_code: 'homepage_hero_adjacent', name: 'Homepage Hero-Adjacent Half-Page / Display', dimensions: '300x600' },
-  { id: 3, placement_code: 'article_inline', name: 'In-Article Inline Native Leaderboard', dimensions: '728x90' },
-  { id: 4, placement_code: 'article_sidebar_top', name: 'Article Sidebar Top Medium Rectangle', dimensions: '300x250' },
-  { id: 5, placement_code: 'category_page_banner', name: 'Category Page Header Billboard', dimensions: '728x90' },
-  { id: 6, placement_code: 'footer_banner', name: 'Global Footer Super Leaderboard', dimensions: '970x90' },
-  { id: 7, placement_code: 'mobile_anchor_banner', name: 'Responsive Mobile Sticky Anchor Banner', dimensions: '320x50' }
+  { id: 2, placement_code: 'marquee_top', name: 'Top Marquee Ad (Below Day/Date)', dimensions: 'Single Line Marquee' },
+  { id: 3, placement_code: 'marquee_breaking', name: 'Breaking Marquee Ad (Below Breaking News)', dimensions: 'Single Line Marquee' },
+  { id: 4, placement_code: 'marquee_both', name: 'Marquee Ad (Both Top & Breaking)', dimensions: 'Single Line Marquee' },
+  { id: 5, placement_code: 'homepage_hero_adjacent', name: 'Homepage Hero-Adjacent Half-Page / Display', dimensions: '300x600' },
+  { id: 6, placement_code: 'homepage_mid_billboard', name: 'Homepage Mid-Section Billboard', dimensions: '970x120' },
+  { id: 7, placement_code: 'article_inline', name: 'In-Article Inline Native Leaderboard', dimensions: '728x90' },
+  { id: 8, placement_code: 'article_sidebar_top', name: 'Article Sidebar Top Medium Rectangle', dimensions: '300x250' },
+  { id: 9, placement_code: 'category_page_banner', name: 'Category Page Header Billboard', dimensions: '728x90' },
+  { id: 10, placement_code: 'footer_banner', name: 'Global Footer Super Leaderboard', dimensions: '970x90' },
+  { id: 11, placement_code: 'mobile_anchor_banner', name: 'Responsive Mobile Sticky Anchor Banner', dimensions: '320x50' }
 ];
+
+
+
+
+
+
+
+
+
 
 export default function AdminAdsPage() {
   const [campaigns, setCampaigns] = useState([]);
   const [placements, setPlacements] = useState(DEFAULT_AD_PLACEMENTS);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' | 'placements'
+
+  // Marquee Tickers Live Settings
+  const [marqueeTopEnabled, setMarqueeTopEnabled] = useState(true);
+  const [marqueeBreakingEnabled, setMarqueeBreakingEnabled] = useState(true);
+  const [updatingSetting, setUpdatingSetting] = useState(false);
+  const [syncingDb, setSyncingDb] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,9 +73,10 @@ export default function AdminAdsPage() {
   const fetchCampaignsAndPlacements = async () => {
     setLoading(true);
     try {
-      const [cRes, pRes] = await Promise.allSettled([
+      const [cRes, pRes, sRes] = await Promise.allSettled([
         adminApi.getAdCampaigns(),
-        adminApi.getAdPlacements()
+        adminApi.getAdPlacements(),
+        adminApi.getSettings()
       ]);
 
       if (cRes.status === 'fulfilled' && cRes.value) {
@@ -75,6 +97,16 @@ export default function AdminAdsPage() {
         console.warn('Could not fetch ad placements, using default placement catalog:', pRes.reason);
       }
 
+      if (sRes.status === 'fulfilled' && sRes.value) {
+        const sData = sRes.value.data?.settings || sRes.value.data || {};
+        if (sData.ad_marquee_top_enabled !== undefined) {
+          setMarqueeTopEnabled(sData.ad_marquee_top_enabled === '1' || sData.ad_marquee_top_enabled === 1 || sData.ad_marquee_top_enabled === true || sData.ad_marquee_top_enabled === 'true');
+        }
+        if (sData.ad_marquee_breaking_enabled !== undefined) {
+          setMarqueeBreakingEnabled(sData.ad_marquee_breaking_enabled === '1' || sData.ad_marquee_breaking_enabled === 1 || sData.ad_marquee_breaking_enabled === true || sData.ad_marquee_breaking_enabled === 'true');
+        }
+      }
+
       if (availablePlacements.length > 0 && !formData.placementId) {
         setFormData(prev => ({ ...prev, placementId: availablePlacements[0].id }));
       }
@@ -88,6 +120,40 @@ export default function AdminAdsPage() {
   useEffect(() => {
     fetchCampaignsAndPlacements();
   }, []);
+
+  // Marquee and DB handlers
+
+
+
+  const handleToggleMarqueeSetting = async (key, currentVal) => {
+    setUpdatingSetting(true);
+    const newVal = !currentVal;
+    try {
+      await adminApi.updateSetting(key, newVal ? '1' : '0');
+      if (key === 'ad_marquee_top_enabled') setMarqueeTopEnabled(newVal);
+      if (key === 'ad_marquee_breaking_enabled') setMarqueeBreakingEnabled(newVal);
+    } catch (err) {
+      alert(`Could not update marquee setting: ${err.message}`);
+    } finally {
+      setUpdatingSetting(false);
+    }
+  };
+
+  const handleSyncDatabase = async () => {
+    setSyncingDb(true);
+    setSyncMessage('');
+    try {
+      const res = await adminApi.syncDatabase();
+      setSyncMessage(res.message || 'Database schema, placements, and CRM tables verified successfully!');
+      setTimeout(() => setSyncMessage(''), 5000);
+      await fetchCampaignsAndPlacements();
+    } catch (err) {
+      alert(`Database sync failed: ${err.message}`);
+    } finally {
+      setSyncingDb(false);
+    }
+  };
+
 
   const handleOpenCreateModal = () => {
     setIsEditing(false);
@@ -139,11 +205,14 @@ export default function AdminAdsPage() {
       if (!formData.title || !formData.clientName) {
         throw new Error('Campaign title and client name are required.');
       }
-      if (formData.adType === 'image' && (!formData.bannerImageUrl || !formData.targetUrl)) {
-        throw new Error('Banner Image URL and Target URL are required for image ads.');
+      if (formData.adType === 'image' && !formData.bannerImageUrl) {
+        throw new Error('Banner Image Creative URL is required for image ads.');
       }
       if (formData.adType === 'code' && (!formData.adCode || !formData.adCode.trim())) {
         throw new Error('Approved Ad Code snippet is required for code ads.');
+      }
+      if (formData.adType === 'text' && !formData.title.trim()) {
+        throw new Error('Campaign headline text is required for text/marquee campaigns.');
       }
 
       if (isEditing && currentId) {
@@ -154,6 +223,9 @@ export default function AdminAdsPage() {
 
       setIsModalOpen(false);
       fetchCampaignsAndPlacements();
+  
+
+
     } catch (err) {
       setFormError(err.message || 'Failed to save advertisement campaign.');
     } finally {
@@ -185,6 +257,25 @@ export default function AdminAdsPage() {
   const totalClicks = campaigns.reduce((acc, c) => acc + (Number(c.clicks_count) || 0), 0);
   const platformCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : '0.00';
   const activeCount = campaigns.filter(c => c.is_active).length;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const activeMarqueeTopAds = campaigns.filter(c => {
+    const isAct = Boolean(c.is_active);
+    const code = c.placement_code || '';
+    const isMarquee = ['marquee_top', 'marquee_both', 'marquee_all'].includes(code);
+    const isDateValid = (!c.start_date || c.start_date.split('T')[0] <= todayStr) &&
+                        (!c.end_date || c.end_date.split('T')[0] >= todayStr);
+    return isAct && isMarquee && isDateValid;
+  });
+
+  const activeMarqueeBreakingAds = campaigns.filter(c => {
+    const isAct = Boolean(c.is_active);
+    const code = c.placement_code || '';
+    const isMarquee = ['marquee_breaking', 'marquee_both', 'marquee_all'].includes(code);
+    const isDateValid = (!c.start_date || c.start_date.split('T')[0] <= todayStr) &&
+                        (!c.end_date || c.end_date.split('T')[0] >= todayStr);
+    return isAct && isMarquee && isDateValid;
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -223,6 +314,29 @@ export default function AdminAdsPage() {
 
           <button
             type="button"
+            onClick={handleSyncDatabase}
+            disabled={syncingDb}
+            title="Verifies and creates missing MySQL tables and placement slots on cPanel hosting"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              color: '#1e3a8a',
+              padding: '0.55rem 0.9rem',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: syncingDb ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <Database size={14} />
+            {syncingDb ? 'Syncing...' : 'Verify & Sync DB'}
+          </button>
+
+          <button
+            type="button"
             onClick={handleOpenCreateModal}
             style={{
               display: 'inline-flex',
@@ -241,6 +355,195 @@ export default function AdminAdsPage() {
           >
             <PlusCircle size={15} /> Book Sponsor Campaign
           </button>
+        </div>
+      </div>
+
+
+      {syncMessage && (
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          color: '#1e40af',
+          borderRadius: '6px',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <CheckCircle size={18} color="#2563eb" />
+          <span>{syncMessage}</span>
+        </div>
+      )}
+
+      {/* Single-Line Marquee Ad Tickers (Live Website Display Control) */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '6px',
+        padding: '1.25rem 1.5rem',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.85rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sparkles size={18} color="#d97706" />
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Single-Line Scrolling Marquee Ad Tickers (Live Display Controls)
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.25rem', margin: 0 }}>
+              Master visibility toggles for the real-time scrolling sponsor banners.
+              <strong> Visibility rule:</strong> A marquee bar is <em>only</em> displayed on the website when its toggle is turned ON <strong>and</strong> active/unexpired sponsor ads are published for that slot. If OFF or if 0 ads exist, the bar remains completely hidden.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+          {/* Top Marquee (Below Day/Date) */}
+          <div style={{
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            padding: '1rem 1.15rem',
+            backgroundColor: marqueeTopEnabled ? '#f8fafc' : '#fcfcfc'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Position 1 &bull; Header Placement
+                </span>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', margin: '0.15rem 0 0 0' }}>
+                  Top Day/Date Marquee Ad Ticker
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleMarqueeSetting('ad_marquee_top_enabled', marqueeTopEnabled)}
+                disabled={updatingSetting}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: updatingSetting ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '20px',
+                  backgroundColor: marqueeTopEnabled ? '#dbeafe' : '#f1f5f9',
+                  color: marqueeTopEnabled ? '#1e40af' : '#64748b',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  transition: 'all 150ms ease'
+                }}
+                title={marqueeTopEnabled ? 'Click to turn OFF' : 'Click to turn ON'}
+              >
+                {marqueeTopEnabled ? <ToggleRight size={22} color="#2563eb" /> : <ToggleLeft size={22} color="#94a3b8" />}
+                <span>{marqueeTopEnabled ? 'Turned ON' : 'Turned OFF'}</span>
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 0.75rem 0' }}>
+              Renders directly below the Day/Date Top Info Bar at the very top of all editorial pages.
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', paddingTop: '0.65rem', borderTop: '1px solid #e2e8f0', fontSize: '0.74rem' }}>
+              <div>
+                <span style={{ color: '#64748b' }}>Active Ad Count: </span>
+                <strong style={{ color: activeMarqueeTopAds.length > 0 ? '#16a34a' : '#d97706' }}>
+                  {activeMarqueeTopAds.length} active ads
+                </strong>
+                <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}> (slot: marquee_top)</span>
+              </div>
+
+              {/* Live Status Pill */}
+              {marqueeTopEnabled && activeMarqueeTopAds.length > 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.72rem' }}>
+                  <Check size={12} /> Live & Visible on Website
+                </span>
+              ) : marqueeTopEnabled && activeMarqueeTopAds.length === 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#fef3c7', color: '#b45309', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.72rem' }}>
+                  <AlertCircle size={12} /> ON, but Hidden (0 active ads)
+                </span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#f1f5f9', color: '#64748b', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.72rem' }}>
+                  Turned OFF (Hidden)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Breaking News Marquee (Below Breaking News Ticker) */}
+          <div style={{
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            padding: '1rem 1.15rem',
+            backgroundColor: marqueeBreakingEnabled ? '#f8fafc' : '#fcfcfc'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Position 2 &bull; Editorial Ticker Placement
+                </span>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', margin: '0.15rem 0 0 0' }}>
+                  Breaking News Marquee Ad Ticker
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleMarqueeSetting('ad_marquee_breaking_enabled', marqueeBreakingEnabled)}
+                disabled={updatingSetting}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: updatingSetting ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '20px',
+                  backgroundColor: marqueeBreakingEnabled ? '#dbeafe' : '#f1f5f9',
+                  color: marqueeBreakingEnabled ? '#1e40af' : '#64748b',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  transition: 'all 150ms ease'
+                }}
+                title={marqueeBreakingEnabled ? 'Click to turn OFF' : 'Click to turn ON'}
+              >
+                {marqueeBreakingEnabled ? <ToggleRight size={22} color="#2563eb" /> : <ToggleLeft size={22} color="#94a3b8" />}
+                <span>{marqueeBreakingEnabled ? 'Turned ON' : 'Turned OFF'}</span>
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 0.75rem 0' }}>
+              Renders directly below the Breaking News Ticker section with high reader engagement.
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', paddingTop: '0.65rem', borderTop: '1px solid #e2e8f0', fontSize: '0.74rem' }}>
+              <div>
+                <span style={{ color: '#64748b' }}>Active Ad Count: </span>
+                <strong style={{ color: activeMarqueeBreakingAds.length > 0 ? '#16a34a' : '#d97706' }}>
+                  {activeMarqueeBreakingAds.length} active ads
+                </strong>
+                <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}> (slot: marquee_breaking)</span>
+              </div>
+
+              {/* Live Status Pill */}
+              {marqueeBreakingEnabled && activeMarqueeBreakingAds.length > 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#dcfce7', color: '#15803d', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.72rem' }}>
+                  <Check size={12} /> Live & Visible on Website
+                </span>
+              ) : marqueeBreakingEnabled && activeMarqueeBreakingAds.length === 0 ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#fef3c7', color: '#b45309', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.72rem' }}>
+                  <AlertCircle size={12} /> ON, but Hidden (0 active ads)
+                </span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', backgroundColor: '#f1f5f9', color: '#64748b', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.72rem' }}>
+                  Turned OFF (Hidden)
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -353,9 +656,35 @@ export default function AdminAdsPage() {
                   {campaigns.map((camp) => (
                     <tr key={camp.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '1rem 1.25rem' }}>
-                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>{camp.title}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.15rem' }}>
-                          Sponsor: <strong>{camp.client_name}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>{camp.title}</span>
+                          {camp.article_id && (
+                            <span style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              backgroundColor: '#fef3c7',
+                              color: '#92400e',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '3px',
+                              letterSpacing: '0.04em'
+                            }}>
+                              SPONSORED STORY
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span>Sponsor: <strong>{camp.client_name}</strong></span>
+                          {camp.target_url && (
+                            <a
+                              href={camp.target_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#2563eb', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                            >
+                              <span>View Linked Destination</span>
+                              <ExternalLink size={10} />
+                            </a>
+                          )}
                         </div>
                       </td>
 
@@ -660,13 +989,14 @@ export default function AdminAdsPage() {
                     style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
                   >
                     <option value="image">Direct Creative Image (JPG / PNG / WebP)</option>
+                    <option value="text">Sponsored Headline / Text Ad (Single-Line Marquee & Native)</option>
                     <option value="code">Approved Ad Code (Google AdSense / HTML Tag)</option>
                   </select>
                 </div>
               </div>
 
-              {/* Image creative vs Code creative */}
-              {formData.adType === 'image' ? (
+              {/* Image creative vs Text creative vs Code creative */}
+              {formData.adType === 'image' && (
                 <>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
@@ -687,21 +1017,34 @@ export default function AdminAdsPage() {
                     )}
                   </div>
 
+
+                </>
+              )}
+
+              {formData.adType === 'text' && (
+                <>
+                  <div style={{ padding: '0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', fontSize: '0.8rem', color: '#166534' }}>
+                    <strong>Marquee / Text Ad Display:</strong> The <strong>Campaign Name</strong> entered above will be displayed directly as the prominent scrolling headline text in the Marquee bar alongside <strong>[{formData.clientName || 'Sponsor Name'}]</strong>.
+                  </div>
+
+
+
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-                      Target Destination Landing URL *
+                      Optional Brand Logo / Thumbnail Creative URL
                     </label>
                     <input
                       type="url"
-                      required
-                      value={formData.targetUrl}
-                      onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
-                      placeholder="https://partner-domain.com/landing-page"
+                      value={formData.bannerImageUrl}
+                      onChange={(e) => setFormData({ ...formData, bannerImageUrl: e.target.value })}
+                      placeholder="https://example.com/logo-small.png"
                       style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
                     />
                   </div>
                 </>
-              ) : (
+              )}
+
+              {formData.adType === 'code' && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>

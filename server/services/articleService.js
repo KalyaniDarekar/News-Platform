@@ -103,7 +103,7 @@ export const generateUniqueSlug = async (title, currentId = null) => {
 const ARTICLE_SELECT = `
   a.id, a.title, a.slug, a.kicker, a.short_description, a.featured_image,
   a.image_caption, a.alt_text, a.youtube_url,
-  a.status, a.priority, a.is_featured, a.is_breaking, a.is_sponsored, a.sponsor_client,
+  a.status, a.priority, a.is_featured, a.is_breaking, a.is_sponsored, a.sponsor_client, a.sponsor_placement_code,
   a.reading_time_minutes, a.view_count, a.language,
   a.scheduled_publication_time, a.publication_time, a.expiry_time,
   a.meta_title, a.meta_description, a.meta_keywords, a.canonical_url, a.og_image,
@@ -511,6 +511,7 @@ export const articleService = {
       isBreaking = false,
       isSponsored = false,
       sponsorClient = null,
+      sponsorPlacementCode = 'marquee_top',
       language = 'en',
       scheduledPublicationTime = null,
       expiryTime = null,           // ← Phase 3
@@ -580,16 +581,16 @@ export const articleService = {
            title, slug, kicker, short_description, article_body,
            featured_image, image_caption, alt_text, youtube_url,
            author_id, category_id, status, priority,
-           is_featured, is_breaking, is_sponsored, sponsor_client,
+           is_featured, is_breaking, is_sponsored, sponsor_client, sponsor_placement_code,
            reading_time_minutes, language,
            scheduled_publication_time, publication_time, expiry_time,
            meta_title, meta_description, meta_keywords, canonical_url, og_image
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title, finalSlug, kicker, shortDescription, articleBody,
           featuredImage, imageCaption, altText, embedUrl,
           authorId, categoryId, safeStatus, priority,
-          isFeatured ? 1 : 0, isBreaking ? 1 : 0, isSponsored ? 1 : 0, sponsorClient,
+          isFeatured ? 1 : 0, isBreaking ? 1 : 0, isSponsored ? 1 : 0, sponsorClient, sponsorPlacementCode || "marquee_top",
           readingTime, language,
           toMySqlDateTime(scheduledPublicationTime), toMySqlDateTime(publicationTime), toMySqlDateTime(safeExpiryTime),
           metaTitle || title,
@@ -650,6 +651,11 @@ export const articleService = {
         ]
       );
 
+      // Sync with commercial advertisements inventory
+      if (isSponsored) {
+        await syncSponsoredArticleAd(articleId, finalSlug, title, sponsorClient, sponsorPlacementCode, featuredImage, safeStatus, priority, safeExpiryTime, conn);
+      }
+
       return {
         id: articleId,
         title,
@@ -697,6 +703,7 @@ export const articleService = {
     const isBreaking       = updateData.isBreaking       !== undefined ? (updateData.isBreaking ? 1 : 0) : current.is_breaking;
     const isSponsored      = updateData.isSponsored      !== undefined ? (updateData.isSponsored ? 1 : 0) : current.is_sponsored;
     const sponsorClient    = updateData.sponsorClient    !== undefined ? updateData.sponsorClient    : current.sponsor_client;
+    const sponsorPlacementCode = updateData.sponsorPlacementCode !== undefined ? updateData.sponsorPlacementCode : (current.sponsor_placement_code || 'marquee_top');
     const language         = updateData.language         !== undefined ? updateData.language         : current.language;
     const scheduledTime    = updateData.scheduledPublicationTime !== undefined ? updateData.scheduledPublicationTime : current.scheduled_publication_time;
     const metaTitle        = updateData.metaTitle        !== undefined ? updateData.metaTitle        : current.meta_title;
@@ -786,7 +793,7 @@ export const articleService = {
            title = ?, slug = ?, kicker = ?, short_description = ?, article_body = ?,
            featured_image = ?, image_caption = ?, alt_text = ?, youtube_url = ?,
            category_id = ?, status = ?, priority = ?,
-           is_featured = ?, is_breaking = ?, is_sponsored = ?, sponsor_client = ?,
+           is_featured = ?, is_breaking = ?, is_sponsored = ?, sponsor_client = ?, sponsor_placement_code = ?,
            reading_time_minutes = ?, language = ?,
            scheduled_publication_time = ?, publication_time = ?, expiry_time = ?,
            meta_title = ?, meta_description = ?, meta_keywords = ?, canonical_url = ?, og_image = ?
@@ -795,7 +802,7 @@ export const articleService = {
           title, slug, kicker, shortDescription, articleBody,
           featuredImage, imageCaption, altText, youtubeUrl,
           categoryId, newStatus, priority,
-          isFeatured, isBreaking, isSponsored, sponsorClient,
+          isFeatured, isBreaking, isSponsored, sponsorClient, sponsorPlacementCode,
           readingTime, language,
           toMySqlDateTime(scheduledTime), toMySqlDateTime(publicationTime), toMySqlDateTime(expiryTime),
           metaTitle, metaDescription, metaKeywords, canonicalUrl, ogImage,
@@ -806,6 +813,7 @@ export const articleService = {
       // ---- Tags update ----
       if (Array.isArray(updateData.tags)) {
         await conn.query(`DELETE FROM article_tags WHERE article_id = ?`, [articleId]);
+      await conn.query(`UPDATE advertisements SET is_active = 0 WHERE article_id = ?`, [articleId]).catch(() => {});
         for (const tagItem of updateData.tags) {
           let tagId = null;
           if (typeof tagItem === 'number') {
@@ -895,6 +903,9 @@ export const articleService = {
           ipAddress
         ]
       );
+
+      // Sync with commercial advertisements inventory
+      await syncSponsoredArticleAd(articleId, slug, title, sponsorClient, sponsorPlacementCode, featuredImage, newStatus, priority, expiryTime, conn);
 
       return {
         id: articleId,
@@ -1060,3 +1071,77 @@ export const articleService = {
 };
 
 export default articleService;
+
+/**
+ * Synchronize a sponsored article with the commercial advertisement inventory.
+ * Automatically inserts/updates/deactivates the ad flight in the selected placement slot.
+ */
+export async function syncSponsoredArticleAd(articleId, slug, title, sponsorClient, sponsorPlacementCode, featuredImage, status, priority, expiryTime, conn = null) {
+  try {
+    const runQuery = async (sql, params = []) => {
+      if (conn && conn.query) {
+        const [rows] = await conn.query(sql, params);
+        return rows;
+      }
+      return await query(sql, params);
+    };
+
+    const artRows = await runQuery(
+      `SELECT is_sponsored, sponsor_client, sponsor_placement_code FROM articles WHERE id = ? LIMIT 1`,
+      [articleId]
+    );
+
+    const isSponsored = artRows && artRows[0] ? Boolean(artRows[0].is_sponsored) : false;
+
+    if (!isSponsored) {
+      // Deactivate any existing linked advertisement
+      await runQuery(`UPDATE advertisements SET is_active = 0 WHERE article_id = ?`, [articleId]).catch(() => {});
+      return;
+    }
+
+    const code = sponsorPlacementCode || (artRows && artRows[0] ? artRows[0].sponsor_placement_code : 'marquee_top') || 'marquee_top';
+    const client = sponsorClient || (artRows && artRows[0] ? artRows[0].sponsor_client : 'Sponsored Partner') || 'Sponsored Partner';
+
+    const plcRows = await runQuery(`SELECT id, placement_code FROM ad_placements WHERE placement_code = ? LIMIT 1`, [code]);
+    const placementId = plcRows && plcRows[0] ? plcRows[0].id : 2; // fallback to marquee_top (id 2)
+
+    const isMarquee = code.startsWith('marquee_');
+    const adType = isMarquee ? 'text' : (featuredImage ? 'image' : 'text');
+    const bannerUrl = featuredImage || null;
+    const targetUrl = `/article/${slug}`;
+    const isActive = status === 'published' ? 1 : 0;
+    const prio = parseInt(priority, 10) || 5;
+    const startDate = new Date().toISOString().split('T')[0];
+    const endDate = expiryTime ? (typeof expiryTime === 'string' ? expiryTime.split('T')[0] : expiryTime.toISOString().split('T')[0]) : '2099-12-31';
+
+    const existing = await runQuery(`SELECT id FROM advertisements WHERE article_id = ? LIMIT 1`, [articleId]);
+
+    if (existing && existing.length > 0) {
+      await runQuery(
+        `UPDATE advertisements SET
+           placement_id = ?,
+           title = ?,
+           client_name = ?,
+           ad_type = ?,
+           banner_image_url = ?,
+           target_url = ?,
+           start_date = ?,
+           end_date = ?,
+           priority = ?,
+           is_active = ?
+         WHERE id = ?`,
+        [placementId, title, client, adType, bannerUrl, targetUrl, startDate, endDate, prio, isActive, existing[0].id]
+      );
+    } else {
+      await runQuery(
+        `INSERT INTO advertisements (
+           placement_id, title, client_name, ad_type, banner_image_url,
+           target_url, start_date, end_date, priority, is_active, article_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [placementId, title, client, adType, bannerUrl, targetUrl, startDate, endDate, prio, isActive, articleId]
+      );
+    }
+  } catch (err) {
+    console.warn('[syncSponsoredArticleAd Warning]', err.message);
+  }
+}

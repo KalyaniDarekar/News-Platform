@@ -366,6 +366,12 @@ export const adminApi = {
     });
   },
 
+  async syncDatabase() {
+    return request('/settings/sync-database', {
+      method: 'POST'
+    });
+  },
+
   async updateSettingsBatch(payload) {
     return request('/settings/batch', {
       method: 'PUT',

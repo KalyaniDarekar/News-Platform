@@ -5,6 +5,32 @@
 import adService from '../services/adService.js';
 
 export const adController = {
+  // GET /api/v1/ads/marquee/:slot (Public marquee single line ticker)
+  async getMarqueeAds(req, res, next) {
+    try {
+      const { slot } = req.params;
+      const ads = await adService.getActiveMarqueeAds(slot);
+      res.json({
+        success: true,
+        data: ads || []
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  // GET /api/v1/ads/directory (Public all active commercial ads showcase)
+  async getPublicAdDirectory(req, res, next) {
+    try {
+      const ads = await adService.getPublicAdDirectory();
+      res.json({
+        success: true,
+        data: ads || []
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // GET /api/v1/ads/active/:placementCode (Public)
   async getActiveAd(req, res, next) {
     try {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Mail, Phone, Calendar, Search, Filter, 
   CheckCircle, Clock, FileText, Trash2, Edit3, ExternalLink, 
-  ChevronDown, MessageSquare, AlertCircle, RefreshCw
+  ChevronDown, MessageSquare, AlertCircle, RefreshCw, Database
 } from 'lucide-react';
 import adminApi from '../../services/adminApi';
 
@@ -15,9 +15,13 @@ export default function AdminEnquiriesPage() {
   const [updatingId, setUpdatingId] = useState(null);
   const [internalNotes, setInternalNotes] = useState('');
   const [statusDraft, setStatusDraft] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [syncingDb, setSyncingDb] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   const fetchEnquiries = async () => {
     setLoading(true);
+    setErrorMessage('');
     try {
       const res = await adminApi.getAdvertiserEnquiries({
         status: statusFilter,
@@ -26,8 +30,25 @@ export default function AdminEnquiriesPage() {
       setEnquiries(res.data || []);
     } catch (err) {
       console.error('Failed to load enquiries:', err);
+      setErrorMessage(err.message || 'Failed to load advertiser enquiries from the server.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncDatabase = async () => {
+    setSyncingDb(true);
+    setSyncMessage('');
+    setErrorMessage('');
+    try {
+      const res = await adminApi.syncDatabase();
+      setSyncMessage(res.message || 'Database schema, CRM tables, and placement slots verified successfully!');
+      setTimeout(() => setSyncMessage(''), 5000);
+      await fetchEnquiries();
+    } catch (err) {
+      alert(`Database sync failed: ${err.message}`);
+    } finally {
+      setSyncingDb(false);
     }
   };
 
@@ -116,26 +137,107 @@ export default function AdminEnquiriesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={fetchEnquiries}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            color: '#334155',
-            padding: '0.5rem 0.85rem',
-            borderRadius: '4px',
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          <RefreshCw size={14} /> Refresh Leads
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={fetchEnquiries}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <RefreshCw size={14} /> Refresh Leads
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSyncDatabase}
+            disabled={syncingDb}
+            title="Verifies and creates missing advertiser_enquiries MySQL table on cPanel hosting"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              color: '#1e3a8a',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: syncingDb ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <Database size={14} />
+            {syncingDb ? 'Syncing...' : 'Verify & Sync DB'}
+          </button>
+        </div>
       </div>
+
+      {syncMessage && (
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          color: '#1e40af',
+          borderRadius: '4px',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <CheckCircle size={18} color="#2563eb" />
+          <span>{syncMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div style={{
+          padding: '1rem 1.25rem',
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          borderRadius: '4px',
+          fontSize: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertCircle size={18} color="#dc2626" />
+            <span><strong>Database Connection / Table Issue:</strong> {errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleSyncDatabase}
+            disabled={syncingDb}
+            style={{
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              border: 'none',
+              padding: '0.4rem 0.85rem',
+              borderRadius: '4px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            {syncingDb ? 'Syncing Tables...' : 'Sync Database Now'}
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div style={{

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  Clock, Share2, Check, Volume2, ArrowLeft, ShieldCheck, 
+  Clock, Share2, Check, Volume2, ArrowLeft, 
   Link as LinkIcon, RefreshCw, AlertCircle, AlertTriangle, 
   MessageSquare, ExternalLink, Calendar, User, Tag
 } from 'lucide-react';
@@ -17,7 +17,6 @@ import apiService, {
   getMediaUrl,
   handleImageError,
   DEFAULT_NEWS_IMAGE,
-  DEFAULT_AVATAR_IMAGE,
   formatArticleContent
 } from '../../services/api';
 import { isMarathi } from '../../utils/language';
@@ -143,9 +142,8 @@ export default function ArticleDetailPage() {
           'datePublished': article.publication_time || new Date().toISOString(),
           'dateModified': article.updated_at || article.publication_time || new Date().toISOString(),
           'author': [{
-            '@type': 'Person',
-            'name': article.author_name || 'Chronicle Bureau Correspondent',
-            'jobTitle': article.author_designation || 'Editorial Staff'
+            '@type': 'NewsMediaOrganization',
+            'name': 'JANTA JOURNAL Newsroom'
           }],
           'publisher': {
             '@type': 'NewsMediaOrganization',
@@ -303,9 +301,6 @@ export default function ArticleDetailPage() {
 
   const categoryName = article.category_name || article.category || 'National';
   const categorySlug = article.category_slug || article.categorySlug || 'national';
-  const authorName = article.author_name || (article.author && article.author.name) || 'Vikramaditya Sharma';
-  const authorTitle = article.author_designation || (article.author && article.author.title) || 'Senior Editorial Correspondent';
-  const authorAvatar = getMediaUrl(article.author_avatar || (article.author && article.author.avatar), DEFAULT_AVATAR_IMAGE);
   const pubDetails = getPublishTimeDetails(article.publication_time);
   const exactPublishedTime = pubDetails.exact || (article.published_at || article.publishedAt || 'October 2026');
   
@@ -337,9 +332,6 @@ export default function ArticleDetailPage() {
     }
   }
 
-  // Check if article has an editorial update or correction
-  const hasUpdate = Boolean(article.updated_at && article.publication_time && new Date(article.updated_at).getTime() - new Date(article.publication_time).getTime() > 1000 * 60 * 10);
-  const updatedDate = hasUpdate ? formatEditorialDate(article.updated_at) : null;
 
   return (
     <article style={{ paddingTop: '1.5rem', paddingBottom: '4rem' }}>
@@ -412,22 +404,7 @@ export default function ArticleDetailPage() {
           borderBottom: '1px solid var(--color-ink-200)',
           marginBottom: '1.5rem'
         }}>
-          {/* Author info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <img
-              src={authorAvatar}
-              alt={authorName}
-              style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }}
-            />
-            <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-                {authorName}
-              </div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--color-ink-500)' }}>
-                {authorTitle}
-              </div>
-            </div>
-          </div>
+
 
           {/* Date, Reading Time & Live Reader Tracking */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.76rem', color: 'var(--color-ink-500)', flexWrap: 'wrap' }}>
@@ -528,28 +505,8 @@ export default function ArticleDetailPage() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.74rem', color: 'var(--color-ink-500)' }}>
-            <ShieldCheck size={14} style={{ color: '#059669' }} /> Double-Source Editorial Verification
-          </div>
         </div>
 
-        {/* Editorial Correction / Update Banner (if applicable) */}
-        {(hasUpdate || article.correction_note) && (
-          <div style={{
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderLeft: '4px solid #3b82f6',
-            padding: '0.85rem 1.25rem',
-            marginBottom: '1.75rem',
-            borderRadius: '2px',
-            fontSize: '0.82rem',
-            color: '#1e3a8a',
-            lineHeight: 1.5
-          }}>
-            <strong style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editorial Notice:</strong>{' '}
-            {article.correction_note || `This report was updated on ${updatedDate} to include latest field developments and official statements.`}
-          </div>
-        )}
 
       </div>
 
@@ -679,46 +636,7 @@ export default function ArticleDetailPage() {
               </div>
             )}
 
-            {/* Editorial Footnote / Source Disclosure */}
-            <div style={{
-              backgroundColor: '#fafbfc',
-              border: '1px solid var(--color-ink-200)',
-              padding: '1.25rem',
-              marginTop: '2rem',
-              borderRadius: '2px',
-              fontSize: '0.78rem',
-              color: 'var(--color-ink-600)',
-              lineHeight: 1.5
-            }}>
-              <strong style={{ color: 'var(--color-ink-900)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editorial Standards & Code:</strong> JANTA JOURNAL adheres strictly to Press Council of India standards. Dispatches do not contain undisclosed commercial endorsements. Report factual errors to <span style={{ color: 'var(--color-breaking)', textDecoration: 'underline' }}>corrections@jantajournal.com</span>.
-            </div>
 
-            {/* Author Bio Box */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '1.25rem',
-              padding: '1.5rem 0',
-              marginTop: '2rem',
-              borderTop: '2px solid var(--color-ink-950)',
-              borderBottom: '1px solid var(--color-ink-200)'
-            }}>
-              <img
-                src={authorAvatar}
-                alt={authorName}
-                onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
-                style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-              />
-              <div>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-                  Written by {authorName}
-                </h4>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-ink-600)', marginTop: '0.25rem', lineHeight: 1.4 }}>
-                  {authorTitle} for JANTA JOURNAL. Covers constitutional policy, national affairs, and economic developments.
-                </p>
-              </div>
-            </div>
           </div>
 
           {/* Desktop Right Sidebar */}
@@ -771,21 +689,6 @@ export default function ArticleDetailPage() {
             </div>
             */}
 
-            {/* Editorial Independence Assurance */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '3px',
-              padding: '1rem',
-              fontSize: '0.75rem',
-              color: '#475569',
-              lineHeight: 1.45
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                <ShieldCheck size={14} color="#059669" /> Editorial Independence
-              </div>
-              JANTA JOURNAL newsroom operates autonomously from commercial sponsorships. Paid placements are strictly labeled.
-            </div>
           </aside>
 
         </div>

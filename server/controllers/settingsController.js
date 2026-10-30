@@ -3,6 +3,7 @@
 // ========================================================================
 
 import settingsService from '../services/settingsService.js';
+import { syncProductionDatabase } from '../database/sync_production.js';
 
 export const settingsController = {
   // GET /api/v1/settings
@@ -43,6 +44,19 @@ export const settingsController = {
         success: true,
         data: result,
         message: 'Setting updated successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // POST /api/v1/settings/sync-database (Super Admin / Editor)
+  async syncDatabase(req, res, next) {
+    try {
+      await syncProductionDatabase();
+      res.json({
+        success: true,
+        message: 'Production database schema and taxonomy synchronized successfully'
       });
     } catch (error) {
       next(error);

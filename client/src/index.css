@@ -873,4 +873,28 @@ iframe {
   display: none;
 }
 
+/* Single-Line Commercial Marquee Ticker */
+@keyframes ad-marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.ad-marquee-track {
+  will-change: transform;
+}
+
+.ad-marquee-track:hover {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-marquee-track {
+    animation-duration: 90s !important;
+  }
+}
+
 

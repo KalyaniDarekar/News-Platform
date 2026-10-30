@@ -87,6 +87,7 @@ const baseArticleSchema = z.object({
   isBreaking: z.boolean().optional(),
   isSponsored: z.boolean().optional(),
   sponsorClient: z.string().max(150).optional().nullable(),
+  sponsorPlacementCode: z.string().max(80).optional().nullable(),
   language: z.enum(['en', 'mr', 'hi']).optional(),
   scheduledPublicationTime: z.string().optional().nullable(),
   tags: z.array(z.union([z.string(), z.number()])).optional(),
@@ -131,7 +132,7 @@ const campaignBaseSchema = z.object({
   placementId: z.number().int().positive('Valid placement ID is required'),
   title: z.string().min(3, 'Campaign title must be at least 3 characters').max(180),
   clientName: z.string().min(2, 'Client / Sponsor name is required').max(150),
-  adType: z.enum(['image', 'code']).default('image'),
+  adType: z.enum(['image', 'code', 'text']).default('image'),
   bannerImageUrl: urlOrPathSchema.optional().nullable(),
   adCode: z.string().max(5000, 'Ad code exceeds maximum allowed size').optional().nullable(),
   targetUrl: z.string().max(500).optional().nullable(),
@@ -144,14 +145,14 @@ const campaignBaseSchema = z.object({
 export const createCampaignSchema = campaignBaseSchema.refine(
   data => {
     if (data.adType === 'image') {
-      return !!data.bannerImageUrl && !!data.targetUrl;
+      return !!data.bannerImageUrl;
     }
     if (data.adType === 'code') {
       return !!data.adCode && data.adCode.trim().length > 0;
     }
     return true;
   },
-  { message: 'Banner image & Target URL are required for image ads; Ad code is required for code ads' }
+  { message: 'Banner Image Creative URL is required for image campaigns; Ad code is required for code ads' }
 );
 
 export const updateCampaignSchema = campaignBaseSchema.partial();

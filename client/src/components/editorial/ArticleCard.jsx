@@ -20,7 +20,6 @@ export default function ArticleCard({
 
   const categoryName = article.category_name || article.category || 'General';
   const categorySlug = article.category_slug || article.categorySlug || 'national';
-  const authorName = article.author_name || (article.author && article.author.name) || 'Chronicle Bureau';
   const publishedAt = article.publication_time 
     ? formatPublishTime(article.publication_time) 
     : (article.published_at || article.publishedAt || 'Recent');
@@ -81,8 +80,6 @@ export default function ArticleCard({
           )}
 
           <div className="byline-text" style={{ marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{authorName}</strong></span>
-            <span>•</span>
             <span>{publishedAt}</span>
             {readTimeAgo && (
               <>
@@ -198,8 +195,6 @@ export default function ArticleCard({
       )}
 
       <div className="byline-text" style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-        <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{authorName}</strong></span>
-        <span>•</span>
         <span>{publishedAt}</span>
         {readTimeAgo && (
           <>

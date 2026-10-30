@@ -48,6 +48,7 @@ export default function AdminArticleEditPage() {
   const [isBreaking, setIsBreaking] = useState(false);
   const [isSponsored, setIsSponsored] = useState(false);
   const [sponsorClient, setSponsorClient] = useState('');
+  const [sponsorPlacementCode, setSponsorPlacementCode] = useState('marquee_top');
 
   // Status & Timers
   const [status, setStatus] = useState('draft');
@@ -126,6 +127,7 @@ export default function AdminArticleEditPage() {
         setIsBreaking(Boolean(a.is_breaking));
         setIsSponsored(Boolean(a.is_sponsored));
         setSponsorClient(a.sponsor_client || '');
+        setSponsorPlacementCode(a.sponsor_placement_code || 'marquee_top');
         setStatus(a.status || 'draft');
 
         if (a.scheduled_publication_time) {
@@ -344,6 +346,7 @@ export default function AdminArticleEditPage() {
       isBreaking: Boolean(isBreaking),
       isSponsored: Boolean(isSponsored),
       sponsorClient: isSponsored ? (sponsorClient.trim() || null) : null,
+      sponsorPlacementCode: isSponsored ? (sponsorPlacementCode || 'marquee_top') : null,
       language,
       scheduledPublicationTime: targetStatus === 'scheduled' ? toUtcIso(scheduledPublicationTime) : null,
       expiryTime: targetStatus === 'published' ? (expiryTime && new Date(toUtcIso(expiryTime)).getTime() > Date.now() ? toUtcIso(expiryTime) : null) : (expiryTime ? toUtcIso(expiryTime) : null),
@@ -1371,13 +1374,47 @@ export default function AdminArticleEditPage() {
                 </label>
 
                 {isSponsored && (
-                  <input
-                    type="text"
-                    placeholder="Sponsor Client Name (e.g. Tata Consultancy)"
-                    value={sponsorClient}
-                    onChange={(e) => setSponsorClient(e.target.value)}
-                    style={{ width: '100%', padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '4px', marginLeft: '1.5rem' }}
-                  />
+                  <div style={{ marginLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', padding: '0.85rem', backgroundColor: '#fefce8', border: '1px solid #fef08a', borderRadius: '6px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#854d0e', marginBottom: '0.25rem' }}>
+                        Sponsor / Client Brand Name *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Tata Consultancy Services, Reliance, etc."
+                        value={sponsorClient}
+                        onChange={(e) => setSponsorClient(e.target.value)}
+                        style={{ width: '100%', padding: '0.45rem 0.6rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#ffffff', color: '#0f172a' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#854d0e', marginBottom: '0.25rem' }}>
+                        Target Ad Inventory Placement (Live Display Location) *
+                      </label>
+                      <select
+                        value={sponsorPlacementCode}
+                        onChange={(e) => setSponsorPlacementCode(e.target.value)}
+                        style={{ width: '100%', padding: '0.45rem 0.6rem', fontSize: '0.82rem', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#ffffff', color: '#0f172a', cursor: 'pointer' }}
+                      >
+                        <option value="marquee_top">Top Marquee Ad Ticker (Below Day/Date Bar)</option>
+                        <option value="marquee_breaking">Breaking Marquee Ad Ticker (Below Breaking News)</option>
+                        <option value="marquee_both">Both Marquee Tickers (Top & Breaking)</option>
+                        <option value="header_leaderboard">Header Super Leaderboard (Top of Site)</option>
+                        <option value="homepage_mid_billboard">Homepage Mid-Section Billboard</option>
+                        <option value="article_sidebar_top">Article Sidebar Top Medium Rectangle</option>
+                        <option value="article_inline">In-Article Inline Native Leaderboard</option>
+                        <option value="homepage_hero_adjacent">Homepage Hero-Adjacent Display</option>
+                        <option value="category_page_banner">Category Page Header Billboard</option>
+                        <option value="footer_banner">Global Footer Super Leaderboard</option>
+                        <option value="mobile_anchor_banner">Responsive Mobile Sticky Anchor Banner</option>
+                      </select>
+                    </div>
+
+                    <div style={{ fontSize: '0.73rem', color: '#92400e', lineHeight: 1.45, backgroundColor: '#fffbeb', padding: '0.5rem', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                      📢 <strong>Live Placement & Monitoring:</strong> Once published, this story will automatically feature in your selected <strong>Ad Placement Slot</strong> on the live site, direct readers straight to this article, and appear in the <strong>Commercial Advertising & Inventory Operations</strong> page for real-time impression & click telemetry.
+                    </div>
+                  </div>
                 )}
 
                 {/* Language & Priority */}

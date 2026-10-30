@@ -28,7 +28,9 @@ const ALLOWED_PUBLIC_KEYS = new Set([
   'advertiser_desk_phone',
   'privacy_compliance_mode',
   'cookie_consent_required',
-  'visitor_counter'
+  'visitor_counter',
+  'ad_marquee_top_enabled',
+  'ad_marquee_breaking_enabled'
 ]);
 
 export const settingsService = {

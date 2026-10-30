@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Building2, Mail, Phone, MapPin, Download, CheckCircle, 
   Send, Sparkles, Layout, Smartphone, Video, Compass, 
-  Award, ShieldCheck, ArrowRight, AlertCircle, FileText
+  Award, ArrowRight, AlertCircle, FileText
 } from 'lucide-react';
 import apiService from '../../services/api';
 
@@ -243,15 +243,6 @@ All commercial creative is subject to editorial board review. Political endorsem
               ))}
             </div>
 
-            {/* Editorial Compliance Note */}
-            <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                <ShieldCheck size={18} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div style={{ fontSize: '0.78rem', color: '#166534', lineHeight: 1.5 }}>
-                  <strong>ASCI & Press Council Compliance:</strong> All commercial creative is labeled with transparent disclosures ("SPONSORED" / "ADVERTISEMENT"). We uphold reader transparency and strict brand safety standards.
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Verified Commercial Desk & Direct Contact Details */}

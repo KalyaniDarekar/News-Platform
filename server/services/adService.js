@@ -34,9 +34,78 @@ export const adService = {
     const selectedAd = ads[0];
 
     // Increment impressions count asynchronously
-    query(`UPDATE advertisements SET impressions_count = impressions_count + 1 WHERE id = ?`, [selectedAd.id]).catch(() => {});
+    query(`UPDATE advertisements SET impressions_count = impressions_count + 1 WHERE id = ?`, [selectedAd.id]).catch(() => { });
 
     return selectedAd;
+  },
+
+  // Public endpoint: Fetch all active ads for a marquee slot ('top' or 'breaking' or 'all')
+  async getActiveMarqueeAds(slot = 'top') {
+    const today = new Date().toISOString().split('T')[0];
+    const targetCodes = [];
+
+    if (slot === 'top') {
+      targetCodes.push('marquee_top', 'marquee_both', 'marquee_all');
+    } else if (slot === 'breaking') {
+      targetCodes.push('marquee_breaking', 'marquee_both', 'marquee_all');
+    } else {
+      targetCodes.push('marquee_top', 'marquee_breaking', 'marquee_both', 'marquee_all');
+    }
+
+    const placeholders = targetCodes.map(() => '?').join(',');
+
+    try {
+      const ads = await query(
+        `SELECT a.id, a.title, a.client_name, a.ad_type, a.banner_image_url, 
+                a.ad_code, a.target_url, a.priority, a.start_date, a.end_date,
+                p.placement_code, p.dimensions, p.name as placement_name
+         FROM advertisements a
+         JOIN ad_placements p ON a.placement_id = p.id
+         WHERE p.placement_code IN (${placeholders})
+           AND a.is_active = 1 
+           AND a.start_date <= ? 
+           AND a.end_date >= ?
+         ORDER BY a.priority DESC, a.created_at DESC`,
+        [...targetCodes, today, today]
+      );
+
+      if (ads && ads.length > 0) {
+        const adIds = ads.map(a => a.id);
+        const idPlaceholders = adIds.map(() => '?').join(',');
+        query(`UPDATE advertisements SET impressions_count = impressions_count + 1 WHERE id IN (${idPlaceholders})`, adIds).catch(() => { });
+      }
+
+      return ads || [];
+    } catch (err) {
+      console.warn(`[AdService Warning] Failed to get marquee ads for slot "${slot}":`, err.message);
+      return [];
+    }
+  },
+
+  // Get all active ads for the public commercial directory / showcase page
+  async getPublicAdDirectory() {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const ads = await query(
+        `SELECT a.id, a.placement_id, a.title, a.client_name, a.ad_type, 
+                a.banner_image_url, a.ad_code, a.target_url, a.priority, 
+                a.start_date, a.end_date, a.article_id, a.created_at,
+                p.placement_code, p.dimensions, p.name as placement_name,
+                art.slug as article_slug, art.short_description as article_summary
+         FROM advertisements a
+         JOIN ad_placements p ON a.placement_id = p.id
+         LEFT JOIN articles art ON a.article_id = art.id
+         WHERE a.is_active = 1 
+           AND a.start_date <= ? 
+           AND a.end_date >= ?
+         ORDER BY a.priority DESC, a.created_at DESC`,
+        [today, today]
+      );
+      return ads || [];
+    } catch (err) {
+      console.warn('[AdService Warning] Failed to get public ad directory:', err.message);
+      return [];
+    }
   },
 
   // Record verified impression event
@@ -71,7 +140,7 @@ export const adService = {
       await query(`UPDATE advertisements SET clicks_count = clicks_count + 1 WHERE id = ?`, [adId]);
     } catch {
       // Fallback update
-      await query(`UPDATE advertisements SET clicks_count = clicks_count + 1 WHERE id = ?`, [adId]).catch(() => {});
+      await query(`UPDATE advertisements SET clicks_count = clicks_count + 1 WHERE id = ?`, [adId]).catch(() => { });
     }
     return { success: true };
   },
@@ -145,7 +214,7 @@ export const adService = {
     } = data;
 
     // Security check: Only super_admin or ad_manager can submit or modify adCode
-    if (adType === 'code' && user && user.role !== 'super_admin' && user.role !== 'ad_manager') {
+    if (adType === 'code' && user && !['super_admin', 'editor', 'ad_manager'].includes(user?.role)) {
       const error = new Error('Unauthorized: Only authorized Ad Managers and Super Administrators may configure custom ad code snippets.');
       error.statusCode = 403;
       error.code = 'AD_CODE_RESTRICTED';
@@ -209,7 +278,7 @@ export const adService = {
       isActive
     } = data;
 
-    if (adType === 'code' && user && user.role !== 'super_admin' && user.role !== 'ad_manager') {
+    if (adType === 'code' && user && !['super_admin', 'editor', 'ad_manager'].includes(user?.role)) {
       const error = new Error('Unauthorized: Only authorized Ad Managers and Super Administrators may configure custom ad code snippets.');
       error.statusCode = 403;
       error.code = 'AD_CODE_RESTRICTED';

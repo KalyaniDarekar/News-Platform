@@ -113,6 +113,7 @@ export function getHybridDb() {
         is_breaking INTEGER NOT NULL DEFAULT 0,
         is_sponsored INTEGER NOT NULL DEFAULT 0,
         sponsor_client TEXT,
+        sponsor_placement_code TEXT DEFAULT 'marquee_top',
         reading_time_minutes INTEGER NOT NULL DEFAULT 4,
         view_count INTEGER NOT NULL DEFAULT 0,
         language TEXT NOT NULL DEFAULT 'en',
@@ -187,6 +188,7 @@ export function getHybridDb() {
       CREATE TABLE IF NOT EXISTS advertisements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         placement_id INTEGER NOT NULL,
+        article_id INTEGER,
         title TEXT NOT NULL,
         client_name TEXT NOT NULL,
         ad_type TEXT NOT NULL DEFAULT 'image',
@@ -366,6 +368,9 @@ function seedInitialData(db) {
   insertPerm.run('editor', 'categories:manage', 'Manage categories and hierarchy');
   insertPerm.run('editor', 'media:upload', 'Upload media assets');
   insertPerm.run('editor', 'audit:view', 'View newsroom audit trail');
+  insertPerm.run('editor', 'ads:manage', 'Manage commercial campaigns and marquee ads');
+  insertPerm.run('editor', 'enquiries:manage', 'Manage advertiser leads and enquiries');
+  insertPerm.run('editor', 'settings:manage', 'Manage site settings and marquee toggles');
 
   insertPerm.run('reporter', 'articles:create', 'Create new articles and drafts');
   insertPerm.run('reporter', 'articles:edit_own', 'Edit own drafted articles');
@@ -457,6 +462,34 @@ function seedInitialData(db) {
     if (!existingVc) {
       db.prepare("INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description) VALUES ('visitor_counter', '5000', 'analytics', 1, 'Audited total website visitor baseline counter')").run();
     }
+    const existingMarqueeTop = db.prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'ad_marquee_top_enabled'").get();
+    if (!existingMarqueeTop) {
+      db.prepare("INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description) VALUES ('ad_marquee_top_enabled', '1', 'monetization', 1, 'Enable single-line scrolling marquee ad below top date bar')").run();
+    }
+    const existingMarqueeBreaking = db.prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'ad_marquee_breaking_enabled'").get();
+    if (!existingMarqueeBreaking) {
+      db.prepare("INSERT INTO site_settings (setting_key, setting_value, setting_group, is_public, description) VALUES ('ad_marquee_breaking_enabled', '1', 'monetization', 1, 'Enable single-line scrolling marquee ad below breaking news bar')").run();
+    }
+
+    try {
+      db.prepare("ALTER TABLE articles ADD COLUMN sponsor_placement_code TEXT DEFAULT 'marquee_top'").run();
+    } catch (_) {}
+    try {
+      db.prepare("ALTER TABLE advertisements ADD COLUMN article_id INTEGER").run();
+    } catch (_) {}
+
+    const insertPlc = db.prepare("INSERT OR IGNORE INTO ad_placements (placement_code, name, dimensions, is_active) VALUES (?, ?, ?, 1)");
+    insertPlc.run('header_leaderboard', 'Top Header Super Leaderboard', '970x90');
+    insertPlc.run('marquee_top', 'Top Marquee Ad (Below Day/Date)', 'Single Line Marquee');
+    insertPlc.run('marquee_breaking', 'Breaking Marquee Ad (Below Breaking News)', 'Single Line Marquee');
+    insertPlc.run('marquee_both', 'Marquee Ad (Both Top & Breaking)', 'Single Line Marquee');
+    insertPlc.run('homepage_hero_adjacent', 'Homepage Hero-Adjacent Half-Page / Display', '300x600');
+    insertPlc.run('homepage_mid_billboard', 'Homepage Mid-Section Billboard', '970x120');
+    insertPlc.run('article_inline', 'In-Article Inline Native Leaderboard', '728x90');
+    insertPlc.run('article_sidebar_top', 'Article Sidebar Top Medium Rectangle', '300x250');
+    insertPlc.run('category_page_banner', 'Category Page Header Billboard', '728x90');
+    insertPlc.run('footer_banner', 'Global Footer Super Leaderboard', '970x90');
+    insertPlc.run('mobile_anchor_banner', 'Responsive Mobile Sticky Anchor Banner', '320x50');
   } catch (_) {}
 
   // Purge lingering demo seed data to keep production store completely clean

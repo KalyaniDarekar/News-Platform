@@ -13,11 +13,19 @@ router.get('/public', settingsController.getPublicSettings);
 // General settings (authenticated staff or public fields)
 router.get('/', settingsController.getSettings);
 
+// Trigger Database Schema Verification & Sync
+router.post(
+  '/sync-database',
+  authenticateToken,
+  requireRoles('super_admin', 'editor'),
+  settingsController.syncDatabase
+);
+
 // Batch update settings (Super Admin only)
 router.put(
   '/batch',
   authenticateToken,
-  requireRoles('super_admin'),
+  requireRoles('super_admin', 'editor'),
   validateRequest({ body: batchUpdateSettingsSchema }),
   settingsController.updateBatch
 );
@@ -26,7 +34,7 @@ router.put(
 router.put(
   '/:key',
   authenticateToken,
-  requireRoles('super_admin'),
+  requireRoles('super_admin', 'editor'),
   validateRequest({ body: updateSettingSchema }),
   settingsController.updateSetting
 );

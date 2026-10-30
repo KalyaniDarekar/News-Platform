@@ -5,8 +5,7 @@ import {
   formatPublishTime, 
   getMediaUrl, 
   handleImageError, 
-  DEFAULT_NEWS_IMAGE, 
-  DEFAULT_AVATAR_IMAGE 
+  DEFAULT_NEWS_IMAGE 
 } from '../../services/api';
 import { isMarathi, getHeadlineClass } from '../../utils/language';
 
@@ -93,7 +92,6 @@ function SpotlightAutoScroll({ items = [] }) {
     const sAlt = story.alt_text || story.title;
     const sSummary = story.short_description || story.summary;
     const sReading = story.reading_time_minutes ? `${story.reading_time_minutes} min read` : (story.readingTime || '4 min read');
-    const sAuthor = story.author_name || (story.author && story.author.name) || 'Chronicle Bureau';
     const sDate = story.publication_time ? formatPublishTime(story.publication_time) : (story.published_at || 'Recent');
 
     return (
@@ -135,8 +133,6 @@ function SpotlightAutoScroll({ items = [] }) {
         )}
 
         <div className="byline-text" style={{ marginTop: '0.35rem' }}>
-          <span>By <strong style={{ color: 'var(--color-ink-800)' }}>{sAuthor}</strong></span>
-          <span>•</span>
           <span>{sDate}</span>
         </div>
       </article>
@@ -401,9 +397,6 @@ function OpinionsAutoScroll({ items = [] }) {
   const canLoop = items.length > 1;
 
   const renderOpinion = (op, idx, isClone = false, prefix = 'p') => {
-    const authorName = op.author_name || (op.author && op.author.name) || 'Editorial Board';
-    const authorDesig = op.author_designation || (op.author && op.author.designation) || (op.author && op.author.title) || 'Guest Columnist';
-    const authorAvatar = getMediaUrl(op.author_avatar || (op.author && op.author.avatar), DEFAULT_AVATAR_IMAGE);
     const excerpt = op.short_description || op.excerpt || op.summary;
 
     return (
@@ -418,21 +411,8 @@ function OpinionsAutoScroll({ items = [] }) {
           borderBottom: '1px solid var(--color-ink-200)' 
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <img
-            src={authorAvatar}
-            alt={authorName}
-            onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
-            style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-          />
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-              {authorName}
-            </div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--color-ink-500)', lineHeight: 1.2 }}>
-              {authorDesig}
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="kicker kicker-neutral" style={{ fontSize: '0.68rem' }}>Opinion • Perspective</span>
         </div>
 
         <Link 
@@ -625,9 +605,6 @@ export default function HeroPackage({
   const leadKicker = current.kicker || 'SPECIAL REPORT';
   const categoryName = current.category_name || (current.category && current.category.name) || current.category;
   const leadReadingTime = current.reading_time_minutes ? `${current.reading_time_minutes} min read` : (current.readingTime || '5 min read');
-  const leadAuthorName = current.author_name || (current.author && current.author.name) || 'Staff Reporter';
-  const leadAuthorTitle = current.author_designation || (current.author && current.author.title) || 'Editorial Bureau';
-  const leadAuthorAvatar = getMediaUrl(current.author_avatar || (current.author && current.author.avatar), DEFAULT_AVATAR_IMAGE);
   const leadPublishedAt = current.publication_time ? formatPublishTime(current.publication_time) : (current.published_at || current.publishedAt || 'Today');
 
   const handleCardClick = (e) => {
@@ -876,34 +853,17 @@ export default function HeroPackage({
               </p>
             )}
 
-            {/* Author Byline */}
+            {/* Published Date */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-start',
               paddingTop: '0.75rem',
               borderTop: '1px solid var(--color-ink-200)',
               marginTop: '0.5rem',
               flexWrap: 'wrap',
               gap: '0.65rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <img
-                  src={leadAuthorAvatar}
-                  alt={leadAuthorName}
-                  onError={(e) => handleImageError(e, DEFAULT_AVATAR_IMAGE)}
-                  style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
-                    By {leadAuthorName}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-500)' }}>
-                    {leadAuthorTitle}
-                  </div>
-                </div>
-              </div>
-
               <div style={{ fontSize: '0.74rem', color: 'var(--color-ink-500)', whiteSpace: 'nowrap' }}>
                 {leadPublishedAt}
               </div>

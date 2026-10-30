@@ -25,7 +25,7 @@ router.get(
 router.patch(
   '/:id/status',
   authenticateToken,
-  requireRoles('super_admin', 'ad_manager'),
+  requireRoles('super_admin', 'ad_manager', 'editor'),
   validateRequest({ body: updateEnquiryStatusSchema }),
   advertiserEnquiryController.updateStatus
 );
@@ -33,7 +33,7 @@ router.patch(
 router.delete(
   '/:id',
   authenticateToken,
-  requireRoles('super_admin', 'ad_manager'),
+  requireRoles('super_admin', 'ad_manager', 'editor'),
   advertiserEnquiryController.deleteEnquiry
 );
 

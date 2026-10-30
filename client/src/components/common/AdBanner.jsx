@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ExternalLink, Info, Sparkles, X } from 'lucide-react';
 import apiService from '../../services/api';
 
@@ -18,6 +18,7 @@ import apiService from '../../services/api';
  * Automatically records viewable impressions using IntersectionObserver.
  */
 export default function AdBanner({ slot = 'headerLeaderboard', className = '' }) {
+  const navigate = useNavigate();
   const [ad, setAd] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
@@ -61,13 +62,9 @@ export default function AdBanner({ slot = 'headerLeaderboard', className = '' })
   const handleAdClick = (e) => {
     if (ad && ad.id) {
       apiService.recordAdClick(ad.id, ad.placementCode || slot, window.location.pathname);
-    }
-    if (ad && ad.targetUrl && !ad.adCode) {
-      if (ad.targetUrl.startsWith('http')) {
-        window.open(ad.targetUrl, '_blank', 'noopener,noreferrer');
-      } else {
-        window.location.href = ad.targetUrl;
-      }
+      navigate(`/advertisements?id=${ad.id}`);
+    } else {
+      navigate('/advertisements');
     }
   };
 
