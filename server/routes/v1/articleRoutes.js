@@ -21,10 +21,11 @@ router.get('/', optionalAuth, articleController.listArticles);
 // Usage from cPanel: curl -s -X POST http://yourdomain.com/api/v1/articles/cron/publish \
 //                        -H "x-cron-secret: YOUR_SECRET"
 // -----------------------------------------------------------------------
-router.post('/cron/publish', (req, res, next) => {
+router.post('/cron/publish', optionalAuth, (req, res, next) => {
   const cronSecret = process.env.CRON_SECRET;
-  // If CRON_SECRET is configured, validate it; otherwise allow (dev mode)
-  if (cronSecret && req.headers['x-cron-secret'] !== cronSecret) {
+  const isStaff = req.user && ['super_admin', 'editor'].includes(req.user.role);
+  // Allow if triggered by authenticated staff, valid cron secret, or dev mode
+  if (cronSecret && req.headers['x-cron-secret'] !== cronSecret && !isStaff) {
     return res.status(403).json({
       success: false,
       error: { code: 'FORBIDDEN', message: 'Invalid or missing cron secret' }
@@ -60,6 +61,16 @@ router.get('/videos', (req, res, next) => {
   req.query.limit = req.query.limit || '10';
   return articleController.listArticles(req, res, next);
 });
+
+// -----------------------------------------------------------------------
+// Admin: Get scheduled and expiry overview (articles + commercial ads)
+// -----------------------------------------------------------------------
+router.get(
+  '/scheduled-and-expiry',
+  authenticateToken,
+  requireRoles('super_admin', 'editor'),
+  articleController.getScheduledAndExpiryOverview
+);
 
 // -----------------------------------------------------------------------
 // Admin: Get single article by NUMERIC ID (for edit page load)

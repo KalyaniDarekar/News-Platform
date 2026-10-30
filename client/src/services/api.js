@@ -549,6 +549,24 @@ export const apiService = {
     }
   },
 
+  // Submit contact page enquiry / newsroom dispatch / tip
+  async submitContactEnquiry(payload) {
+    try {
+      const res = await fetch(`${API_BASE}/advertiser-enquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error?.message || json.message || 'Submission failed');
+      }
+      return json;
+    } catch (err) {
+      throw err;
+    }
+  },
+
   // Submit direct advertiser commercial enquiry
   async submitAdvertiserEnquiry(payload) {
     try {

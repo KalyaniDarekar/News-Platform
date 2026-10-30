@@ -168,6 +168,26 @@ export const adminApi = {
     });
   },
 
+  async expireArticleNow(id) {
+    return request(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status: 'expired'
+      })
+    });
+  },
+
+  // ---- Scheduled & Expiry Overview & Automated Trigger ----
+  async getScheduledAndExpiryOverview() {
+    return request('/articles/scheduled-and-expiry');
+  },
+
+  async triggerCron() {
+    return request('/articles/cron/publish', {
+      method: 'POST'
+    });
+  },
+
   // ---- Categories Endpoints ----
   async getCategories() {
     return request('/categories');

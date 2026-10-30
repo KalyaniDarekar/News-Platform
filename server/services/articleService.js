@@ -1060,12 +1060,107 @@ export const articleService = {
       );
     }
 
+    // ---- 3. Deactivate commercial advertisements whose end_date has passed ----
+    let expiredAdsCount = 0;
+    try {
+      const expiredAds = await query(
+        `SELECT id, title, client_name, end_date FROM advertisements
+         WHERE is_active = 1
+           AND end_date < CURRENT_DATE`,
+        []
+      );
+      for (const ad of (expiredAds || [])) {
+        await query(
+          `UPDATE advertisements SET is_active = 0 WHERE id = ? AND is_active = 1`,
+          [ad.id]
+        );
+        expiredAdsCount++;
+      }
+    } catch (adErr) {
+      console.warn('[Cron] Ad expiry check notice:', adErr.message);
+    }
+
     return {
       publishedCount,
       expiredCount,
+      expiredAdsCount,
       archivedCount: expiredCount,
       timestamp: nowStr,
-      message: `Cron run complete: ${publishedCount} published, ${expiredCount} expired`
+      message: `Cron run complete: ${publishedCount} published, ${expiredCount} expired, ${expiredAdsCount} ads retired`
+    };
+  },
+
+  // -------------------------------------------------------------------------
+  // GET SCHEDULED & EXPIRY OVERVIEW (Articles + Commercial Ads)
+  // Dedicated endpoint for Admin Scheduled & Expiry Management Desk
+  // -------------------------------------------------------------------------
+  async getScheduledAndExpiryOverview() {
+    // 1. Scheduled Articles (embargoed releases pending publication)
+    const scheduledArticles = await query(
+      `SELECT a.id, a.title, a.slug, a.status, a.scheduled_publication_time, a.expiry_time,
+              a.publication_time, a.is_sponsored, a.sponsor_client, a.priority, a.created_at,
+              c.name AS category_name, c.color_badge AS category_color,
+              u.full_name AS author_name
+       FROM articles a
+       LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN users u ON a.author_id = u.id
+       WHERE a.status = 'scheduled'
+          OR (a.scheduled_publication_time IS NOT NULL AND a.scheduled_publication_time > UTC_TIMESTAMP() AND a.status != 'archived')
+       ORDER BY a.scheduled_publication_time ASC, a.created_at DESC`
+    );
+
+    // 2. Active Expiring Articles (published stories currently ticking down to auto-expiry)
+    const expiringArticles = await query(
+      `SELECT a.id, a.title, a.slug, a.status, a.publication_time, a.expiry_time,
+              a.is_sponsored, a.sponsor_client, a.priority, a.created_at,
+              c.name AS category_name, c.color_badge AS category_color,
+              u.full_name AS author_name
+       FROM articles a
+       LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN users u ON a.author_id = u.id
+       WHERE a.status = 'published'
+         AND a.expiry_time IS NOT NULL
+       ORDER BY a.expiry_time ASC`
+    );
+
+    // 3. Expired Articles Archive (retired dispatches)
+    const expiredArticles = await query(
+      `SELECT a.id, a.title, a.slug, a.status, a.publication_time, a.expiry_time, a.updated_at,
+              a.is_sponsored, a.sponsor_client, a.priority, a.created_at,
+              c.name AS category_name, c.color_badge AS category_color,
+              u.full_name AS author_name
+       FROM articles a
+       LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN users u ON a.author_id = u.id
+       WHERE a.status = 'expired'
+          OR (a.expiry_time IS NOT NULL AND a.expiry_time <= UTC_TIMESTAMP() AND a.status NOT IN ('published', 'draft'))
+       ORDER BY a.expiry_time DESC, a.updated_at DESC
+       LIMIT 60`
+    );
+
+    // 4. Commercial Advertisements (scheduled, active, and expired flights)
+    let adCampaigns = [];
+    try {
+      adCampaigns = await query(
+        `SELECT a.id, a.title, a.client_name, a.ad_type, a.banner_image_url, a.target_url,
+                a.start_date, a.end_date, a.is_active, a.priority, a.article_id,
+                a.impressions_count, a.clicks_count,
+                p.name AS placement_name, p.placement_code, p.dimensions
+         FROM advertisements a
+         LEFT JOIN ad_placements p ON a.placement_id = p.id
+         ORDER BY a.end_date ASC, a.priority DESC`
+      );
+    } catch (adQueryErr) {
+      console.warn('[Scheduled] Ad query notice:', adQueryErr.message);
+      adCampaigns = [];
+    }
+
+    return {
+      scheduledArticles: scheduledArticles || [],
+      expiringArticles: expiringArticles || [],
+      expiredArticles: expiredArticles || [],
+      adCampaigns: adCampaigns || [],
+      serverTimeUtc: new Date().toISOString()
     };
   }
 };

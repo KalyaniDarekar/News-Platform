@@ -140,6 +140,19 @@ export const articleController = {
     }
   },
 
+  // GET /api/v1/articles/scheduled-and-expiry (Admin / Editor)
+  async getScheduledAndExpiryOverview(req, res, next) {
+    try {
+      const result = await articleService.getScheduledAndExpiryOverview();
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // POST /api/v1/articles/cron/publish (Cron endpoint for cPanel automation)
   async processCron(req, res, next) {
     try {

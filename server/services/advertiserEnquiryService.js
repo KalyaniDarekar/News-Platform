@@ -10,12 +10,12 @@ export const advertiserEnquiryService = {
   // Public endpoint: Submit campaign enquiry
   async submitEnquiry(data, ipAddress) {
     const {
-      companyName,
-      contactName,
+      companyName = 'Public Inbound Desk',
+      contactName = 'Anonymous Contributor',
       email,
       phone = null,
       website = null,
-      budgetRange,
+      budgetRange = 'General Inquiry / Direct Tip',
       preferredPlacements = [],
       flightStartDate = null,
       campaignObjectives = null,
@@ -27,6 +27,9 @@ export const advertiserEnquiryService = {
     const cleanPhone = phone && String(phone).trim() !== '' ? String(phone).trim() : null;
     const cleanWebsite = website && String(website).trim() !== '' ? String(website).trim() : null;
     const cleanObjectives = campaignObjectives && String(campaignObjectives).trim() !== '' ? String(campaignObjectives).trim() : null;
+    const cleanCompanyName = (companyName && String(companyName).trim()) || 'Public Inbound Desk';
+    const cleanContactName = (contactName && String(contactName).trim()) || 'Anonymous Contributor';
+    const cleanBudgetRange = (budgetRange && String(budgetRange).trim()) || 'General Inquiry / Direct Tip';
 
     const result = await query(
       `INSERT INTO advertiser_enquiries (
@@ -35,12 +38,12 @@ export const advertiserEnquiryService = {
         campaign_objectives, message, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
       [
-        companyName,
-        contactName,
+        cleanCompanyName,
+        cleanContactName,
         email.toLowerCase().trim(),
         cleanPhone,
         cleanWebsite,
-        budgetRange,
+        cleanBudgetRange,
         placementsJson,
         cleanFlightStartDate,
         cleanObjectives,
@@ -54,16 +57,16 @@ export const advertiserEnquiryService = {
       action: 'ADVERTISER_ENQUIRY_SUBMITTED',
       entityType: 'advertiser_enquiry',
       entityId: newId,
-      details: { companyName, contactName, budgetRange },
+      details: { companyName: cleanCompanyName, contactName: cleanContactName, budgetRange: cleanBudgetRange },
       ipAddress
     });
 
     return {
       id: newId,
-      companyName,
-      contactName,
+      companyName: cleanCompanyName,
+      contactName: cleanContactName,
       status: 'new',
-      message: 'Your advertising enquiry has been submitted to JANTA JOURNAL Commercial Desk. Our corporate partnerships team will review and respond within 24 business hours.'
+      message: 'Your inquiry has been successfully transmitted to the newsroom desk. Our team will review and respond promptly.'
     };
   },
 

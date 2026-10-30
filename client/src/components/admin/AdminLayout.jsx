@@ -55,7 +55,7 @@ export default function AdminLayout() {
     { label: 'Scheduled & Expiry', path: '/admin/scheduled', icon: CalendarClock },
     { label: 'Ad Monetization', path: '/admin/ads', icon: Megaphone },
     {
-      label: 'Ad Enquiries & Leads',
+      label: 'Inquiries & Leads',
       path: '/admin/enquiries',
       icon: Briefcase,
       badge: newEnquiriesCount > 0 ? newEnquiriesCount : null

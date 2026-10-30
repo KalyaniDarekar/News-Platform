@@ -30,6 +30,8 @@ router.use('/v1/analytics', analyticsRoutes);
 router.use('/v1/audit-logs', auditRoutes);
 router.use('/v1/settings', settingsRoutes);
 router.use('/v1/advertiser-enquiries', enquiryRoutes);         // Phase 5 Direct Advertiser CRM
+router.use('/v1/enquiries', enquiryRoutes);
+router.use('/v1/contact', enquiryRoutes);
 router.use('/v1/videos', youtubeRoutes);                       // Phase 5 YouTube Video Gallery
 
 // Dashboard is admin-only — authenticateToken applied at mount level
@@ -46,6 +48,8 @@ router.use('/analytics', analyticsRoutes);
 router.use('/audit-logs', auditRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/advertiser-enquiries', enquiryRoutes);
+router.use('/enquiries', enquiryRoutes);
+router.use('/contact', enquiryRoutes);
 router.use('/videos', youtubeRoutes);
 
 export default router;

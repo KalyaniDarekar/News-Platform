@@ -158,16 +158,16 @@ export const createCampaignSchema = campaignBaseSchema.refine(
 export const updateCampaignSchema = campaignBaseSchema.partial();
 
 export const createEnquirySchema = z.object({
-  companyName: z.string().min(2, 'Company or organization name is required').max(191),
-  contactName: z.string().min(2, 'Primary contact name is required').max(150),
-  email: z.string().email('Valid business email address is required').max(191),
+  companyName: z.string().max(191).optional().default('Public Inbound Desk'),
+  contactName: z.string().max(150).optional().default('Anonymous Contributor'),
+  email: z.string().email('Valid email address is required').max(191),
   phone: z.string().max(50).optional().nullable(),
   website: z.string().max(255).optional().nullable(),
-  budgetRange: z.string().min(1, 'Please select an estimated campaign budget tier'),
+  budgetRange: z.string().max(100).optional().default('General Inquiry / Direct Tip'),
   preferredPlacements: z.array(z.string()).optional().default([]),
   flightStartDate: z.string().optional().nullable(),
   campaignObjectives: z.string().max(1000).optional().nullable(),
-  message: z.string().min(10, 'Please provide details about your commercial campaign (min 10 characters)').max(3000)
+  message: z.string().min(5, 'Please provide details about your message or inquiry (min 5 characters)').max(4000)
 });
 
 export const updateEnquiryStatusSchema = z.object({
